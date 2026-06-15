@@ -795,6 +795,71 @@
     border-radius:10px;padding:14px 18px;margin:18px 0;font-size:13.5px;
   }
   .guide-article-body .warn strong{color:#fca5a5}
+
+  /* Onglets TCG dans le guide */
+  .guide-tcg-tabs{
+    display:flex;gap:8px;flex-wrap:wrap;margin:18px 0 22px;
+    padding:6px;background:rgba(255,255,255,.03);border:1px solid var(--line2);
+    border-radius:12px;
+  }
+  .g-tcg-tab{
+    flex:1;min-width:110px;background:transparent;border:0;
+    color:var(--mut);border-radius:8px;padding:10px 14px;
+    font-family:"Outfit";font-size:13px;font-weight:700;
+    letter-spacing:.06em;cursor:pointer;transition:.15s;
+  }
+  .g-tcg-tab:hover{color:var(--gold-2)}
+  .g-tcg-tab.active{
+    background:linear-gradient(180deg,var(--gold-2),var(--gold-deep));
+    color:#1a1430;box-shadow:0 2px 6px rgba(212,168,90,.3);
+  }
+
+  /* Bloc critère */
+  .guide-criterion{
+    margin:22px 0;padding:18px 18px 14px;
+    background:rgba(255,255,255,.025);
+    border:1px solid var(--line2);border-radius:12px;
+  }
+  .guide-criterion h4{
+    color:var(--gold-2);font-family:"Outfit";font-size:16px;
+    font-weight:800;letter-spacing:.02em;margin:0 0 8px;
+  }
+  .guide-criterion p{margin:0 0 14px;font-size:13.5px}
+
+  /* Grille de mock-cartes (vitrines) */
+  .guide-cards{
+    display:flex;gap:14px;flex-wrap:wrap;justify-content:center;
+    padding:8px 0 4px;
+  }
+  .mock-card-wrap{
+    display:flex;flex-direction:column;align-items:center;
+    gap:8px;flex-shrink:0;
+  }
+  .mock-card-wrap .mock-card-svg{
+    width:140px;height:196px;
+    border-radius:9px;overflow:hidden;
+    transition:transform .25s;
+    filter:drop-shadow(0 6px 14px rgba(0,0,0,.5));
+  }
+  .mock-card-wrap:hover .mock-card-svg{transform:translateY(-4px) scale(1.03)}
+  .mock-card-label{
+    font-size:11px;font-weight:700;color:#fff;
+    text-align:center;letter-spacing:.04em;line-height:1.3;
+    max-width:140px;
+  }
+  .mock-card-sub{
+    font-size:10px;color:var(--mut);font-weight:500;
+    text-align:center;max-width:140px;margin-top:-4px;
+  }
+  .mock-card-price{
+    font-size:11px;font-weight:800;color:var(--gold-2);
+    background:rgba(212,168,90,.1);padding:3px 8px;border-radius:5px;
+    border:1px solid rgba(212,168,90,.3);
+  }
+  @media (max-width:580px){
+    .mock-card-wrap .mock-card-svg{width:108px;height:151px}
+    .mock-card-label,.mock-card-sub{max-width:108px;font-size:10px}
+  }
   .guide-article-foot{margin-top:30px;padding-top:20px;border-top:1px solid var(--line2);text-align:center}
 
   /* Responsive nav (un peu plus serrée pour faire rentrer 6 items) */
@@ -1467,16 +1532,50 @@
 
   <article class="guide-section" id="g-analyze">
     <h3><span class="ico">🔍</span>1. Comment analyser une carte ?</h3>
-    <p>Avant d'acheter ou de vendre, plusieurs critères déterminent la <strong>vraie valeur</strong> d'une carte. C'est rarement le prix au pif.</p>
-    <h4>Les 6 critères qui comptent</h4>
-    <ul>
-      <li><strong>Rareté</strong> : Common, Uncommon, Rare, Holo Rare, Ultra Rare, Secret Rare, Special Illustration Rare, Hyper Rare... Plus elle est rare, plus elle peut valoir cher.</li>
-      <li><strong>Variante d'impression</strong> : Normale, Reverse Holo, Cold Foil, Full Art, Alternate Art, Stamped. Une Alt Art peut valoir 100× la version normale.</li>
-      <li><strong>État physique</strong> : Mint (parfait), Near Mint (NM), Excellent, Good, Played. L'écart entre NM et Played = parfois ÷5 sur le prix.</li>
-      <li><strong>Popularité du personnage</strong> : Charizard, Pikachu, Mewtwo > Pokémon obscurs. Idem chez Lorcana avec Elsa, Mickey, Stitch.</li>
-      <li><strong>Tendance du marché</strong> : Hype récente, sortie d'un film, événement esport. Regarde la sparkline 30j sur Soridex.</li>
-      <li><strong>Édition / Promo</strong> : 1st Edition, Base Set, promo limitée d'événement, prerelease. Ces marqueurs multiplient parfois la valeur.</li>
-    </ul>
+    <p>Avant d'acheter ou de vendre, plusieurs critères déterminent la <strong>vraie valeur</strong> d'une carte. C'est rarement le prix au pif. Choisis ton TCG ci-dessous pour voir les exemples adaptés.</p>
+
+    <div class="guide-tcg-tabs" id="guideTcgTabs">
+      <button class="g-tcg-tab active" data-g-tcg="pokemon">⚡ Pokémon</button>
+      <button class="g-tcg-tab" data-g-tcg="lorcana">✨ Lorcana</button>
+      <button class="g-tcg-tab" data-g-tcg="magic">🔥 Magic</button>
+    </div>
+
+    <div class="guide-criterion">
+      <h4>① Rareté</h4>
+      <p>Common, Uncommon, Rare, Holo Rare, Ultra Rare, Secret Rare… Plus elle est rare, plus elle peut valoir cher. La <strong>Hyper Rare</strong> ou <strong>Special Illustration</strong> peut valoir 50 à 200× la Common du même set.</p>
+      <div class="guide-cards" id="ex-rarete"></div>
+    </div>
+
+    <div class="guide-criterion">
+      <h4>② Variante d'impression</h4>
+      <p>Normale, Reverse Holo, Cold Foil, Full Art, Alternate Art, Stamped. Une <strong>Alt Art</strong> peut valoir <strong>100×</strong> la version normale de la même carte.</p>
+      <div class="guide-cards" id="ex-variante"></div>
+    </div>
+
+    <div class="guide-criterion">
+      <h4>③ État physique</h4>
+      <p>Mint (parfait) → Near Mint (NM) → Excellent → Good → Played. L'écart entre NM et Played = parfois <strong>÷5 sur le prix</strong>. Regarde toujours les coins, les bords et la surface (rayures, blanchiment).</p>
+      <div class="guide-cards" id="ex-etat"></div>
+    </div>
+
+    <div class="guide-criterion">
+      <h4>④ Popularité du personnage</h4>
+      <p>Les têtes d'affiche valent plus, même à rareté égale. Mewtwo, Charizard et Pikachu écrasent les Pokémon obscurs. Idem chez Lorcana avec Elsa, Mickey, Stitch.</p>
+      <div class="guide-cards" id="ex-pop"></div>
+    </div>
+
+    <div class="guide-criterion">
+      <h4>⑤ Tendance du marché</h4>
+      <p>Hype récente, sortie d'un film, événement esport, anniversaire d'un set. Une carte en tendance haussière sur 30 jours peut être un signal d'achat — ou de bulle. Regarde la sparkline 30j sur Soridex.</p>
+      <div class="guide-cards" id="ex-trend"></div>
+    </div>
+
+    <div class="guide-criterion">
+      <h4>⑥ Édition / Promo</h4>
+      <p>1st Edition, Base Set, promo limitée d'événement, prerelease, sceau championship. Ces marqueurs multiplient parfois la valeur. Une 1st Edition Base Set Charizard valait quelques centaines d'euros en 2015, plus de 50 000 € aujourd'hui.</p>
+      <div class="guide-cards" id="ex-edition"></div>
+    </div>
+
     <div class="guide-callout">💡 <strong>Astuce</strong> — Toujours comparer la cote Cardmarket "trend" vs le "lowest listing" avant d'acheter. Si le lowest est très en dessous du trend, c'est souvent une carte en mauvais état ou un fake.</div>
   </article>
 
@@ -4380,6 +4479,325 @@ showView = function(name){
     window._wishDetailSearchInited = true;
   }
 };
+
+
+/* === GUIDE — EXEMPLES DE CARTES MOCK PAR TCG === */
+
+// Thèmes visuels par TCG
+const GUIDE_TCG_THEMES = {
+  pokemon: {
+    frameOuter: '#e8c149', frameInner: '#fff4cc', frameStroke: '#8a6d20',
+    artBg1: '#bde0fe', artBg2: '#fcd34d',
+    typeBar: '#fef3c7', typeTxt: '#7a5817',
+    textBox: '#fffaeb', textTxt: '#3a2e0a',
+    nameTxt: '#1a1430', costLabel: 'PV', costBg: '#fff', costTxt: '#dc2626',
+    chars: [
+      {emoji:'⚡', name:'Pikachu', star:true},
+      {emoji:'🔥', name:'Salamèche', star:true},
+      {emoji:'🐛', name:'Chenipan', star:false},
+      {emoji:'🧠', name:'Mewtwo', star:true},
+      {emoji:'🐌', name:'Limonde', star:false},
+    ],
+    setName: 'Mega Evolution'
+  },
+  lorcana: {
+    frameOuter: '#b08938', frameInner: '#1f1742', frameStroke: '#3b2a78',
+    artBg1: '#3b2a78', artBg2: '#7c3aed',
+    typeBar: '#2a1f5c', typeTxt: '#c4b5fd',
+    textBox: '#f7f1e1', textTxt: '#2a1f5c',
+    nameTxt: '#fff7e0', costLabel: 'INK', costBg: '#fef3c7', costTxt: '#8a6d20',
+    chars: [
+      {emoji:'❄️', name:'Elsa', star:true},
+      {emoji:'🐭', name:'Mickey', star:true},
+      {emoji:'👽', name:'Stitch', star:true},
+      {emoji:'🦗', name:'Jiminy', star:false},
+      {emoji:'🐗', name:'Pumbaa', star:false},
+    ],
+    setName: 'Lueurs Profondeurs'
+  },
+  magic: {
+    frameOuter: '#5b3a1f', frameInner: '#d6c19a', frameStroke: '#2d1b0e',
+    artBg1: '#7b5638', artBg2: '#c89a6b',
+    typeBar: '#a8794a', typeTxt: '#1a0e05',
+    textBox: '#ece2c8', textTxt: '#2d1b0e',
+    nameTxt: '#fff', costLabel: '◇', costBg: '#fff', costTxt: '#1a1430',
+    chars: [
+      {emoji:'🐲', name:'Atraxa', star:true},
+      {emoji:'🌟', name:'Jace', star:true},
+      {emoji:'🪨', name:'Squire', star:false},
+      {emoji:'⚔️', name:'Liliana', star:true},
+      {emoji:'🍄', name:'Goblin', star:false},
+    ],
+    setName: 'Foundations'
+  }
+};
+
+const RARITY_STYLE = {
+  common:  {label:'C',  badge:'#9ca3af', glow:false, name:'Common'},
+  uncommon:{label:'U',  badge:'#cbd5e1', glow:false, name:'Uncommon'},
+  rare:    {label:'★',  badge:'#fbbf24', glow:false, name:'Rare'},
+  ultra:   {label:'★★', badge:'#a78bfa', glow:true,  name:'Ultra Rare'},
+  hyper:   {label:'✦',  badge:'rainbow', glow:true,  name:'Hyper Rare'},
+};
+
+/**
+ * Génère un SVG de carte mock paramétrable.
+ * opts: { rarity, variant, condition, edition, char (index dans theme.chars), label, trendUp, trendDown }
+ */
+function mockCardSvg(tcg, opts){
+  opts = opts || {};
+  const th = GUIDE_TCG_THEMES[tcg] || GUIDE_TCG_THEMES.pokemon;
+  const ch = th.chars[opts.char != null ? opts.char : 0];
+  const rar = RARITY_STYLE[opts.rarity || 'common'];
+  const condition = opts.condition || 'mint';
+  const variant = opts.variant || 'normal';
+  const edition = opts.edition || null;
+
+  const uid = 'g' + Math.random().toString(36).slice(2,9);
+
+  // Dégâts par condition
+  const damageFilter = condition === 'mint' ? '' :
+    condition === 'nm' ? `<filter id="dmg${uid}"><feColorMatrix values="0.97 0 0 0 0  0 0.97 0 0 0  0 0 0.97 0 0  0 0 0 1 0"/></filter>` :
+    condition === 'exc' ? `<filter id="dmg${uid}"><feColorMatrix values="0.88 0.04 0 0 0  0.04 0.88 0 0 0  0 0 0.85 0 0  0 0 0 1 0"/><feGaussianBlur stdDeviation="0.4"/></filter>` :
+    `<filter id="dmg${uid}"><feColorMatrix values="0.72 0.1 0 0 0.04  0.1 0.7 0 0 0.04  0 0 0.62 0 0.04  0 0 0 1 0"/><feGaussianBlur stdDeviation="0.9"/></filter>`;
+
+  // Coin abimé (uniquement Played)
+  const playedCorners = condition === 'played' ? `
+    <path d="M3 3 L15 3 L3 15 Z" fill="rgba(60,40,20,.55)"/>
+    <path d="M197 3 L185 3 L197 15 Z" fill="rgba(60,40,20,.4)"/>
+    <path d="M3 277 L18 277 L3 262 Z" fill="rgba(60,40,20,.45)"/>
+  ` : (condition === 'exc' ? `
+    <path d="M3 3 L9 3 L3 9 Z" fill="rgba(60,40,20,.35)"/>
+    <path d="M197 277 L191 277 L197 271 Z" fill="rgba(60,40,20,.3)"/>
+  ` : '');
+
+  // Rayures (Played)
+  const scratches = condition === 'played' ? `
+    <line x1="20" y1="60" x2="110" y2="55" stroke="rgba(255,255,255,.18)" stroke-width="1"/>
+    <line x1="140" y1="120" x2="180" y2="100" stroke="rgba(255,255,255,.12)" stroke-width="1"/>
+    <line x1="30" y1="190" x2="170" y2="195" stroke="rgba(0,0,0,.15)" stroke-width=".7"/>
+  ` : '';
+
+  // Effet variant
+  const variantOverlay = variant === 'foil' || variant === 'reverse' ? `
+    <rect x="14" y="34" width="172" height="120" fill="url(#foil${uid})" opacity=".4"/>
+  ` : variant === 'altart' ? `
+    <rect x="14" y="34" width="172" height="208" fill="url(#alt${uid})" opacity=".3"/>
+  ` : '';
+
+  // Stamp édition
+  const editionStamp = edition === '1st' ? `
+    <g transform="translate(20,80) rotate(-12)">
+      <rect x="-2" y="-12" width="48" height="24" fill="#fff" stroke="#dc2626" stroke-width="2" rx="3"/>
+      <text x="22" y="4" font-size="9" font-weight="900" fill="#dc2626" text-anchor="middle" font-family="Outfit">1ST ED.</text>
+    </g>
+  ` : edition === 'stamped' ? `
+    <g transform="translate(170,30)">
+      <circle r="14" fill="#fbbf24" stroke="#92400e" stroke-width="1.5"/>
+      <text y="3" font-size="7" font-weight="900" fill="#92400e" text-anchor="middle" font-family="Outfit">PROMO</text>
+    </g>
+  ` : '';
+
+  // Couleur du badge de rareté
+  const badgeFill = rar.badge === 'rainbow' ? `url(#rainbow${uid})` : rar.badge;
+
+  // Halo holo si rare+
+  const holoGlow = rar.glow ? `
+    <rect x="14" y="34" width="172" height="120" fill="url(#holo${uid})" opacity=".55" style="mix-blend-mode:screen"/>
+  ` : '';
+
+  // Trend sparkline (option)
+  let trendSpark = '';
+  if(opts.trendUp || opts.trendDown){
+    const pts = opts.trendUp
+      ? '0,30 10,32 22,28 35,24 48,22 60,16 72,10 84,6'
+      : '0,8 10,12 22,10 35,16 48,20 60,24 72,28 84,32';
+    const col = opts.trendUp ? '#22c55e' : '#ef4444';
+    trendSpark = `
+      <g transform="translate(58,255)">
+        <polyline points="${pts}" fill="none" stroke="${col}" stroke-width="2"/>
+        <text x="42" y="-2" font-size="7" font-weight="700" fill="${col}" text-anchor="middle" font-family="Outfit">${opts.trendUp?'↑ +24% 30j':'↓ -18% 30j'}</text>
+      </g>
+    `;
+  }
+
+  // Popularité (étoiles)
+  let popStars = '';
+  if(opts.showPop){
+    const filled = opts.popLevel || 1; // 1 à 5
+    const stars = [];
+    for(let i=0;i<5;i++){
+      stars.push(`<text x="${i*11}" y="0" font-size="11" fill="${i<filled?'#fbbf24':'#3a3050'}" font-family="Outfit">★</text>`);
+    }
+    popStars = `<g transform="translate(70,260)">${stars.join('')}</g>`;
+  }
+
+  // Pour AltArt : on étend la zone d'art à toute la carte
+  const isAlt = variant === 'altart';
+  const artH = isAlt ? 208 : 120;
+  const artBgGrad = isAlt ? `url(#altbg${uid})` : `url(#bg${uid})`;
+
+  return `<svg viewBox="0 0 200 280" xmlns="http://www.w3.org/2000/svg" class="mock-card-svg" preserveAspectRatio="xMidYMid meet">
+    <defs>
+      <linearGradient id="frame${uid}" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="${th.frameOuter}"/>
+        <stop offset="1" stop-color="${th.frameStroke}"/>
+      </linearGradient>
+      <linearGradient id="bg${uid}" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="${th.artBg1}"/>
+        <stop offset="1" stop-color="${th.artBg2}"/>
+      </linearGradient>
+      <linearGradient id="altbg${uid}" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="${th.artBg2}"/>
+        <stop offset=".5" stop-color="${th.artBg1}"/>
+        <stop offset="1" stop-color="${th.frameStroke}"/>
+      </linearGradient>
+      <linearGradient id="foil${uid}" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#ec4899"/>
+        <stop offset=".25" stop-color="#fbbf24"/>
+        <stop offset=".5" stop-color="#22d3ee"/>
+        <stop offset=".75" stop-color="#a78bfa"/>
+        <stop offset="1" stop-color="#34d399"/>
+      </linearGradient>
+      <linearGradient id="alt${uid}" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#c084fc"/>
+        <stop offset=".5" stop-color="transparent"/>
+        <stop offset="1" stop-color="#f0abfc"/>
+      </linearGradient>
+      <linearGradient id="rainbow${uid}" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="#ec4899"/>
+        <stop offset=".33" stop-color="#fbbf24"/>
+        <stop offset=".66" stop-color="#22d3ee"/>
+        <stop offset="1" stop-color="#a78bfa"/>
+      </linearGradient>
+      <radialGradient id="holo${uid}" cx=".5" cy=".5">
+        <stop offset="0" stop-color="#fff" stop-opacity=".7"/>
+        <stop offset=".5" stop-color="#a78bfa" stop-opacity=".25"/>
+        <stop offset="1" stop-color="transparent"/>
+      </radialGradient>
+      ${damageFilter}
+    </defs>
+
+    <!-- Cadre externe -->
+    <rect x="0" y="0" width="200" height="280" rx="11" fill="url(#frame${uid})"/>
+    <rect x="6" y="6" width="188" height="268" rx="7" fill="${th.frameInner}" stroke="${th.frameStroke}" stroke-width="1.2"/>
+
+    <g ${condition !== 'mint' ? `filter="url(#dmg${uid})"` : ''}>
+      <!-- Bandeau nom -->
+      <rect x="12" y="12" width="176" height="18" rx="3" fill="${th.frameStroke}" opacity=".85"/>
+      <text x="18" y="25" font-size="10" font-weight="800" fill="${th.nameTxt}" font-family="Outfit">${escapeHtml(ch.name)}</text>
+      <!-- Cost -->
+      <circle cx="180" cy="21" r="9" fill="${th.costBg}" stroke="${th.frameStroke}" stroke-width="1"/>
+      <text x="180" y="24" font-size="8" font-weight="900" fill="${th.costTxt}" text-anchor="middle" font-family="Outfit">${tcg==='pokemon'?'120':tcg==='lorcana'?'3':'4'}</text>
+
+      <!-- Zone art -->
+      <rect x="14" y="34" width="172" height="${artH}" fill="${artBgGrad}" stroke="${th.frameStroke}" stroke-width=".8"/>
+      <text x="100" y="${isAlt?140:106}" font-size="${isAlt?80:60}" text-anchor="middle" dominant-baseline="middle">${ch.emoji}</text>
+      ${holoGlow}
+      ${variantOverlay}
+
+      ${!isAlt ? `
+      <!-- Type bar -->
+      <rect x="14" y="158" width="172" height="14" fill="${th.typeBar}" stroke="${th.frameStroke}" stroke-width=".6"/>
+      <text x="20" y="168" font-size="8" font-weight="700" fill="${th.typeTxt}" font-family="Outfit">${tcg==='pokemon'?'Stage 2 · 120 PV':tcg==='lorcana'?'Personnage · Étincelant':'Créature — Légendaire'}</text>
+
+      <!-- Boîte de texte -->
+      <rect x="14" y="176" width="172" height="64" fill="${th.textBox}" stroke="${th.frameStroke}" stroke-width=".6"/>
+      <text x="20" y="190" font-size="7" font-weight="800" fill="${th.textTxt}" font-family="Outfit">${tcg==='pokemon'?'⚡ Attaque éclair':tcg==='lorcana'?'⟡ Capacité magique':'⟡ Vol, piétinement'}</text>
+      <text x="20" y="202" font-size="6.5" fill="${th.textTxt}" font-family="Outfit" opacity=".85">Inflige 90 dégâts à l'adversaire actif.</text>
+      <text x="20" y="214" font-size="6.5" fill="${th.textTxt}" font-family="Outfit" opacity=".7" font-style="italic">— Citation flavor en italique.</text>
+      <text x="20" y="232" font-size="6" fill="${th.textTxt}" font-family="Outfit" opacity=".55">Illustration : Artiste fictif</text>
+      ` : ''}
+
+      ${playedCorners}
+      ${scratches}
+    </g>
+
+    <!-- Stamp édition (par-dessus l'effet de condition) -->
+    ${editionStamp}
+
+    <!-- Bas de carte : rareté + set + numéro -->
+    <text x="14" y="262" font-size="6.5" fill="${th.frameStroke}" font-family="Outfit" opacity=".75">${escapeHtml(th.setName)} · ${(opts.num||'042')}/204</text>
+    <g transform="translate(178,258)">
+      <rect x="-14" y="-7" width="28" height="14" rx="3" fill="${badgeFill}" stroke="${th.frameStroke}" stroke-width=".8"/>
+      <text y="3" font-size="8" font-weight="900" fill="#1a1430" text-anchor="middle" font-family="Outfit">${rar.label}</text>
+    </g>
+
+    ${trendSpark}
+    ${popStars}
+  </svg>`;
+}
+
+// Construit le HTML d'une "carte vitrine" avec label en-dessous
+function mockCardItem(tcg, opts, label, sub, priceTag){
+  return `<div class="mock-card-wrap">
+    ${mockCardSvg(tcg, opts)}
+    <div class="mock-card-label">${label}</div>
+    ${sub ? `<div class="mock-card-sub">${sub}</div>` : ''}
+    ${priceTag ? `<div class="mock-card-price">${priceTag}</div>` : ''}
+  </div>`;
+}
+
+let _currentGuideTcg = 'pokemon';
+
+function renderGuideExhibits(tcg){
+  _currentGuideTcg = tcg;
+  document.querySelectorAll('#guideTcgTabs .g-tcg-tab').forEach(t => t.classList.toggle('active', t.dataset.gTcg === tcg));
+
+  const $ = (id) => document.getElementById(id);
+  if(!$('ex-rarete')) return; // pas sur la vue guide
+
+  // ① Rareté : 3 cartes du même perso, raretés croissantes
+  $('ex-rarete').innerHTML =
+    mockCardItem(tcg, {char:2, rarity:'common', num:'120'}, 'Common', 'Carte basique du set', '€0,15') +
+    mockCardItem(tcg, {char:0, rarity:'rare', num:'042'}, 'Rare', 'Effet holographique', '€2,80') +
+    mockCardItem(tcg, {char:3, rarity:'hyper', num:'186'}, 'Hyper Rare', 'Effet arc-en-ciel — ultra recherché', '€140');
+
+  // ② Variante d'impression : Normal vs Reverse vs Alt Art
+  $('ex-variante').innerHTML =
+    mockCardItem(tcg, {char:1, rarity:'rare', variant:'normal', num:'088'}, 'Normale', 'Impression standard', '€3,20') +
+    mockCardItem(tcg, {char:1, rarity:'rare', variant:'foil', num:'088'}, tcg==='lorcana'?'Cold Foil':'Reverse Holo', 'Brillance complète', '€8,50') +
+    mockCardItem(tcg, {char:1, rarity:'ultra', variant:'altart', num:'205'}, 'Alternate Art', 'Illustration pleine page', '€320');
+
+  // ③ État physique : 4 cartes même perso, conditions différentes
+  $('ex-etat').innerHTML =
+    mockCardItem(tcg, {char:0, rarity:'rare', condition:'mint'}, 'Mint', 'Parfaite, jamais touchée', '€25') +
+    mockCardItem(tcg, {char:0, rarity:'rare', condition:'nm'}, 'Near Mint', '≈ neuve, micro défauts', '€22') +
+    mockCardItem(tcg, {char:0, rarity:'rare', condition:'exc'}, 'Excellent', 'Coins légers, surface OK', '€14') +
+    mockCardItem(tcg, {char:0, rarity:'rare', condition:'played'}, 'Played', 'Rayures, coins abîmés', '€4');
+
+  // ④ Popularité : star vs obscur
+  $('ex-pop').innerHTML =
+    mockCardItem(tcg, {char:0, rarity:'rare', showPop:true, popLevel:5}, 'Personnage star', 'Tête d\'affiche du TCG', '€18') +
+    mockCardItem(tcg, {char:4, rarity:'rare', showPop:true, popLevel:1}, 'Personnage obscur', 'Même rareté, mais oublié', '€1,50');
+
+  // ⑤ Tendance : up vs down
+  $('ex-trend').innerHTML =
+    mockCardItem(tcg, {char:2, rarity:'rare', trendUp:true}, 'En hausse', 'Hype récente, film/event', '€42') +
+    mockCardItem(tcg, {char:4, rarity:'rare', trendDown:true}, 'En baisse', 'Surreprint ou hype passée', '€6');
+
+  // ⑥ Édition / Promo
+  $('ex-edition').innerHTML =
+    mockCardItem(tcg, {char:1, rarity:'rare', edition:null}, 'Édition standard', 'Tirage normal', '€8') +
+    mockCardItem(tcg, {char:1, rarity:'rare', edition:'1st'}, '1st Edition', 'Premier tirage, multiplie ×5–×10', '€85') +
+    mockCardItem(tcg, {char:1, rarity:'rare', edition:'stamped'}, 'Promo événement', 'Tampon distribution limitée', '€60');
+}
+
+// Onglets TCG du guide
+document.addEventListener('click', (e) => {
+  const tab = e.target.closest('#guideTcgTabs .g-tcg-tab');
+  if(!tab) return;
+  renderGuideExhibits(tab.dataset.gTcg);
+});
+
+// Premier rendu dès qu'on entre sur la vue guide
+(function(){
+  const orig = showView;
+  showView = function(name){
+    orig(name);
+    if(name === 'guide') setTimeout(() => renderGuideExhibits(_currentGuideTcg), 0);
+  };
+})();
 
 
 /* === INIT GRIDS === */
