@@ -3642,8 +3642,17 @@ document.addEventListener('click', (e)=>{
   if(typeof renderDashboard !== 'function') return;
   // Premier rendu immédiat
   try{ renderDashboard(); }catch(e){}
-  // Re-render après 2s, 5s et 15s pour capter les chargements asynchrones
-  // (Pokémon API sets, Magic API sets via Scryfall)
+
+  // Pré-chargement en arrière-plan des catalogues de sets Pokémon et Magic
+  // pour que le compteur "Sets disponibles" reflète le vrai total dès la home
+  (async ()=>{
+    try{ if(typeof getAllPokemonSetsFromApi === 'function') await getAllPokemonSetsFromApi(); }catch(e){}
+    try{ renderDashboard(); }catch(e){}
+    try{ if(typeof loadMagicSets === 'function') await loadMagicSets(); }catch(e){}
+    try{ renderDashboard(); }catch(e){}
+  })();
+
+  // Filets de sécurité au cas où le chargement traîne
   setTimeout(()=>{ try{ renderDashboard(); }catch(e){} }, 2000);
   setTimeout(()=>{ try{ renderDashboard(); }catch(e){} }, 5000);
   setTimeout(()=>{ try{ renderDashboard(); }catch(e){} }, 15000);
