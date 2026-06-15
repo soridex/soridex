@@ -229,12 +229,13 @@
 
 
   /* SEARCH RESULTS DROPDOWN */
-  .search-box{position:relative}
+  .search-row{position:relative;z-index:9000}
+  .search-box{position:relative;z-index:9000}
   .search-results{
     position:absolute;top:calc(100% + 6px);left:0;right:0;
     background:var(--surf);border:1px solid var(--gold-deep);
-    border-radius:12px;max-height:480px;overflow-y:auto;z-index:1000;
-    box-shadow:0 12px 40px rgba(0,0,0,.5),0 0 30px rgba(212,168,90,.1);
+    border-radius:12px;max-height:480px;overflow-y:auto;z-index:9001;
+    box-shadow:0 12px 40px rgba(0,0,0,.7),0 0 30px rgba(212,168,90,.15);
   }
   .search-results.hidden{display:none}
   .search-result{
@@ -264,6 +265,41 @@
   .search-tcg-badge.magic{background:rgba(248,113,113,.15);color:#fca5a5;border:1px solid rgba(248,113,113,.3)}
   .search-tcg-badge.lorcana{background:rgba(96,165,250,.15);color:#93c5fd;border:1px solid rgba(96,165,250,.3)}
   .search-empty{padding:18px 14px;text-align:center;color:var(--mut);font-size:13px}
+
+  /* Highlight quand on arrive sur une carte via la recherche globale */
+  .card-item.search-highlight{
+    animation: searchPulse 2.4s ease-out;
+    border-radius:12px;
+  }
+  @keyframes searchPulse{
+    0%   { box-shadow:0 0 0 0 rgba(212,168,90,0); }
+    20%  { box-shadow:0 0 0 4px rgba(212,168,90,.55), 0 0 30px rgba(212,168,90,.4); }
+    100% { box-shadow:0 0 0 0 rgba(212,168,90,0); }
+  }
+
+  /* Bouton OK / soumettre de la recherche globale */
+  .search-submit-btn{
+    position:absolute;right:6px;top:50%;transform:translateY(-50%);
+    background:linear-gradient(180deg,var(--gold-2),var(--gold),var(--gold-deep));
+    color:#1a1430;border:0;border-radius:18px;
+    padding:7px 16px;font-family:"Outfit";font-size:12px;font-weight:800;
+    letter-spacing:.12em;text-transform:uppercase;cursor:pointer;
+    box-shadow:0 2px 6px rgba(212,168,90,.3);transition:.15s;
+    z-index:9002;
+  }
+  .search-submit-btn:hover{transform:translateY(-50%) scale(1.04)}
+  .search-submit-btn:disabled{opacity:.4;cursor:not-allowed}
+  .search-box input{padding-right:80px !important}
+
+  /* Footer du dropdown : voir tout */
+  .search-see-all{
+    padding:14px;text-align:center;
+    color:var(--gold-2);font-weight:700;font-size:13px;
+    cursor:pointer;border-top:1px solid var(--line2);
+    background:rgba(212,168,90,.05);transition:.12s;
+    letter-spacing:.04em;
+  }
+  .search-see-all:hover{background:rgba(212,168,90,.12);color:#fff}
 
   /* TREND BADGE (sur cartes) */
   .trend{
@@ -1065,6 +1101,24 @@
   </div>
 </section>
 
+<!-- VIEW: GLOBAL SEARCH RESULTS -->
+<section class="view" id="view-global-search" hidden>
+  <div class="breadcrumb"><a data-view="home">← Accueil</a><span>/</span><span>Résultats de recherche</span></div>
+  <div class="sets-head">
+    <div>
+      <h2 class="view-title" id="globSearchTitle">Résultats</h2>
+      <p class="view-sub" id="globSearchSub">— cartes trouvées</p>
+    </div>
+  </div>
+  <div class="wish-tcg-tabs" id="globSearchTcgTabs">
+    <button class="wish-tcg-tab active" data-glob-tcg="all">Tous</button>
+    <button class="wish-tcg-tab" data-glob-tcg="pokemon">Pokémon</button>
+    <button class="wish-tcg-tab" data-glob-tcg="lorcana">Lorcana</button>
+    <button class="wish-tcg-tab" data-glob-tcg="magic">Magic</button>
+  </div>
+  <div class="card-grid" id="globSearchGrid"></div>
+</section>
+
 <!-- VIEW: COMPTE -->
 <section class="view" id="view-compte" hidden>
   <div class="compte-head">
@@ -1151,11 +1205,12 @@
     <a data-view="sets-pokemon" id="setDetailEraLink">Pokémon TCG</a><span>/</span>
     <span id="setDetailBreadcrumb">—</span>
   </div>
-  <div class="sets-head">
-    <div>
+  <div class="sets-head" style="align-items:flex-start;flex-wrap:wrap;gap:14px">
+    <div style="flex:1;min-width:240px">
       <h2 class="view-title" id="setDetailTitle">—</h2>
       <p class="view-sub" id="setDetailSub">—</p>
     </div>
+    <button class="btn-gold" id="setDetailCreatePfBtn" hidden style="white-space:nowrap">+ Créer un portfolio de ce set</button>
   </div>
   <div class="page-search">
     <input type="search" id="setSearchInput" placeholder="Filtrer les cartes par nom…">
@@ -1308,6 +1363,21 @@
     <div class="modal-actions">
       <button class="btn-gold-outline" id="syncPfSkip">Plus tard</button>
       <button class="btn-gold" id="syncPfConfirm">Marquer comme possédée</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: CARTE DÉJÀ POSSÉDÉE (clic sur ✓ vert d'une carte déjà dans un portfolio) -->
+<div class="modal-overlay hidden" id="ownAnywhereModal">
+  <div class="modal-box">
+    <button class="modal-close" id="ownAnywhereClose">×</button>
+    <h3 class="modal-title">✓ Déjà dans ta collection</h3>
+    <p class="view-sub" style="margin:0 0 10px" id="ownAnywhereText">Cette carte est déjà marquée comme possédée :</p>
+    <p class="view-sub" style="margin:0 0 14px;font-size:11px;color:var(--mut)" id="ownAnywhereHint">Coche les portfolios où tu veux retirer la carte (rien de coché par défaut, juste pour info).</p>
+    <div id="ownAnywhereList" style="display:flex;flex-direction:column;gap:8px;max-height:340px;overflow-y:auto;margin-bottom:14px"></div>
+    <div class="modal-actions">
+      <button class="btn-gold-outline" id="ownAnywhereCancel">Fermer</button>
+      <button class="btn-gold" id="ownAnywhereConfirm">Appliquer les changements</button>
     </div>
   </div>
 </div>
@@ -1644,7 +1714,7 @@ new Chart(ctx, {
 })();
 
 /* === ROUTING === */
-const ALL_VIEWS = ['home','login','compte','sets-pokemon','sets-lorcana','sets-magic','era-detail','set-detail','pf-detail','wishlist','wish-detail','shop','guide','guide-article'];
+const ALL_VIEWS = ['home','login','compte','sets-pokemon','sets-lorcana','sets-magic','era-detail','set-detail','pf-detail','wishlist','wish-detail','global-search','shop','guide','guide-article'];
 function showView(name){
   if(!ALL_VIEWS.includes(name)) name='home';
   document.querySelectorAll('.view').forEach(v => v.hidden = (v.id !== 'view-'+name));
@@ -1746,6 +1816,49 @@ function renderPortfolios(filter){
   });
 }
 function createPortfolio(){ openCreatePfModal(); }
+
+/* === Bouton "Créer un portfolio de ce set" sur set-detail === */
+let _currentSetContext = null; // {tcg, setId, setName}
+function setCurrentSetContext(tcg, setId, setName){
+  _currentSetContext = (tcg && setId) ? {tcg, setId, setName: setName||''} : null;
+  const btn = document.getElementById('setDetailCreatePfBtn');
+  if(btn){
+    btn.hidden = !_currentSetContext;
+    if(_currentSetContext){
+      btn.textContent = `+ Créer un portfolio « ${_currentSetContext.setName || 'ce set'} »`;
+    }
+  }
+}
+document.getElementById('setDetailCreatePfBtn').addEventListener('click', () => {
+  if(!_currentSetContext) return;
+  if(!getUser()){
+    if(confirm('Connecte-toi pour créer un portfolio. Aller à la connexion ?')) goToAccount();
+    return;
+  }
+  openCreatePfModalForSet(_currentSetContext.tcg, _currentSetContext.setId, _currentSetContext.setName);
+});
+
+async function openCreatePfModalForSet(tcg, setId, setName){
+  // Ouvre la modal et pré-remplit pour ce set
+  document.getElementById('createPfModal').classList.remove('hidden');
+  document.getElementById('newPfName').value = setName || '';
+  document.getElementById('newPfTcg').value = tcg;
+  document.getElementById('newPfChar').value = '';
+  setPfSource('set');
+  await populatePfSetDropdown(tcg);
+  const sel = document.getElementById('newPfSet');
+  // Vérifie si l'id existe dans la liste, sinon insère-le pour pouvoir le sélectionner
+  const hasOpt = Array.from(sel.options).some(o => o.value === setId);
+  if(!hasOpt){
+    const opt = document.createElement('option');
+    opt.value = setId;
+    opt.textContent = setName || setId;
+    sel.appendChild(opt);
+  }
+  sel.value = setId;
+  // Focus le nom pour que l'utilisateur puisse vite valider/éditer
+  setTimeout(() => document.getElementById('newPfName').focus(), 50);
+}
 
 /* === MODAL CRÉATION PORTFOLIO === */
 let currentPfSource = 'empty';
@@ -2561,6 +2674,7 @@ async function showAllEraCards(slug){
   document.getElementById('setDetailTitle').textContent = `${era.name} — Toutes les cartes`;
   document.getElementById('setDetailSub').textContent = 'Triées par valeur décroissante (Cardmarket EUR).';
   document.getElementById('setDetailBreadcrumb').textContent = 'Toutes les cartes';
+  setCurrentSetContext(null); // pas de set unique → on cache le bouton "créer portfolio"
   const links=document.querySelectorAll('#view-set-detail .breadcrumb a');
   if(links[1]){links[1].textContent='Pokémon TCG'; links[1].dataset.view='sets-pokemon';}
   const eraLink=document.getElementById('setDetailEraLink');
@@ -2632,7 +2746,7 @@ async function showAllEraCards(slug){
         const ebQuery = `${c.name} ${c._setName} ${num}`;
         const displayName = translateCardNameToFr(c.name);
         _visibleCards[c.id] = {entry: pkCardToPfEntry(c, null), tcg: 'pokemon'};
-        return `<div class="card-item">
+        return `<div class="card-item" data-card-id="${c.id}">
           <div class="card-img">
             <img src="${(c.images&&c.images.small)||''}" data-large="${large}" alt="${escapeHtml(displayName)}" loading="lazy">
             ${favButtonHtml(c.id)}${ownButtonHtml(c.id)}
@@ -2670,6 +2784,7 @@ async function showPokemonSetCards(setId){
   document.getElementById('setDetailTitle').textContent=setInfo?setInfo.name:'—';
   document.getElementById('setDetailSub').textContent=setInfo?`${(setInfo.releaseDate||'').slice(0,4)} · ${setInfo.printedTotal||setInfo.total} cartes · ${setInfo.series}`:'';
   document.getElementById('setDetailBreadcrumb').textContent=setInfo?setInfo.name:'—';
+  setCurrentSetContext(setInfo ? 'pokemon' : null, setId, setInfo ? setInfo.name : '');
   const links=document.querySelectorAll('#view-set-detail .breadcrumb a');
   if(links[1]){links[1].textContent='Pokémon TCG'; links[1].dataset.view='sets-pokemon';}
   const eraLink=document.getElementById('setDetailEraLink');
@@ -2731,7 +2846,7 @@ async function showPokemonSetCards(setId){
       const displayName = translateCardNameToFr(c.name);
       // Enregistrer la carte dans la map pour le bouton favori
       _visibleCards[c.id] = {entry: pkCardToPfEntry(c, setInfo), tcg: 'pokemon'};
-      return `<div class="card-item">
+      return `<div class="card-item" data-card-id="${c.id}">
         <div class="card-img">
           <img src="${(c.images&&c.images.small)||''}" data-large="${large}" alt="${escapeHtml(displayName)}" loading="lazy">
           ${favButtonHtml(c.id)}${ownButtonHtml(c.id)}
@@ -2764,6 +2879,7 @@ async function showLorcanaSetCards(slug){
   document.getElementById('setDetailTitle').textContent=setInfo.name;
   document.getElementById('setDetailSub').textContent=`${setInfo.year} · Chapitre ${setInfo.lorcastCode} · ${setInfo.count} cartes`;
   document.getElementById('setDetailBreadcrumb').textContent=setInfo.name;
+  setCurrentSetContext('lorcana', setInfo.lorcastCode, setInfo.name);
   const links=document.querySelectorAll('#view-set-detail .breadcrumb a');
   if(links[1]){links[1].textContent='Disney Lorcana'; links[1].dataset.view='sets-lorcana';}
   const eraLink=document.getElementById('setDetailEraLink');
@@ -2821,7 +2937,7 @@ async function showLorcanaSetCards(slug){
       _visibleCards[c.id] = {entry: lcCardToPfEntry(c, setInfo), tcg: 'lorcana'};
       const imgProxy = smartImg(img);
       const largeProxy = smartImg(large);
-      return `<div class="card-item">
+      return `<div class="card-item" data-card-id="${c.id}">
         <div class="card-img">
           ${imgProxy?`<img src="${imgProxy}" data-large="${largeProxy}" alt="${escapeHtml(full)}" loading="lazy">`:''}
           ${favButtonHtml(c.id)}${ownButtonHtml(c.id)}
@@ -2899,6 +3015,7 @@ async function showMagicSetCards(setCode){
   document.getElementById('setDetailTitle').textContent=setInfo?setInfo.name:setCode;
   document.getElementById('setDetailSub').textContent=setInfo?`${setInfo.year} · ${setInfo.card_count} cartes · code ${setInfo.code.toUpperCase()}`:'';
   document.getElementById('setDetailBreadcrumb').textContent=setInfo?setInfo.name:setCode;
+  setCurrentSetContext('magic', setCode, setInfo ? setInfo.name : setCode);
   const links=document.querySelectorAll('#view-set-detail .breadcrumb a');
   if(links[1]){links[1].textContent='Magic: The Gathering'; links[1].dataset.view='sets-magic';}
   const eraLink=document.getElementById('setDetailEraLink');
@@ -2974,7 +3091,7 @@ async function showMagicSetCards(setCode){
       const cmUrl = cardmarketUrlMagic(c);
       const ebQuery = `${c.name} MTG ${setInfo?setInfo.code.toUpperCase():''} ${c.collector_number||''}`;
       _visibleCards[c.id] = {entry: mgCardToPfEntry(c, setInfo), tcg: 'magic'};
-      return `<div class="card-item">
+      return `<div class="card-item" data-card-id="${c.id}">
         <div class="card-img">
           ${img?`<img src="${img}" data-large="${large}" alt="${escapeHtml(c.name)}" loading="lazy">`:''}
           ${favButtonHtml(c.id)}${ownButtonHtml(c.id)}
@@ -3038,6 +3155,40 @@ function translateCardNameToFr(name){
   const box = document.querySelector('.search-box');
   if(!input || !box) return;
 
+  // Bouton OK pour soumettre une recherche complète
+  const submitBtn = document.createElement('button');
+  submitBtn.className = 'search-submit-btn';
+  submitBtn.type = 'button';
+  submitBtn.textContent = 'OK';
+  submitBtn.disabled = true;
+  box.appendChild(submitBtn);
+  function submitFullSearch(){
+    const q = input.value.trim();
+    if(q.length < 2) return;
+    results.classList.add('hidden');
+    input.blur();
+    showGlobalSearchResults(q);
+  }
+  submitBtn.addEventListener('click', (e) => { e.preventDefault(); submitFullSearch(); });
+  input.addEventListener('keydown', (e) => {
+    if(e.key === 'Enter'){ e.preventDefault(); submitFullSearch(); }
+  });
+
+  // Helper : attend que la carte apparaisse dans le DOM puis scrolle + highlight
+  function scrollToCardWhenReady(cardId, attempts){
+    if(attempts == null) attempts = 25;
+    const el = document.querySelector(`.card-item[data-card-id="${CSS.escape(cardId)}"]`);
+    if(el){
+      el.scrollIntoView({behavior:'smooth', block:'center'});
+      el.classList.add('search-highlight');
+      setTimeout(() => el.classList.remove('search-highlight'), 2400);
+      return;
+    }
+    if(attempts <= 0) return;
+    setTimeout(() => scrollToCardWhenReady(cardId, attempts - 1), 250);
+  }
+  window._scrollToCardWhenReady = scrollToCardWhenReady;
+
   const results = document.createElement('div');
   results.className = 'search-results hidden';
   box.appendChild(results);
@@ -3047,6 +3198,7 @@ function translateCardNameToFr(name){
 
   input.addEventListener('input', () => {
     const q = input.value.trim();
+    submitBtn.disabled = q.length < 2;
     if(timer) clearTimeout(timer);
     if(abort) abort.abort();
     if(q.length < 2){ results.classList.add('hidden'); return; }
@@ -3117,7 +3269,7 @@ function translateCardNameToFr(name){
           set: c.set ? c.set.name : '',
           num: c.number + (c.set ? '/' + (c.set.printedTotal || c.set.total || '?') : ''),
           img: (c.images && c.images.small) || '',
-          action: () => c.set && showPokemonSetCards(c.set.id)
+          action: () => { if(c.set){ showPokemonSetCards(c.set.id); scrollToCardWhenReady(c.id); } }
         });
       });
     }
@@ -3133,7 +3285,7 @@ function translateCardNameToFr(name){
           set: c.set_name || '',
           num: c.collector_number || '',
           img,
-          action: () => c.set && (async()=>{ await loadMagicSets(); showMagicSetCards(c.set); })()
+          action: () => c.set && (async()=>{ await loadMagicSets(); showMagicSetCards(c.set); scrollToCardWhenReady(c.id); })()
         });
       });
     }
@@ -3151,7 +3303,7 @@ function translateCardNameToFr(name){
           action: () => {
             const setCode = c.set ? (c.set.code || '') : '';
             const lcSet = LORCANA_SETS.find(s => s.lorcastCode === setCode);
-            if(lcSet) showLorcanaSetCards(lcSet.slug);
+            if(lcSet){ showLorcanaSetCards(lcSet.slug); scrollToCardWhenReady(c.id); }
           }
         });
       });
@@ -3172,7 +3324,20 @@ function translateCardNameToFr(name){
         </div>
         <span class="search-tcg-badge ${r.tcg}">${TCG_BADGE[r.tcg]}</span>
       </div>
-    `).join('');
+    `).join('') + `<div class="search-see-all" data-see-all>⌕ Voir tous les résultats pour « ${escapeHtml(q)} » →</div>`;
+
+    // Click sur "Voir tous"
+    const seeAll = results.querySelector('[data-see-all]');
+    if(seeAll){
+      const seeAllHandler = (e) => {
+        e.preventDefault();
+        results.classList.add('hidden');
+        input.blur();
+        showGlobalSearchResults(q);
+      };
+      seeAll.addEventListener('mousedown', seeAllHandler);
+      seeAll.addEventListener('touchstart', seeAllHandler, {passive:false});
+    }
 
     results.querySelectorAll('.search-result').forEach((el, i) => {
       // On utilise mousedown/touchstart pour fire AVANT le blur du clavier mobile
@@ -3189,6 +3354,161 @@ function translateCardNameToFr(name){
     });
   }
 })();
+
+
+/* === GLOBAL SEARCH RESULTS VIEW === */
+let _globSearchData = []; // toutes les cartes brutes : {tcg, entry, displayName, img, setName, num, rarity, marketPrice}
+let _globSearchQuery = '';
+let _globSearchTcg = 'all';
+
+async function showGlobalSearchResults(query){
+  _globSearchQuery = query;
+  _globSearchTcg = 'all';
+  document.querySelectorAll('#globSearchTcgTabs .wish-tcg-tab').forEach(t => t.classList.toggle('active', t.dataset.globTcg === 'all'));
+  showView('global-search');
+  document.getElementById('globSearchTitle').textContent = `Résultats pour « ${query} »`;
+  document.getElementById('globSearchSub').textContent = 'Recherche en cours dans les 3 TCG…';
+  document.getElementById('globSearchGrid').innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="ico">⌕</div><h3>Recherche…</h3></div>';
+
+  // Traduction FR -> EN pour Pokémon
+  function translateQueryToEn(q){
+    const words = q.split(/\s+/);
+    const translated = words.map(w => (typeof findPokemonEn === 'function' ? (findPokemonEn(w) || w) : w));
+    const r = translated.join(' ');
+    return r === q ? null : r;
+  }
+  const qEn = translateQueryToEn(query);
+  const qPokemon = qEn || query;
+  const qEnc = encodeURIComponent(query);
+  const qPokEnc = encodeURIComponent(qPokemon);
+
+  let tasks;
+  try{
+    tasks = await Promise.allSettled([
+      fetch(`https://api.pokemontcg.io/v2/cards?q=name:*${qPokEnc}*&pageSize=60&orderBy=-set.releaseDate`).then(r => r.json()).catch(()=>({data:[]})),
+      fetch(`https://api.scryfall.com/cards/search?q=${qEnc}+lang:fr+include:multilingual&order=released&unique=cards`, {headers:{'Accept':'application/json'}}).then(r => r.ok ? r.json() : {data:[]}).catch(()=>({data:[]})),
+      fetch(`https://api.lorcast.com/v0/cards/search?q=name%3A${qEnc}`).then(r => r.ok ? r.json() : {results:[]}).catch(()=>({results:[]})),
+    ]);
+  }catch(e){
+    document.getElementById('globSearchGrid').innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="ico">⚠</div><h3>Erreur de recherche</h3></div>';
+    return;
+  }
+
+  _globSearchData = [];
+  // Pokémon
+  if(tasks[0].status === 'fulfilled'){
+    (tasks[0].value.data || []).forEach(c => {
+      const market = (c.cardmarket && c.cardmarket.prices && c.cardmarket.prices.averageSellPrice) || null;
+      const displayName = translateCardNameToFr(c.name);
+      const entry = {
+        apiId: c.id, name: c.name,
+        img: (c.images && c.images.small) || '',
+        largeImg: (c.images && c.images.large) || (c.images && c.images.small) || '',
+        setName: c.set ? c.set.name : '',
+        number: c.number + (c.set ? '/'+(c.set.printedTotal||c.set.total||'?') : ''),
+        rarity: c.rarity || '',
+        marketPrice: market != null ? +market : null,
+        pricePaid: 0, qty: 1, owned: false, addedAt: Date.now()
+      };
+      _globSearchData.push({tcg:'pokemon', entry, displayName, _origSetId: c.set && c.set.id});
+    });
+  }
+  // Magic
+  if(tasks[1].status === 'fulfilled'){
+    (tasks[1].value.data || []).forEach(c => {
+      let img = '', largeImg = '';
+      if(c.image_uris){ img = c.image_uris.small || ''; largeImg = c.image_uris.normal || c.image_uris.large || img; }
+      else if(c.card_faces && c.card_faces[0] && c.card_faces[0].image_uris){ img = c.card_faces[0].image_uris.small || ''; largeImg = c.card_faces[0].image_uris.normal || c.card_faces[0].image_uris.large || img; }
+      let market = null;
+      const p = c.prices || {};
+      if(p.eur) market = parseFloat(p.eur);
+      else if(p.eur_foil) market = parseFloat(p.eur_foil);
+      else if(p.usd) market = parseFloat(p.usd) * USD_TO_EUR;
+      const name = c.printed_name || c.name;
+      const entry = {
+        apiId: c.id, name,
+        img, largeImg,
+        setName: c.set_name || '',
+        number: c.collector_number || '',
+        rarity: c.rarity || '',
+        marketPrice: market,
+        pricePaid: 0, qty: 1, owned: false, addedAt: Date.now()
+      };
+      _globSearchData.push({tcg:'magic', entry, displayName: name, _origSetCode: c.set});
+    });
+  }
+  // Lorcana
+  if(tasks[2].status === 'fulfilled'){
+    const lcArr = tasks[2].value.results || tasks[2].value || [];
+    const arr = Array.isArray(lcArr) ? lcArr : (lcArr.results || []);
+    arr.forEach(c => {
+      const pN = c.prices && c.prices.usd ? parseFloat(c.prices.usd) * USD_TO_EUR : null;
+      const pF = c.prices && c.prices.usd_foil ? parseFloat(c.prices.usd_foil) * USD_TO_EUR : null;
+      const market = pF != null && (pN == null || pF > pN) ? pF : pN;
+      const img = (c.image_uris && c.image_uris.digital && c.image_uris.digital.small) || '';
+      const largeImg = (c.image_uris && c.image_uris.digital && (c.image_uris.digital.large || c.image_uris.digital.normal)) || '';
+      const name = c.version ? `${c.name} — ${c.version}` : c.name;
+      const entry = {
+        apiId: c.id, name, img, largeImg,
+        setName: c.set ? c.set.name : '',
+        number: c.collector_number || '',
+        rarity: (c.rarity || '').replace('_',' '),
+        marketPrice: market,
+        pricePaid: 0, qty: 1, owned: false, addedAt: Date.now()
+      };
+      _globSearchData.push({tcg:'lorcana', entry, displayName: name});
+    });
+  }
+
+  renderGlobalSearchResults();
+}
+
+function renderGlobalSearchResults(){
+  const grid = document.getElementById('globSearchGrid');
+  const sub = document.getElementById('globSearchSub');
+  let filtered = _globSearchTcg === 'all' ? _globSearchData : _globSearchData.filter(c => c.tcg === _globSearchTcg);
+  sub.textContent = `${filtered.length} carte${filtered.length>1?'s':''} ${_globSearchTcg==='all'?'(tous TCG)':'('+_globSearchTcg+')'} pour « ${_globSearchQuery} »`;
+  if(filtered.length === 0){
+    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="ico">⌕</div><h3>Aucun résultat</h3><p>Essaie un autre terme ou un autre TCG.</p></div>';
+    return;
+  }
+  const TCG_LABEL = {pokemon:'PKMN', lorcana:'LCA', magic:'MTG'};
+  grid.innerHTML = filtered.map(r => {
+    const c = r.entry;
+    _visibleCards[c.apiId] = {entry: c, tcg: r.tcg};
+    const market = c.marketPrice != null ? `€${c.marketPrice.toFixed(2)}` : '—';
+    const imgSrc = smartImg(c.img || '');
+    const large = smartImg(c.largeImg || c.img || '');
+    const cmUrl = r.tcg === 'pokemon' ? `https://www.cardmarket.com/fr/Pokemon/Products/Search?searchString=${encodeURIComponent(c.name)}`
+                : r.tcg === 'magic' ? `https://www.cardmarket.com/fr/Magic/Products/Search?searchString=${encodeURIComponent(c.name)}`
+                : `https://www.cardmarket.com/fr/Lorcana/Products/Search?searchString=${encodeURIComponent(c.name)}`;
+    const ebQuery = `${c.name} ${c.setName||''} ${c.number||''}`;
+    return `<div class="card-item" data-card-id="${escapeHtml(c.apiId)}">
+      <div class="card-img">
+        <img src="${imgSrc}" data-large="${large}" alt="${escapeHtml(r.displayName)}" loading="lazy">
+        ${favButtonHtml(c.apiId)}${ownButtonHtml(c.apiId)}
+      </div>
+      <div class="card-info">
+        <div class="card-name">${escapeHtml(r.displayName)}</div>
+        <div class="card-num">${escapeHtml(c.setName||'')} · ${escapeHtml(c.number||'')}</div>
+        <div class="card-rarity">${escapeHtml(c.rarity||'')} · <span style="color:var(--mut)">${TCG_LABEL[r.tcg]||r.tcg}</span></div>
+        <div class="card-price">${market !== '—' ? 'Cote estimée ' + market : '— pas de cote —'}</div>
+        <div class="card-actions">
+          <a class="card-btn cm" href="${cmUrl}" target="_blank" rel="noopener noreferrer">Cardmarket</a>
+          <a class="card-btn eb" href="${ebayUrl(ebQuery)}" target="_blank" rel="noopener noreferrer">eBay</a>
+        </div>
+      </div></div>`;
+  }).join('');
+}
+
+// Tabs TCG sur la vue résultats globaux
+document.addEventListener('click', (e) => {
+  const tab = e.target.closest('#globSearchTcgTabs .wish-tcg-tab');
+  if(!tab) return;
+  _globSearchTcg = tab.dataset.globTcg;
+  document.querySelectorAll('#globSearchTcgTabs .wish-tcg-tab').forEach(t => t.classList.toggle('active', t === tab));
+  renderGlobalSearchResults();
+});
 
 
 /* === MES POSSESSIONS — Quick-owned auto-portfolio === */
@@ -3216,6 +3536,24 @@ function isOwnedQuick(apiId){
   if(!pf) return false;
   return (pf.cards||[]).some(c => c.apiId === apiId && c.owned !== false);
 }
+// Possédée n'importe où (Mes possessions ou autre portfolio)
+function isOwnedAnywhere(apiId){
+  const pfs = getPortfolios();
+  return pfs.some(pf => (pf.cards||[]).some(c => c.apiId === apiId && c.owned !== false));
+}
+// Liste tous les portfolios (non-QO) où une carte est possédée
+function getOwningPortfolios(apiId){
+  const out = [];
+  for(const pf of getPortfolios()){
+    if(pf.id === QUICK_OWNED_PF_ID) continue;
+    (pf.cards||[]).forEach((c, idx) => {
+      if(c.apiId === apiId && c.owned !== false){
+        out.push({pfId: pf.id, pfName: pf.name, tcg: pf.tcg, cardIdx: idx, variant: c.variant || null, cardName: c.name});
+      }
+    });
+  }
+  return out;
+}
 function toggleOwnedQuick(entry, tcg){
   // S'assure que le portfolio existe et ajoute/retire la carte
   const arr = getPortfolios();
@@ -3236,11 +3574,11 @@ function toggleOwnedQuick(entry, tcg){
   return true; // ajoutée
 }
 function ownButtonHtml(apiId){
-  const active = isOwnedQuick(apiId);
-  return `<button class="own-btn ${active?'active':''}" data-own-id="${escapeHtml(apiId)}" title="${active?'Retirer de mes possessions':'J\'ai cette carte'}" aria-label="Possédée">✓</button>`;
+  const active = isOwnedAnywhere(apiId);
+  return `<button class="own-btn ${active?'active':''}" data-own-id="${escapeHtml(apiId)}" title="${active?'Carte possédée — clique pour gérer':'J\'ai cette carte'}" aria-label="Possédée">✓</button>`;
 }
 
-// Listener ✓ (délégation)
+// Listener ✓ (délégation) — gère 3 cas selon où la carte est possédée
 document.addEventListener('click', (e) => {
   const btn = e.target.closest('.own-btn');
   if(!btn) return;
@@ -3251,24 +3589,110 @@ document.addEventListener('click', (e) => {
     return;
   }
   const apiId = btn.dataset.ownId;
-  const meta = _visibleCards[apiId];
-  // Si pas dans _visibleCards, on regarde si on a déjà la carte dans le QO (cas où on est ailleurs)
-  if(!meta){
-    const pf = getQuickOwnedPf();
-    const existing = pf && (pf.cards||[]).find(c => c.apiId === apiId);
-    if(existing){
-      toggleOwnedQuick(existing, existing.tcg);
-      btn.classList.remove('active');
-      btn.title = "J'ai cette carte";
-      return;
-    }
-    console.warn('Carte non trouvée dans _visibleCards', apiId);
+  const inQO = isOwnedQuick(apiId);
+  const othersOwning = getOwningPortfolios(apiId); // hors QO
+
+  // Cas 1 : possédée dans un VRAI portfolio thématique → modal de gestion (sécurité, on ne supprime jamais silencieusement)
+  if(othersOwning.length > 0){
+    openOwnedAnywhereModal(apiId, othersOwning, inQO, btn);
     return;
   }
-  const added = toggleOwnedQuick(meta.entry, meta.tcg);
-  btn.classList.toggle('active', added);
-  btn.title = added ? 'Retirer de mes possessions' : "J'ai cette carte";
-  // Si on est dans la wishlist détail et que cette carte y est, on pourrait toggle "trouvée" — mais on laisse l'user le faire explicitement
+
+  // Cas 2 : possédée seulement dans Mes possessions → toggle direct rapide
+  if(inQO){
+    const meta = _visibleCards[apiId];
+    if(meta){
+      toggleOwnedQuick(meta.entry, meta.tcg);
+    } else {
+      const pf = getQuickOwnedPf();
+      const existing = pf && (pf.cards||[]).find(c => c.apiId === apiId);
+      if(existing) toggleOwnedQuick(existing, existing.tcg);
+    }
+    btn.classList.remove('active');
+    btn.title = "J'ai cette carte";
+    return;
+  }
+
+  // Cas 3 : pas possédée du tout → ajout dans Mes possessions
+  const meta = _visibleCards[apiId];
+  if(!meta){ console.warn('Carte non trouvée dans _visibleCards', apiId); return; }
+  toggleOwnedQuick(meta.entry, meta.tcg);
+  btn.classList.add('active');
+  btn.title = 'Carte possédée — clique pour gérer';
+});
+
+/* --- Modal "Cette carte est déjà possédée" --- */
+let _ownedAnywhereState = null;
+function openOwnedAnywhereModal(apiId, owners, inQO, btn){
+  _ownedAnywhereState = {apiId, owners, inQO, btn};
+  let displayName = 'cette carte', tcgGuess = null;
+  if(owners.length > 0){ displayName = owners[0].cardName || displayName; tcgGuess = owners[0].tcg; }
+  if(_visibleCards[apiId]){ tcgGuess = tcgGuess || _visibleCards[apiId].tcg; if(!owners[0]) displayName = _visibleCards[apiId].entry.name; }
+  const niceName = tcgGuess === 'pokemon' ? translateCardNameToFr(displayName) : displayName;
+  document.getElementById('ownAnywhereText').innerHTML = `<strong style="color:var(--gold-2)">${escapeHtml(niceName)}</strong> est déjà marquée comme possédée dans :`;
+  const list = document.getElementById('ownAnywhereList');
+  let rowsHtml = owners.map((m, i) => `
+    <label class="sync-pf-row">
+      <input type="checkbox" data-remove-idx="${i}">
+      <div class="sync-pf-info">
+        <div class="sync-pf-name">${escapeHtml(m.pfName)} <span style="color:var(--mut);font-size:11px">${PF_ICONS[m.tcg]||''}</span></div>
+        ${m.variant ? `<div class="sync-pf-meta">Variante : ${escapeHtml(m.variant)}</div>` : ''}
+      </div>
+    </label>
+  `).join('');
+  if(inQO){
+    rowsHtml += `<label class="sync-pf-row">
+      <input type="checkbox" data-remove-qo="1">
+      <div class="sync-pf-info">
+        <div class="sync-pf-name">Mes possessions <span style="color:var(--mut);font-size:11px">✓</span></div>
+        <div class="sync-pf-meta">Collection libre</div>
+      </div>
+    </label>`;
+  }
+  list.innerHTML = rowsHtml;
+  document.getElementById('ownAnywhereModal').classList.remove('hidden');
+}
+function closeOwnedAnywhereModal(){
+  document.getElementById('ownAnywhereModal').classList.add('hidden');
+  _ownedAnywhereState = null;
+}
+document.addEventListener('DOMContentLoaded', () => {
+  const closeBtn = document.getElementById('ownAnywhereClose');
+  const cancelBtn = document.getElementById('ownAnywhereCancel');
+  const confirmBtn = document.getElementById('ownAnywhereConfirm');
+  const modal = document.getElementById('ownAnywhereModal');
+  if(!closeBtn || !cancelBtn || !confirmBtn || !modal) return;
+  closeBtn.addEventListener('click', closeOwnedAnywhereModal);
+  cancelBtn.addEventListener('click', closeOwnedAnywhereModal);
+  modal.addEventListener('click', (e) => { if(e.target.id === 'ownAnywhereModal') closeOwnedAnywhereModal(); });
+  confirmBtn.addEventListener('click', () => {
+    if(!_ownedAnywhereState) return closeOwnedAnywhereModal();
+    const {apiId, owners, inQO, btn} = _ownedAnywhereState;
+    let count = 0;
+    document.querySelectorAll('#ownAnywhereList input[data-remove-idx]:checked').forEach(cb => {
+      const idx = parseInt(cb.dataset.removeIdx, 10);
+      const m = owners[idx];
+      if(m && markCardUnownedInPortfolio(m.pfId, m.cardIdx)) count++;
+    });
+    const qoCb = document.querySelector('#ownAnywhereList input[data-remove-qo]:checked');
+    if(qoCb && inQO){
+      const pf = getQuickOwnedPf();
+      const cIdx = pf ? (pf.cards||[]).findIndex(c => c.apiId === apiId) : -1;
+      if(cIdx >= 0 && markCardUnownedInPortfolio(QUICK_OWNED_PF_ID, cIdx)) count++;
+    }
+    closeOwnedAnywhereModal();
+    const stillOwned = isOwnedAnywhere(apiId);
+    btn.classList.toggle('active', stillOwned);
+    btn.title = stillOwned ? 'Carte possédée — clique pour gérer' : "J'ai cette carte";
+    if(count > 0){
+      const t = document.createElement('div');
+      t.className = 'wish-toast';
+      t.textContent = `✓ Retirée de ${count} portfolio${count>1?'s':''}`;
+      document.body.appendChild(t);
+      setTimeout(() => t.classList.add('show'), 10);
+      setTimeout(() => { t.classList.remove('show'); setTimeout(()=>t.remove(), 300); }, 2800);
+    }
+  });
 });
 const WISH_KEY = 'soridex_wishlist_v1';              // legacy : ancienne wishlist plate (migration)
 const WISH_FOLDERS_KEY = 'soridex_wishlist_folders_v1';
@@ -3401,6 +3825,20 @@ function markCardOwnedInPortfolio(pfId, cardIdx){
   const pf = arr.find(p => p.id === pfId);
   if(!pf || !pf.cards || !pf.cards[cardIdx]) return false;
   pf.cards[cardIdx].owned = true;
+  savePortfolios(arr);
+  return true;
+}
+function markCardUnownedInPortfolio(pfId, cardIdx){
+  const arr = getPortfolios();
+  const pf = arr.find(p => p.id === pfId);
+  if(!pf || !pf.cards || !pf.cards[cardIdx]) return false;
+  // Pour Mes possessions : on RETIRE la carte (collection libre, pas de "non possédée")
+  // Pour les vrais portfolios thématiques : on garde la carte mais en owned:false
+  if(pf.id === QUICK_OWNED_PF_ID){
+    pf.cards.splice(cardIdx, 1);
+  } else {
+    pf.cards[cardIdx].owned = false;
+  }
   savePortfolios(arr);
   return true;
 }
