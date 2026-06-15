@@ -860,6 +860,49 @@
     .mock-card-wrap .mock-card-svg{width:108px;height:151px}
     .mock-card-label,.mock-card-sub{max-width:108px;font-size:10px}
   }
+
+  /* Légende des raretés */
+  .rarity-legend{
+    margin-top:18px;padding:14px;
+    background:rgba(212,168,90,.04);
+    border:1px solid rgba(212,168,90,.2);
+    border-radius:10px;
+  }
+  .rarity-legend .legend-head{
+    margin-bottom:12px;padding-bottom:10px;
+    border-bottom:1px solid var(--line2);
+  }
+  .rarity-legend .legend-title{
+    color:var(--gold-2);font-size:14px;font-weight:800;
+    letter-spacing:.02em;margin-bottom:3px;
+  }
+  .rarity-legend .legend-pos{
+    font-size:11px;color:var(--mut);font-style:italic;
+  }
+  .rarity-legend .legend-grid{
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+    gap:10px;
+  }
+  .rarity-legend .legend-row{
+    display:flex;align-items:center;gap:10px;
+    padding:8px 10px;
+    background:rgba(255,255,255,.02);
+    border:1px solid var(--line2);border-radius:8px;
+  }
+  .rarity-legend .legend-sym{
+    flex-shrink:0;width:40px;height:40px;
+    display:flex;align-items:center;justify-content:center;
+    background:#f5f1e0;border-radius:6px;
+    box-shadow:inset 0 1px 2px rgba(0,0,0,.1);
+  }
+  .rarity-legend .legend-info{flex:1;min-width:0}
+  .rarity-legend .legend-name{
+    color:#fff;font-size:12.5px;font-weight:700;
+    margin-bottom:2px;
+  }
+  .rarity-legend .legend-desc{
+    color:var(--mut);font-size:10.5px;line-height:1.4;
+  }
   .guide-article-foot{margin-top:30px;padding-top:20px;border-top:1px solid var(--line2);text-align:center}
 
   /* Responsive nav (un peu plus serrée pour faire rentrer 6 items) */
@@ -1544,12 +1587,19 @@
       <h4>① Rareté</h4>
       <p>Common, Uncommon, Rare, Holo Rare, Ultra Rare, Secret Rare… Plus elle est rare, plus elle peut valoir cher. La <strong>Hyper Rare</strong> ou <strong>Special Illustration</strong> peut valoir 50 à 200× la Common du même set.</p>
       <div class="guide-cards" id="ex-rarete"></div>
+      <div class="rarity-legend" id="rarity-legend"></div>
     </div>
 
     <div class="guide-criterion">
       <h4>② Variante d'impression</h4>
       <p>Normale, Reverse Holo, Cold Foil, Full Art, Alternate Art, Stamped. Une <strong>Alt Art</strong> peut valoir <strong>100×</strong> la version normale de la même carte.</p>
       <div class="guide-cards" id="ex-variante"></div>
+      <div class="guide-callout" style="margin-top:14px">
+        <strong>🔍 Holo vs Reverse Holo — c'est pas pareil !</strong><br>
+        <strong style="color:#fff">Holo</strong> = c'est l'<strong>illustration</strong> qui brille (le Pokémon ou personnage est holographique). Le reste de la carte est mat.<br>
+        <strong style="color:#fff">Reverse Holo</strong> = c'est l'<strong>inverse</strong> — tout SAUF l'illustration brille (la bordure, la boîte de texte, le fond). L'art reste mat.<br>
+        Dans un même set, tu peux donc avoir la même Rare en 3 versions : <strong>Normale / Reverse Holo / Holo</strong>, avec des prix différents.
+      </div>
     </div>
 
     <div class="guide-criterion">
@@ -4483,6 +4533,114 @@ showView = function(name){
 
 /* === GUIDE — EXEMPLES DE CARTES MOCK PAR TCG === */
 
+// Données de légende des raretés par TCG (symboles réels)
+const RARITY_LEGENDS = {
+  pokemon: {
+    title: 'Symboles Pokémon (ère Écarlate & Violet, depuis 2023)',
+    position: 'En bas à gauche, près du numéro de carte',
+    rows: [
+      {sym:'●',  symFill:'#1a1430', label:'Common',                desc:'Cartes basiques, faciles à pull'},
+      {sym:'◆',  symFill:'#1a1430', label:'Uncommon',              desc:'Peu courantes, souvent évolutions'},
+      {sym:'★',  symFill:'#1a1430', label:'Rare (Holo)',           desc:'Depuis S&V, toutes les Rares sont holo'},
+      {sym:'★★', symFill:'#1a1430', label:'Double Rare',           desc:'Cartes ex, mécaniques fortes'},
+      {sym:'★★', symFill:'#c0c0c0', label:'Ultra Rare',            desc:'Full Art ex (étoiles argentées)'},
+      {sym:'★',  symFill:'#d4a857', label:'Illustration Rare',     desc:'Alt-art Pokémon basiques (étoile dorée)'},
+      {sym:'★★', symFill:'#d4a857', label:'Special Illustration Rare', desc:'Alt-art ex/Dresseurs (2 étoiles dorées)'},
+      {sym:'★★★',symFill:'#d4a857', label:'Hyper Rare',            desc:'Cartes arc-en-ciel/dorées (3 étoiles dorées)'},
+      {sym:'★★', symFill:'pinkgreen', label:'Mega Attack Rare',    desc:'Méga-Évolutions, intro août 2025 (rose+vert)'},
+    ]
+  },
+  lorcana: {
+    title: 'Symboles Lorcana (depuis Fabled, set 9 — sept. 2025)',
+    position: 'En bas au centre, sous le nom de la version',
+    rows: [
+      {sym:'circle',   symFill:'#666',     label:'Common',     desc:'~6 par booster, base du set'},
+      {sym:'triangle', symFill:'#666',     label:'Uncommon',   desc:'~3 par booster'},
+      {sym:'diamond',  symFill:'#666',     label:'Rare',       desc:'Une 1ère carte rare ou + par booster'},
+      {sym:'pentagon', symFill:'#666',     label:'Super Rare', desc:'Plus rare, art souvent marquant'},
+      {sym:'hexagon',  symFill:'#d4a857',  label:'Legendary',  desc:'Depuis Fabled : tampon doré + UV spot sur l\'art'},
+      {sym:'star',     symFill:'rainbow',  label:'Epic',       desc:'Frameless, foil arc-en-ciel — env. 1/box'},
+      {sym:'enchanted',symFill:'rainbow',  label:'Enchanted',  desc:'Numéro > 204, art alternatif, ~1/100 boosters'},
+      {sym:'iconic',   symFill:'rainbow',  label:'Iconic',     desc:'Full-art + 3D hot-stamp, seulement 2/set'},
+    ]
+  },
+  magic: {
+    title: 'Symboles Magic: The Gathering',
+    position: 'Au centre-bas de la carte — c\'est la couleur du symbole du set qui indique la rareté',
+    rows: [
+      {sym:'mgSet', symFill:'#1a1430', label:'Common',     desc:'Symbole du set en noir'},
+      {sym:'mgSet', symFill:'#c0c0c0', label:'Uncommon',   desc:'Symbole en argent'},
+      {sym:'mgSet', symFill:'#d4a857', label:'Rare',       desc:'Symbole en or'},
+      {sym:'mgSet', symFill:'#f97316', label:'Mythic Rare',desc:'Symbole orange/rouge dégradé'},
+      {sym:'mgSet', symFill:'#fbbf24', label:'Special / Bonus', desc:'Foil étendu, traitements Showcase, Borderless, etc.'},
+    ]
+  }
+};
+
+// Génère le SVG du symbole de rareté selon le type
+function raritySymbolSvg(sym, fill, size){
+  size = size || 22;
+  const s = size;
+  if(sym === 'circle'){
+    return `<svg viewBox="0 0 24 24" width="${s}" height="${s}"><circle cx="12" cy="12" r="7" fill="${fill}"/></svg>`;
+  }
+  if(sym === 'triangle'){
+    return `<svg viewBox="0 0 24 24" width="${s}" height="${s}"><polygon points="12,4 21,20 3,20" fill="${fill}"/></svg>`;
+  }
+  if(sym === 'diamond'){
+    return `<svg viewBox="0 0 24 24" width="${s}" height="${s}"><polygon points="12,3 21,12 12,21 3,12" fill="${fill}"/></svg>`;
+  }
+  if(sym === 'pentagon'){
+    return `<svg viewBox="0 0 24 24" width="${s}" height="${s}"><polygon points="12,3 22,10 18,21 6,21 2,10" fill="${fill}"/></svg>`;
+  }
+  if(sym === 'hexagon'){
+    const isGold = fill === '#d4a857';
+    const grad = isGold ? `<defs><linearGradient id="goldHex" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fbbf24"/><stop offset="1" stop-color="#92400e"/></linearGradient></defs>` : '';
+    return `<svg viewBox="0 0 24 24" width="${s}" height="${s}">${grad}<polygon points="12,2 21,7 21,17 12,22 3,17 3,7" fill="${isGold?'url(#goldHex)':fill}"/></svg>`;
+  }
+  if(sym === 'star'){
+    const isRainbow = fill === 'rainbow';
+    const grad = isRainbow ? `<defs><linearGradient id="rainStar${Math.random().toString(36).slice(2,7)}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ec4899"/><stop offset=".33" stop-color="#fbbf24"/><stop offset=".66" stop-color="#22d3ee"/><stop offset="1" stop-color="#a78bfa"/></linearGradient></defs>` : '';
+    const f = isRainbow ? 'url(#rainStar)' : fill;
+    // Simplification : utiliser le caractère ★ avec un fill linéaire défini globalement
+    return `<svg viewBox="0 0 24 24" width="${s}" height="${s}"><defs><linearGradient id="rainstar1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ec4899"/><stop offset=".33" stop-color="#fbbf24"/><stop offset=".66" stop-color="#22d3ee"/><stop offset="1" stop-color="#a78bfa"/></linearGradient></defs><polygon points="12,2 14.6,9.3 22,9.3 16.2,13.8 18.4,21 12,16.7 5.6,21 7.8,13.8 2,9.3 9.4,9.3" fill="${isRainbow?'url(#rainstar1)':fill}"/></svg>`;
+  }
+  if(sym === 'enchanted'){
+    // Étoile dans cercle, rainbow
+    return `<svg viewBox="0 0 24 24" width="${s}" height="${s}"><defs><linearGradient id="ench1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ec4899"/><stop offset=".5" stop-color="#fbbf24"/><stop offset="1" stop-color="#a78bfa"/></linearGradient></defs><circle cx="12" cy="12" r="11" fill="url(#ench1)"/><polygon points="12,5 13.8,10.2 19.3,10.2 14.7,13.4 16.5,18.8 12,15.5 7.5,18.8 9.3,13.4 4.7,10.2 10.2,10.2" fill="#fff"/></svg>`;
+  }
+  if(sym === 'iconic'){
+    // Étoile gravée 3D effect
+    return `<svg viewBox="0 0 24 24" width="${s}" height="${s}"><defs><radialGradient id="ico1"><stop offset="0" stop-color="#fbbf24"/><stop offset=".6" stop-color="#dc2626"/><stop offset="1" stop-color="#7c2d12"/></radialGradient></defs><polygon points="12,2 14.6,9.3 22,9.3 16.2,13.8 18.4,21 12,16.7 5.6,21 7.8,13.8 2,9.3 9.4,9.3" fill="url(#ico1)" stroke="#fbbf24" stroke-width=".8"/><polygon points="12,5 13.5,9.5 18.2,9.5 14.6,12.4 16,17 12,14.4 8,17 9.4,12.4 5.8,9.5 10.5,9.5" fill="#fff" opacity=".7"/></svg>`;
+  }
+  if(sym === 'mgSet'){
+    // Symbole de set Magic stylisé (losange/étoile hybride)
+    return `<svg viewBox="0 0 24 24" width="${s}" height="${s}"><path d="M12 2 L17 8 L22 12 L17 16 L12 22 L7 16 L2 12 L7 8 Z" fill="${fill}" stroke="${fill === '#fbbf24' ? '#92400e' : '#000'}" stroke-width=".5" opacity=".95"/></svg>`;
+  }
+  // Symboles étoiles (★ / ★★ / ★★★) en couleur fill
+  if(sym === '★' || sym === '★★' || sym === '★★★'){
+    const isRainbow = fill === 'rainbow';
+    const isPinkGreen = fill === 'pinkgreen';
+    const count = sym.length;
+    const w = count === 1 ? 24 : count === 2 ? 44 : 64;
+    let stars = '';
+    for(let i = 0; i < count; i++){
+      let starFill = fill;
+      if(isPinkGreen){ starFill = i === 0 ? '#ec4899' : '#22c55e'; }
+      stars += `<polygon transform="translate(${i*20+2},0)" points="10,1 12.4,7.3 19,7.3 13.8,11.4 15.8,18 10,14.2 4.2,18 6.2,11.4 1,7.3 7.6,7.3" fill="${starFill}" stroke="${fill==='#1a1430'?'transparent':'rgba(0,0,0,.3)'}" stroke-width=".4"/>`;
+    }
+    return `<svg viewBox="0 0 ${w} 20" width="${(s/20)*w}" height="${s}">${stars}</svg>`;
+  }
+  // Cercle ou losange Unicode simple
+  if(sym === '●'){
+    return `<svg viewBox="0 0 24 24" width="${s}" height="${s}"><circle cx="12" cy="12" r="6" fill="${fill}"/></svg>`;
+  }
+  if(sym === '◆'){
+    return `<svg viewBox="0 0 24 24" width="${s}" height="${s}"><polygon points="12,4 20,12 12,20 4,12" fill="${fill}"/></svg>`;
+  }
+  return `<span style="color:${fill};font-weight:900">${sym}</span>`;
+}
+
 // Thèmes visuels par TCG
 const GUIDE_TCG_THEMES = {
   pokemon: {
@@ -4532,12 +4690,32 @@ const GUIDE_TCG_THEMES = {
   }
 };
 
-const RARITY_STYLE = {
-  common:  {label:'C',  badge:'#9ca3af', glow:false, name:'Common'},
-  uncommon:{label:'U',  badge:'#cbd5e1', glow:false, name:'Uncommon'},
-  rare:    {label:'★',  badge:'#fbbf24', glow:false, name:'Rare'},
-  ultra:   {label:'★★', badge:'#a78bfa', glow:true,  name:'Ultra Rare'},
-  hyper:   {label:'✦',  badge:'rainbow', glow:true,  name:'Hyper Rare'},
+// Style des badges de rareté SUR les mock cards (symbole + couleur selon TCG)
+const RARITY_STYLE_BY_TCG = {
+  pokemon: {
+    common:  {sym:'●',  fill:'#1a1430', name:'Common'},
+    uncommon:{sym:'◆',  fill:'#1a1430', name:'Uncommon'},
+    rare:    {sym:'★',  fill:'#1a1430', name:'Rare'},
+    ultra:   {sym:'★★', fill:'#c0c0c0', name:'Ultra Rare'},
+    hyper:   {sym:'★★★',fill:'#d4a857', name:'Hyper Rare'},
+    illu:    {sym:'★',  fill:'#d4a857', name:'Illustration Rare'},
+  },
+  lorcana: {
+    common:  {sym:'circle',   fill:'#666',    name:'Common'},
+    uncommon:{sym:'triangle', fill:'#666',    name:'Uncommon'},
+    rare:    {sym:'diamond',  fill:'#666',    name:'Rare'},
+    ultra:   {sym:'pentagon', fill:'#666',    name:'Super Rare'},
+    hyper:   {sym:'iconic',   fill:'rainbow', name:'Iconic'},
+    illu:    {sym:'enchanted',fill:'rainbow', name:'Enchanted'},
+  },
+  magic: {
+    common:  {sym:'mgSet', fill:'#1a1430', name:'Common'},
+    uncommon:{sym:'mgSet', fill:'#c0c0c0', name:'Uncommon'},
+    rare:    {sym:'mgSet', fill:'#d4a857', name:'Rare'},
+    ultra:   {sym:'mgSet', fill:'#f97316', name:'Mythic Rare'},
+    hyper:   {sym:'mgSet', fill:'#fbbf24', name:'Bonus / Special'},
+    illu:    {sym:'mgSet', fill:'#f97316', name:'Mythic Showcase'},
+  }
 };
 
 /**
@@ -4548,10 +4726,12 @@ function mockCardSvg(tcg, opts){
   opts = opts || {};
   const th = GUIDE_TCG_THEMES[tcg] || GUIDE_TCG_THEMES.pokemon;
   const ch = th.chars[opts.char != null ? opts.char : 0];
-  const rar = RARITY_STYLE[opts.rarity || 'common'];
+  const rarStyles = RARITY_STYLE_BY_TCG[tcg] || RARITY_STYLE_BY_TCG.pokemon;
+  const rar = rarStyles[opts.rarity || 'common'] || rarStyles.common;
   const condition = opts.condition || 'mint';
   const variant = opts.variant || 'normal';
   const edition = opts.edition || null;
+  const isHigh = opts.rarity === 'ultra' || opts.rarity === 'hyper' || opts.rarity === 'illu';
 
   const uid = 'g' + Math.random().toString(36).slice(2,9);
 
@@ -4598,11 +4778,8 @@ function mockCardSvg(tcg, opts){
     </g>
   ` : '';
 
-  // Couleur du badge de rareté
-  const badgeFill = rar.badge === 'rainbow' ? `url(#rainbow${uid})` : rar.badge;
-
   // Halo holo si rare+
-  const holoGlow = rar.glow ? `
+  const holoGlow = isHigh ? `
     <rect x="14" y="34" width="172" height="120" fill="url(#holo${uid})" opacity=".55" style="mix-blend-mode:screen"/>
   ` : '';
 
@@ -4716,11 +4893,12 @@ function mockCardSvg(tcg, opts){
     <!-- Stamp édition (par-dessus l'effet de condition) -->
     ${editionStamp}
 
-    <!-- Bas de carte : rareté + set + numéro -->
+    <!-- Bas de carte : symbole de rareté (style TCG réel) + set + numéro -->
     <text x="14" y="262" font-size="6.5" fill="${th.frameStroke}" font-family="Outfit" opacity=".75">${escapeHtml(th.setName)} · ${(opts.num||'042')}/204</text>
-    <g transform="translate(178,258)">
-      <rect x="-14" y="-7" width="28" height="14" rx="3" fill="${badgeFill}" stroke="${th.frameStroke}" stroke-width=".8"/>
-      <text y="3" font-size="8" font-weight="900" fill="#1a1430" text-anchor="middle" font-family="Outfit">${rar.label}</text>
+    <g transform="translate(${tcg==='lorcana'?100:178},258)">
+      <foreignObject x="-12" y="-12" width="24" height="24">
+        <div xmlns="http://www.w3.org/1999/xhtml" style="display:flex;align-items:center;justify-content:center">${raritySymbolSvg(rar.sym, rar.fill, 22)}</div>
+      </foreignObject>
     </g>
 
     ${trendSpark}
@@ -4740,6 +4918,29 @@ function mockCardItem(tcg, opts, label, sub, priceTag){
 
 let _currentGuideTcg = 'pokemon';
 
+function renderRarityLegend(tcg){
+  const el = document.getElementById('rarity-legend');
+  if(!el) return;
+  const legend = RARITY_LEGENDS[tcg] || RARITY_LEGENDS.pokemon;
+  el.innerHTML = `
+    <div class="legend-head">
+      <div class="legend-title">📖 ${escapeHtml(legend.title)}</div>
+      <div class="legend-pos">${escapeHtml(legend.position)}</div>
+    </div>
+    <div class="legend-grid">
+      ${legend.rows.map(r => `
+        <div class="legend-row">
+          <div class="legend-sym">${raritySymbolSvg(r.sym, r.symFill, 28)}</div>
+          <div class="legend-info">
+            <div class="legend-name">${escapeHtml(r.label)}</div>
+            <div class="legend-desc">${escapeHtml(r.desc)}</div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
 function renderGuideExhibits(tcg){
   _currentGuideTcg = tcg;
   document.querySelectorAll('#guideTcgTabs .g-tcg-tab').forEach(t => t.classList.toggle('active', t.dataset.gTcg === tcg));
@@ -4751,7 +4952,10 @@ function renderGuideExhibits(tcg){
   $('ex-rarete').innerHTML =
     mockCardItem(tcg, {char:2, rarity:'common', num:'120'}, 'Common', 'Carte basique du set', '€0,15') +
     mockCardItem(tcg, {char:0, rarity:'rare', num:'042'}, 'Rare', 'Effet holographique', '€2,80') +
-    mockCardItem(tcg, {char:3, rarity:'hyper', num:'186'}, 'Hyper Rare', 'Effet arc-en-ciel — ultra recherché', '€140');
+    mockCardItem(tcg, {char:3, rarity:'hyper', num:'186'}, tcg==='magic'?'Mythic Rare':tcg==='lorcana'?'Iconic':'Hyper Rare', 'Top tier — ultra recherché', '€140');
+
+  // ✦ Légende complète des symboles
+  renderRarityLegend(tcg);
 
   // ② Variante d'impression : Normal vs Reverse vs Alt Art
   $('ex-variante').innerHTML =
