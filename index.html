@@ -415,6 +415,40 @@
   }
   .fav-btn.active:hover{transform:scale(1.15)}
 
+  /* Bouton ✓ "J'ai cette carte" — placé à gauche du ♥ */
+  .own-btn{
+    position:absolute;top:8px;right:46px;z-index:5;
+    width:30px;height:30px;border-radius:50%;
+    background:rgba(16,14,40,.85);border:1px solid var(--line2);
+    color:#6b6680;font-size:15px;font-weight:800;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    transition:.18s;backdrop-filter:blur(6px);
+    line-height:1;padding:0;
+  }
+  .own-btn:hover{border-color:#4ade80;color:#4ade80;transform:scale(1.1)}
+  .own-btn.active{
+    background:linear-gradient(135deg,#4ade80,#16a34a);
+    color:#0c0a1f;border-color:#4ade80;
+    box-shadow:0 0 12px rgba(74,222,128,.45);
+  }
+  .own-btn.active:hover{transform:scale(1.15)}
+
+  /* Carte spéciale "Mes possessions" dans la grille de compte */
+  .pf-card-qo{
+    border:1px solid rgba(74,222,128,.4) !important;
+    background:linear-gradient(180deg,rgba(74,222,128,.04),var(--surf)) !important;
+    position:relative;
+  }
+  .pf-card-qo:hover{border-color:#4ade80 !important;box-shadow:0 8px 24px rgba(74,222,128,.12) !important}
+  .qo-ribbon{
+    display:inline-block;
+    background:linear-gradient(135deg,#4ade80,#16a34a);
+    color:#0c0a1f;font-size:10px;font-weight:800;
+    letter-spacing:.1em;text-transform:uppercase;
+    padding:3px 9px;border-radius:5px;margin-bottom:10px;
+    box-shadow:0 2px 6px rgba(74,222,128,.3);
+  }
+
   /* Wishlist - même grille que les cartes */
   .wish-empty{padding:60px 24px;text-align:center}
   .wish-empty .ico{font-size:48px;color:#ec4899;margin-bottom:14px;display:block}
@@ -428,6 +462,37 @@
   /* Wishlist folders — barre de progression */
   .wish-prog{height:4px;background:rgba(255,255,255,.06);border-radius:4px;overflow:hidden;margin-top:8px}
   .wish-prog-bar{height:100%;background:linear-gradient(90deg,var(--gold-deep),var(--gold-2));transition:width .4s ease}
+
+  /* Wishlist folder card — plus compacte que pf-card portfolio */
+  .wish-folder-card{padding:12px !important}
+  .wish-folder-card .pf-name{font-size:14px;margin-bottom:3px}
+  .wish-folder-card .pf-meta{font-size:11px}
+
+  /* Mosaïque de couverture wishlist */
+  .wish-cover{
+    width:100%;aspect-ratio:5/4;border-radius:8px;
+    background:linear-gradient(135deg,rgba(212,168,90,.12),rgba(167,139,250,.06));
+    border:1px solid var(--line2);margin-bottom:10px;overflow:hidden;
+    position:relative;display:grid;gap:3px;padding:3px;
+  }
+  .wish-cover.empty{display:flex;align-items:center;justify-content:center;font-size:28px;padding:0}
+  .wish-cover.tiles.t1{grid-template-columns:1fr;grid-template-rows:1fr}
+  .wish-cover.tiles.t2{grid-template-columns:1fr 1fr;grid-template-rows:1fr}
+  .wish-cover.tiles.t3{grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr}
+  .wish-cover.tiles.t3 .wish-cover-tile:first-child{grid-row:1/3}
+  .wish-cover.tiles.t4{grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr}
+  .wish-cover-tile{overflow:hidden;border-radius:5px;background:rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center}
+  .wish-cover-tile img{width:100%;height:100%;object-fit:cover;display:block}
+  .wish-cover-extra{
+    position:absolute;bottom:6px;right:6px;
+    background:rgba(12,10,31,.92);color:var(--gold-2);
+    font-size:11px;font-weight:800;letter-spacing:.04em;
+    padding:3px 8px;border-radius:6px;border:1px solid rgba(212,168,90,.4);
+    pointer-events:none;backdrop-filter:blur(4px);
+  }
+
+  /* Grille plus dense pour les wishlists */
+  #wishFoldersGrid{grid-template-columns:repeat(auto-fill,minmax(170px,1fr)) !important;gap:12px !important}
 
   /* Wishcard — carte trouvée */
   .wishcard.wishcard-found .card-img img{filter:none;opacity:1}
@@ -1005,7 +1070,7 @@
   <div class="compte-head">
     <div>
       <h2 class="view-title">Mon Compte</h2>
-      <p class="view-sub">Gère tes portfolios, ta wishlist et tes échanges.</p>
+      <p class="view-sub">Tes cartes possédées et tes portfolios thématiques.</p>
     </div>
     <div class="user-card">
       <div class="user-avatar" id="userAvatar">?</div>
@@ -1172,7 +1237,7 @@
     <button class="wish-tcg-tab" data-wish-tcg="lorcana">Lorcana</button>
     <button class="wish-tcg-tab" data-wish-tcg="magic">Magic</button>
   </div>
-  <div class="pf-grid" id="wishFoldersGrid"></div>
+  <div class="portfolio-grid" id="wishFoldersGrid"></div>
 </section>
 
 <!-- VIEW: WISHLIST FOLDER DETAIL -->
@@ -1637,11 +1702,36 @@ function renderCompte(){
 }
 document.querySelectorAll('.pf-tab').forEach(t=>t.addEventListener('click',()=>{currentPfFilter=t.dataset.pfFilter; document.querySelectorAll('.pf-tab').forEach(x=>x.classList.toggle('active',x===t)); renderPortfolios(currentPfFilter);}));
 function renderPortfolios(filter){
-  const list=getPortfolios().filter(p=>filter==='all'||p.tcg===filter);
-  const grid=document.getElementById('portfolioGrid');
+  const all = getPortfolios();
+  const qoPf = all.find(p => p.id === QUICK_OWNED_PF_ID);
+  // Le QO n'apparaît jamais dans la grille des portfolios normaux
+  const list = all.filter(p => p.id !== QUICK_OWNED_PF_ID && (filter==='all' || p.tcg===filter));
+  const grid = document.getElementById('portfolioGrid');
   const createCard = `<button class="pf-create" id="createPfBtn"><span class="plus">+</span><span>Créer un portfolio</span></button>`;
-  if(list.length===0){grid.innerHTML=createCard; document.getElementById('createPfBtn').addEventListener('click',createPortfolio); return;}
-  grid.innerHTML = list.map(p=>{
+
+  // Construire la carte "Mes possessions" si on a un QO non vide (ou même vide après premier clic)
+  let qoHtml = '';
+  if(qoPf && (qoPf.cards||[]).length > 0 && (filter==='all' || (qoPf.cards||[]).some(c=>c.tcg===filter))){
+    const totals = computePfTotals(qoPf);
+    const count = (qoPf.cards||[]).length;
+    const sorted = (qoPf.cards||[]).slice().sort((a,b) => (b.addedAt||0) - (a.addedAt||0));
+    const previews = sorted.slice(0, 4);
+    const tiles = previews.map(c => `<div class="wish-cover-tile"><img src="${smartImg(c.img||'')}" alt="" loading="lazy"></div>`).join('');
+    const extra = count > 4 ? `<div class="wish-cover-extra">+${count-4}</div>` : '';
+    qoHtml = `<div class="pf-card pf-card-qo" data-pf-id="${QUICK_OWNED_PF_ID}">
+      <div class="qo-ribbon">✓ Mes possessions</div>
+      <div class="wish-cover tiles t${previews.length}">${tiles}${extra}</div>
+      <div class="pf-name">${escapeHtml(qoPf.name)}</div>
+      <div class="pf-meta"><span>${count} carte${count>1?'s':''} possédée${count>1?'s':''}</span><span class="pf-value">€${totals.value.toFixed(2)}</span></div>
+    </div>`;
+  }
+
+  if(list.length===0 && !qoHtml){
+    grid.innerHTML = createCard;
+    document.getElementById('createPfBtn').addEventListener('click', createPortfolio);
+    return;
+  }
+  grid.innerHTML = qoHtml + list.map(p=>{
     const totals = computePfTotals(p);
     const count = (p.cards||[]).length;
     return `<div class="pf-card" data-pf-id="${p.id}">
@@ -1650,8 +1740,7 @@ function renderPortfolios(filter){
       <div class="pf-meta"><span>${p.tcg==='pokemon'?'Pokémon':p.tcg==='magic'?'Magic':'Lorcana'} · ${count} cartes</span><span class="pf-value" title="Valeur si collection complète">€${totals.valueComplete.toFixed(2)}</span></div>
     </div>`;
   }).join('') + createCard;
-  document.getElementById('createPfBtn').addEventListener('click',createPortfolio);
-  // Click sur une carte de portfolio -> ouvre le détail
+  document.getElementById('createPfBtn').addEventListener('click', createPortfolio);
   grid.querySelectorAll('.pf-card').forEach(el => {
     el.addEventListener('click', () => showPortfolioDetail(el.dataset.pfId));
   });
@@ -2021,7 +2110,7 @@ function showPortfolioDetail(pfId){
   document.getElementById('pfDetailName').textContent = pf.name;
   document.getElementById('pfDetailBreadcrumb').textContent = pf.name;
   document.getElementById('pfDetailBackLink').onclick = (e)=>{ e.preventDefault(); showView('compte'); renderCompte(); };
-  const tcgLabel = pf.tcg === 'pokemon' ? 'Pokémon' : pf.tcg === 'lorcana' ? 'Lorcana' : 'Magic';
+  const tcgLabel = pf.isQuickOwned ? 'Multi-TCG' : (pf.tcg === 'pokemon' ? 'Pokémon' : pf.tcg === 'lorcana' ? 'Lorcana' : 'Magic');
   const _t = computePfTotals(pf);
   document.getElementById('pfDetailMeta').textContent = `${tcgLabel} · ${_t.owned}/${_t.total} cartes possédées`;
   renderPfTotals(pf);
@@ -2169,7 +2258,8 @@ function renderPfCards(pf){
   let cardsWithIdx = pf.cards.map((c, i) => ({...c, _idx: i}));
   if(_searchState.pf){
     cardsWithIdx = cardsWithIdx.filter(c => {
-      const fr = pf.tcg === 'pokemon' ? translateCardNameToFr(c.name) : c.name;
+      const cardTcg = c.tcg || pf.tcg;
+      const fr = cardTcg === 'pokemon' ? translateCardNameToFr(c.name) : c.name;
       return matchesSearch(c.name, _searchState.pf) || matchesSearch(fr, _searchState.pf) || matchesSearch(c.number || '', _searchState.pf);
     });
   }
@@ -2188,8 +2278,9 @@ function renderPfCards(pf){
       const cls = delta >= 0 ? 'green' : 'red';
       pnlHtml = `<div class="pfcard-pnl ${cls}">${delta >= 0 ? '↑' : '↓'} €${Math.abs(delta).toFixed(2)}</div>`;
     }
-    // Traduire le nom en FR si TCG=pokemon
-    const displayName = pf.tcg === 'pokemon' ? translateCardNameToFr(c.name) : c.name;
+    // Traduire le nom en FR si TCG=pokemon (par carte si portfolio multi-TCG)
+    const cardTcg = c.tcg || pf.tcg;
+    const displayName = cardTcg === 'pokemon' ? translateCardNameToFr(c.name) : c.name;
     const imgSrc = smartImg(c.img || '');
     const large = smartImg(c.largeImg || c.img || '');
     // Backward compat: ancien portfolio sans owned => considéré comme possédé
@@ -2216,7 +2307,7 @@ function renderPfCards(pf){
           </div>
           ${pnlHtml}
           <div class="card-actions" style="margin-top:8px">
-            <a class="card-btn cm" href="${pfCardmarketUrl(c, pf.tcg)}" target="_blank" rel="noopener noreferrer">Cardmarket</a>
+            <a class="card-btn cm" href="${pfCardmarketUrl(c, cardTcg)}" target="_blank" rel="noopener noreferrer">Cardmarket</a>
             <a class="card-btn eb" href="${ebayUrl(c.name + ' ' + (c.setName||'') + ' ' + (c.number||''))}" target="_blank" rel="noopener noreferrer">eBay</a>
           </div>
         </div>
@@ -2544,7 +2635,7 @@ async function showAllEraCards(slug){
         return `<div class="card-item">
           <div class="card-img">
             <img src="${(c.images&&c.images.small)||''}" data-large="${large}" alt="${escapeHtml(displayName)}" loading="lazy">
-            ${favButtonHtml(c.id)}
+            ${favButtonHtml(c.id)}${ownButtonHtml(c.id)}
           </div>
           <div class="card-info">
             <div class="card-name">${escapeHtml(displayName)}</div>
@@ -2643,7 +2734,7 @@ async function showPokemonSetCards(setId){
       return `<div class="card-item">
         <div class="card-img">
           <img src="${(c.images&&c.images.small)||''}" data-large="${large}" alt="${escapeHtml(displayName)}" loading="lazy">
-          ${favButtonHtml(c.id)}
+          ${favButtonHtml(c.id)}${ownButtonHtml(c.id)}
         </div>
         <div class="card-info">
           <div class="card-name">${escapeHtml(displayName)}</div>
@@ -2733,7 +2824,7 @@ async function showLorcanaSetCards(slug){
       return `<div class="card-item">
         <div class="card-img">
           ${imgProxy?`<img src="${imgProxy}" data-large="${largeProxy}" alt="${escapeHtml(full)}" loading="lazy">`:''}
-          ${favButtonHtml(c.id)}
+          ${favButtonHtml(c.id)}${ownButtonHtml(c.id)}
         </div>
         <div class="card-info">
           <div class="card-name">${escapeHtml(full)}</div>
@@ -2886,7 +2977,7 @@ async function showMagicSetCards(setCode){
       return `<div class="card-item">
         <div class="card-img">
           ${img?`<img src="${img}" data-large="${large}" alt="${escapeHtml(c.name)}" loading="lazy">`:''}
-          ${favButtonHtml(c.id)}
+          ${favButtonHtml(c.id)}${ownButtonHtml(c.id)}
         </div>
         <div class="card-info">
           <div class="card-name">${escapeHtml(c.name)}</div>
@@ -3100,7 +3191,85 @@ function translateCardNameToFr(name){
 })();
 
 
-/* === WISHLIST — SYSTÈME DE DOSSIERS THÉMATIQUES === */
+/* === MES POSSESSIONS — Quick-owned auto-portfolio === */
+const QUICK_OWNED_PF_ID = 'pf_quick_owned';
+function getOrCreateQuickOwnedPf(){
+  let arr = getPortfolios();
+  let pf = arr.find(p => p.id === QUICK_OWNED_PF_ID);
+  if(!pf){
+    pf = {
+      id: QUICK_OWNED_PF_ID,
+      name: 'Mes cartes possédées',
+      tcg: 'mixed',
+      isQuickOwned: true,
+      createdAt: Date.now(),
+      cards: []
+    };
+    arr.push(pf);
+    savePortfolios(arr);
+  }
+  return pf;
+}
+function getQuickOwnedPf(){ return getPortfolios().find(p => p.id === QUICK_OWNED_PF_ID) || null; }
+function isOwnedQuick(apiId){
+  const pf = getQuickOwnedPf();
+  if(!pf) return false;
+  return (pf.cards||[]).some(c => c.apiId === apiId && c.owned !== false);
+}
+function toggleOwnedQuick(entry, tcg){
+  // S'assure que le portfolio existe et ajoute/retire la carte
+  const arr = getPortfolios();
+  let pf = arr.find(p => p.id === QUICK_OWNED_PF_ID);
+  if(!pf){
+    pf = {id: QUICK_OWNED_PF_ID, name: 'Mes cartes possédées', tcg: 'mixed', isQuickOwned: true, createdAt: Date.now(), cards: []};
+    arr.push(pf);
+  }
+  const idx = (pf.cards||[]).findIndex(c => c.apiId === entry.apiId);
+  if(idx >= 0){
+    pf.cards.splice(idx, 1);
+    savePortfolios(arr);
+    return false; // retirée
+  }
+  pf.cards = pf.cards || [];
+  pf.cards.push({...entry, tcg, owned: true, qty: 1, pricePaid: 0, addedAt: Date.now()});
+  savePortfolios(arr);
+  return true; // ajoutée
+}
+function ownButtonHtml(apiId){
+  const active = isOwnedQuick(apiId);
+  return `<button class="own-btn ${active?'active':''}" data-own-id="${escapeHtml(apiId)}" title="${active?'Retirer de mes possessions':'J\'ai cette carte'}" aria-label="Possédée">✓</button>`;
+}
+
+// Listener ✓ (délégation)
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('.own-btn');
+  if(!btn) return;
+  e.preventDefault();
+  e.stopPropagation();
+  if(!getUser()){
+    if(confirm('Connecte-toi pour marquer tes cartes possédées. Aller à la connexion ?')) goToAccount();
+    return;
+  }
+  const apiId = btn.dataset.ownId;
+  const meta = _visibleCards[apiId];
+  // Si pas dans _visibleCards, on regarde si on a déjà la carte dans le QO (cas où on est ailleurs)
+  if(!meta){
+    const pf = getQuickOwnedPf();
+    const existing = pf && (pf.cards||[]).find(c => c.apiId === apiId);
+    if(existing){
+      toggleOwnedQuick(existing, existing.tcg);
+      btn.classList.remove('active');
+      btn.title = "J'ai cette carte";
+      return;
+    }
+    console.warn('Carte non trouvée dans _visibleCards', apiId);
+    return;
+  }
+  const added = toggleOwnedQuick(meta.entry, meta.tcg);
+  btn.classList.toggle('active', added);
+  btn.title = added ? 'Retirer de mes possessions' : "J'ai cette carte";
+  // Si on est dans la wishlist détail et que cette carte y est, on pourrait toggle "trouvée" — mais on laisse l'user le faire explicitement
+});
 const WISH_KEY = 'soridex_wishlist_v1';              // legacy : ancienne wishlist plate (migration)
 const WISH_FOLDERS_KEY = 'soridex_wishlist_folders_v1';
 const _visibleCards = {}; // apiId -> {entry, tcg} pour les cartes actuellement rendues
@@ -3276,8 +3445,23 @@ function renderWishFolders(){
     const tcgs = [...new Set((f.cards||[]).map(c => c.tcg))];
     const icons = tcgs.map(t => PF_ICONS[t]||'').join(' ');
     const progPct = total > 0 ? Math.round((found/total)*100) : 0;
-    return `<div class="pf-card" data-wish-id="${f.id}">
-      <div class="pf-cover">${icons || '♡'}</div>
+    // Mosaïque : jusqu'à 4 visuels de cartes (non trouvées en priorité, puis trouvées)
+    const sorted = (f.cards||[]).slice().sort((a,b)=> (a.found?1:0)-(b.found?1:0));
+    const previewCards = sorted.slice(0, 4);
+    let coverHtml;
+    if(previewCards.length === 0){
+      coverHtml = `<div class="wish-cover empty">${icons || '♡'}</div>`;
+    } else {
+      const tiles = previewCards.map(c => {
+        const src = smartImg(c.img || '');
+        const dim = c.found ? 'style="filter:saturate(.5) brightness(.7)"' : '';
+        return `<div class="wish-cover-tile"><img src="${src}" alt="" loading="lazy" ${dim}></div>`;
+      }).join('');
+      const extra = total > 4 ? `<div class="wish-cover-extra">+${total-4}</div>` : '';
+      coverHtml = `<div class="wish-cover tiles t${previewCards.length}">${tiles}${extra}</div>`;
+    }
+    return `<div class="pf-card wish-folder-card" data-wish-id="${f.id}">
+      ${coverHtml}
       <div class="pf-name">${escapeHtml(f.name)}</div>
       ${f.note ? `<div class="pf-meta" style="font-style:italic;color:var(--mut);font-size:11px;margin-bottom:4px">${escapeHtml(f.note)}</div>` : ''}
       <div class="pf-meta">
