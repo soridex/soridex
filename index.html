@@ -825,7 +825,7 @@
     <div class="stats-grid">
       <div class="stat-card">
         <div class="stat-label">Valeur totale de la collection</div>
-        <div class="stat-value">$1,250.00 <span class="stat-trend">↑ 2.3%</span></div>
+        <div class="stat-value"><span id="dashTotalValue">—</span> <span class="stat-trend" id="dashTotalTrend"></span></div>
         <div class="stat-icon">
           <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
             <defs><linearGradient id="gboxGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#e6c177"/><stop offset="100%" stop-color="#a87c2e"/></linearGradient></defs>
@@ -834,8 +834,8 @@
           </svg>
         </div>
       </div>
-      <div class="stat-card"><div class="stat-label">Sets complets</div><div class="stat-value">4 <span class="stat-unit">sets</span></div></div>
-      <div class="stat-card"><div class="stat-label">Cartes totales</div><div class="stat-value">650 <span class="stat-unit">cartes</span></div></div>
+      <div class="stat-card"><div class="stat-label">Sets disponibles</div><div class="stat-value"><span id="dashTotalSets">—</span> <span class="stat-unit">sets</span></div></div>
+      <div class="stat-card"><div class="stat-label">Cartes totales</div><div class="stat-value"><span id="dashTotalCards">—</span> <span class="stat-unit">cartes</span></div></div>
     </div>
   </section>
 
@@ -1456,6 +1456,7 @@ function showView(name){
   document.querySelectorAll('.view').forEach(v => v.hidden = (v.id !== 'view-'+name));
   document.querySelectorAll('.navlink').forEach(l => l.classList.toggle('active', l.dataset.view === name));
   if(name==='home') document.querySelector('.navlink[data-view="home"]').classList.add('active');
+  if(name==='home' && typeof renderDashboard === 'function'){ try{ renderDashboard(); }catch(e){} }
   window.scrollTo({top:0,behavior:'smooth'});
   history.replaceState(null,'','#/'+name);
 }
@@ -3316,6 +3317,75 @@ function pokemonSparkline(c){
 }
 
 
+/* === DASHBOARD HOMEPAGE (vraies données tous TCG) === */
+function renderDashboard(){
+  // 1. Calcul de la valeur totale + nombre de cartes possédées
+  let totalValue = 0;
+  let totalCards = 0;
+  const portfolios = (typeof getPortfolios === 'function') ? getPortfolios() : [];
+  for(const pf of portfolios){
+    if(!pf || !Array.isArray(pf.cards)) continue;
+    for(const c of pf.cards){
+      const isOwned = c.owned !== false;
+      if(!isOwned) continue;
+      const qty = c.qty || 1;
+      totalCards += qty;
+      if(c.marketPrice != null && !isNaN(c.marketPrice)){
+        totalValue += c.marketPrice * qty;
+      }
+    }
+  }
+
+  // 2. Comptage des sets disponibles tous TCG (depuis Explorateur TCG)
+  let totalSets = 0;
+  try{ if(typeof _allApiSets !== 'undefined' && _allApiSets) totalSets += _allApiSets.length; }catch(e){}
+  try{ if(typeof LORCANA_SETS !== 'undefined' && LORCANA_SETS) totalSets += LORCANA_SETS.length; }catch(e){}
+  try{ if(typeof MAGIC_SETS !== 'undefined' && MAGIC_SETS) totalSets += MAGIC_SETS.length; }catch(e){}
+
+  // 3. Évolution 24h via snapshots agrégés
+  const todayStr = new Date().toISOString().slice(0,10);
+  const allSnaps = (typeof getPfSnapshots === 'function') ? getPfSnapshots() : {};
+  const globalArr = allSnaps['__global__'] || [];
+  // Sauvegarde du snapshot du jour si valeur > 0
+  if(totalValue > 0){
+    const last = globalArr[globalArr.length - 1];
+    if(last && last.d === todayStr){
+      last.v = +totalValue.toFixed(2);
+    } else {
+      globalArr.push({ d: todayStr, v: +totalValue.toFixed(2) });
+    }
+    while(globalArr.length > 180) globalArr.shift();
+    allSnaps['__global__'] = globalArr;
+    try{ savePfSnapshots(allSnaps); }catch(e){}
+  }
+  // Calcul du % par rapport au snapshot précédent
+  let trendHtml = '';
+  if(globalArr.length >= 2){
+    const prev = globalArr[globalArr.length - 2];
+    if(prev && prev.v > 0){
+      const diff = (totalValue - prev.v) / prev.v;
+      const pct = (diff * 100).toFixed(1);
+      if(diff > 0.001){
+        trendHtml = `<span style="color:#3fc97a">↑ ${pct}%</span>`;
+      } else if(diff < -0.001){
+        trendHtml = `<span style="color:#e74c3c">↓ ${Math.abs(pct)}%</span>`;
+      } else {
+        trendHtml = `<span style="color:#888">→ 0%</span>`;
+      }
+    }
+  }
+
+  // 4. Mise à jour du DOM
+  const elValue = document.getElementById('dashTotalValue');
+  const elTrend = document.getElementById('dashTotalTrend');
+  const elSets = document.getElementById('dashTotalSets');
+  const elCards = document.getElementById('dashTotalCards');
+  if(elValue) elValue.textContent = '€' + totalValue.toFixed(2);
+  if(elTrend) elTrend.innerHTML = trendHtml;
+  if(elSets) elSets.textContent = totalSets > 0 ? totalSets : '—';
+  if(elCards) elCards.textContent = totalCards;
+}
+
 /* === SNAPSHOTS DE PRIX (localStorage) === */
 const PRICE_SNAP_KEY = 'soridex_price_snapshots_v1';
 const PF_SNAP_KEY = 'soridex_pf_snapshots_v1';
@@ -3557,6 +3627,18 @@ document.addEventListener('click', (e)=>{
   if(hash==='compte') goToAccount();
   else if(ALL_VIEWS.includes(hash)) showView(hash);
   else showView('home');
+})();
+
+/* === DASHBOARD : refresh après chargement async des sets API === */
+(function(){
+  if(typeof renderDashboard !== 'function') return;
+  // Premier rendu immédiat
+  try{ renderDashboard(); }catch(e){}
+  // Re-render après 2s, 5s et 15s pour capter les chargements asynchrones
+  // (Pokémon API sets, Magic API sets via Scryfall)
+  setTimeout(()=>{ try{ renderDashboard(); }catch(e){} }, 2000);
+  setTimeout(()=>{ try{ renderDashboard(); }catch(e){} }, 5000);
+  setTimeout(()=>{ try{ renderDashboard(); }catch(e){} }, 15000);
 })();
 </script>
 </body>
