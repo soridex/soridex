@@ -3319,58 +3319,66 @@ function pokemonSparkline(c){
 
 /* === DASHBOARD HOMEPAGE (vraies données tous TCG) === */
 function renderDashboard(){
-  // 1. Calcul de la valeur totale + nombre de cartes possédées
+  // Auth check : si pas loggué, les stats perso sont masquées
+  const _user = (typeof getUser === 'function') ? getUser() : null;
+  const _isAuthed = !!_user;
+
+  // 1. Calcul de la valeur totale + nombre de cartes possédées (uniquement si loggué)
   let totalValue = 0;
   let totalCards = 0;
-  const portfolios = (typeof getPortfolios === 'function') ? getPortfolios() : [];
-  for(const pf of portfolios){
-    if(!pf || !Array.isArray(pf.cards)) continue;
-    for(const c of pf.cards){
-      const isOwned = c.owned !== false;
-      if(!isOwned) continue;
-      const qty = c.qty || 1;
-      totalCards += qty;
-      if(c.marketPrice != null && !isNaN(c.marketPrice)){
-        totalValue += c.marketPrice * qty;
+  if(_isAuthed){
+    const portfolios = (typeof getPortfolios === 'function') ? getPortfolios() : [];
+    for(const pf of portfolios){
+      if(!pf || !Array.isArray(pf.cards)) continue;
+      for(const c of pf.cards){
+        const isOwned = c.owned !== false;
+        if(!isOwned) continue;
+        const qty = c.qty || 1;
+        totalCards += qty;
+        if(c.marketPrice != null && !isNaN(c.marketPrice)){
+          totalValue += c.marketPrice * qty;
+        }
       }
     }
   }
 
-  // 2. Comptage des sets disponibles tous TCG (depuis Explorateur TCG)
+  // 2. Comptage des sets disponibles tous TCG (toujours affiché, c'est pas perso)
   let totalSets = 0;
   try{ if(typeof _allApiSets !== 'undefined' && _allApiSets) totalSets += _allApiSets.length; }catch(e){}
   try{ if(typeof LORCANA_SETS !== 'undefined' && LORCANA_SETS) totalSets += LORCANA_SETS.length; }catch(e){}
   try{ if(typeof MAGIC_SETS !== 'undefined' && MAGIC_SETS) totalSets += MAGIC_SETS.length; }catch(e){}
 
-  // 3. Évolution 24h via snapshots agrégés
-  const todayStr = new Date().toISOString().slice(0,10);
-  const allSnaps = (typeof getPfSnapshots === 'function') ? getPfSnapshots() : {};
-  const globalArr = allSnaps['__global__'] || [];
-  // Sauvegarde du snapshot du jour si valeur > 0
-  if(totalValue > 0){
-    const last = globalArr[globalArr.length - 1];
-    if(last && last.d === todayStr){
-      last.v = +totalValue.toFixed(2);
-    } else {
-      globalArr.push({ d: todayStr, v: +totalValue.toFixed(2) });
-    }
-    while(globalArr.length > 180) globalArr.shift();
-    allSnaps['__global__'] = globalArr;
-    try{ savePfSnapshots(allSnaps); }catch(e){}
-  }
-  // Calcul du % par rapport au snapshot précédent
+  // 3. Évolution 24h via snapshots agrégés (uniquement si loggué)
   let trendHtml = '';
-  if(globalArr.length >= 2){
-    const prev = globalArr[globalArr.length - 2];
-    if(prev && prev.v > 0){
-      const diff = (totalValue - prev.v) / prev.v;
-      const pct = (diff * 100).toFixed(1);
-      if(diff > 0.001){
-        trendHtml = `<span style="color:#3fc97a">↑ ${pct}%</span>`;
-      } else if(diff < -0.001){
-        trendHtml = `<span style="color:#e74c3c">↓ ${Math.abs(pct)}%</span>`;
+  if(_isAuthed){
+    const todayStr = new Date().toISOString().slice(0,10);
+    const allSnaps = (typeof getPfSnapshots === 'function') ? getPfSnapshots() : {};
+    const globalArr = allSnaps['__global__'] || [];
+    // Sauvegarde du snapshot du jour si valeur > 0
+    if(totalValue > 0){
+      const last = globalArr[globalArr.length - 1];
+      if(last && last.d === todayStr){
+        last.v = +totalValue.toFixed(2);
       } else {
-        trendHtml = `<span style="color:#888">→ 0%</span>`;
+        globalArr.push({ d: todayStr, v: +totalValue.toFixed(2) });
+      }
+      while(globalArr.length > 180) globalArr.shift();
+      allSnaps['__global__'] = globalArr;
+      try{ savePfSnapshots(allSnaps); }catch(e){}
+    }
+    // Calcul du % par rapport au snapshot précédent
+    if(globalArr.length >= 2){
+      const prev = globalArr[globalArr.length - 2];
+      if(prev && prev.v > 0){
+        const diff = (totalValue - prev.v) / prev.v;
+        const pct = (diff * 100).toFixed(1);
+        if(diff > 0.001){
+          trendHtml = `<span style="color:#3fc97a">↑ ${pct}%</span>`;
+        } else if(diff < -0.001){
+          trendHtml = `<span style="color:#e74c3c">↓ ${Math.abs(pct)}%</span>`;
+        } else {
+          trendHtml = `<span style="color:#888">→ 0%</span>`;
+        }
       }
     }
   }
@@ -3380,10 +3388,10 @@ function renderDashboard(){
   const elTrend = document.getElementById('dashTotalTrend');
   const elSets = document.getElementById('dashTotalSets');
   const elCards = document.getElementById('dashTotalCards');
-  if(elValue) elValue.textContent = '€' + totalValue.toFixed(2);
+  if(elValue) elValue.textContent = _isAuthed ? ('€' + totalValue.toFixed(2)) : '—';
   if(elTrend) elTrend.innerHTML = trendHtml;
   if(elSets) elSets.textContent = totalSets > 0 ? totalSets : '—';
-  if(elCards) elCards.textContent = totalCards;
+  if(elCards) elCards.textContent = _isAuthed ? totalCards : '—';
 }
 
 /* === SNAPSHOTS DE PRIX (localStorage) === */
