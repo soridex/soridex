@@ -425,6 +425,43 @@
   .wish-tcg-tab:hover{color:var(--gold-2);border-color:var(--gold-deep)}
   .wish-tcg-tab.active{background:rgba(212,168,90,.12);color:var(--gold-2);border-color:var(--gold)}
 
+  /* Wishlist folders — barre de progression */
+  .wish-prog{height:4px;background:rgba(255,255,255,.06);border-radius:4px;overflow:hidden;margin-top:8px}
+  .wish-prog-bar{height:100%;background:linear-gradient(90deg,var(--gold-deep),var(--gold-2));transition:width .4s ease}
+
+  /* Wishcard — carte trouvée */
+  .wishcard.wishcard-found .card-img img{filter:none;opacity:1}
+  .wishcard:not(.wishcard-found) .card-img img{filter:saturate(.55) brightness(.95);opacity:.85;transition:filter .25s,opacity .25s}
+  .wishcard .card-img{cursor:pointer}
+
+  /* Toast de feedback */
+  .wish-toast{
+    position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
+    background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;
+    padding:12px 22px;border-radius:10px;font-family:"Outfit";font-size:14px;font-weight:700;
+    box-shadow:0 8px 24px rgba(22,163,74,.4);z-index:9999;opacity:0;
+    transition:opacity .25s,transform .25s;pointer-events:none;
+  }
+  .wish-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  /* Picker / Sync rows */
+  .pick-wish-row, .sync-pf-row{
+    display:flex;align-items:center;gap:12px;width:100%;
+    background:rgba(255,255,255,.03);border:1px solid var(--line2);
+    border-radius:10px;padding:12px 14px;cursor:pointer;text-align:left;
+    color:var(--tx);font-family:"Outfit";transition:.15s;
+  }
+  .pick-wish-row:hover:not(:disabled){border-color:var(--gold);background:rgba(212,168,90,.06)}
+  .pick-wish-row:disabled{opacity:.5;cursor:not-allowed}
+  .pick-wish-row{flex-direction:column;align-items:flex-start;gap:4px}
+  .pick-wish-name{font-weight:700;color:#fff;font-size:14px}
+  .pick-wish-meta{font-size:11px;color:var(--mut);letter-spacing:.04em}
+  .sync-pf-row input[type=checkbox]{width:18px;height:18px;accent-color:var(--gold);cursor:pointer;flex-shrink:0}
+  .sync-pf-row:hover{border-color:var(--gold);background:rgba(212,168,90,.06)}
+  .sync-pf-info{flex:1}
+  .sync-pf-name{font-weight:700;color:#fff;font-size:14px}
+  .sync-pf-meta{font-size:11px;color:var(--mut);margin-top:2px}
+
 
   /* PORTFOLIO : état possédée vs à acquérir */
   .pfcard .pfcard-img{cursor:pointer;position:relative;transition:.2s}
@@ -1118,20 +1155,16 @@
   <div class="pfcard-grid" id="pfCardGrid"></div>
 </section>
 
-<!-- VIEW: WISHLIST -->
+<!-- VIEW: WISHLIST (LISTE DES DOSSIERS) -->
 <section class="view" id="view-wishlist" hidden>
   <div class="breadcrumb">
-    <a data-view="home">← Accueil</a><span>/</span><span>Ma Wishlist</span>
+    <a data-view="home">← Accueil</a><span>/</span><span>Mes Wishlists</span>
   </div>
   <div class="sets-head">
     <div>
-      <h2 class="view-title">Ma Wishlist</h2>
-      <p class="view-sub" id="wishSub">Les cartes que tu veux suivre ou acheter prochainement.</p>
+      <h2 class="view-title">Mes Wishlists</h2>
+      <p class="view-sub" id="wishSub">Crée des dossiers thématiques (brocante, convention, manques d'un set…). Coche les cartes trouvées : on synchronisera tes portfolios automatiquement.</p>
     </div>
-  </div>
-  <div class="page-search">
-    <input type="search" id="wishSearchInput" placeholder="Filtrer ma wishlist…">
-    <button class="clear" id="wishSearchClear" aria-label="Effacer">×</button>
   </div>
   <div class="wish-tcg-tabs" id="wishTcgTabs">
     <button class="wish-tcg-tab active" data-wish-tcg="all">Tous</button>
@@ -1139,8 +1172,80 @@
     <button class="wish-tcg-tab" data-wish-tcg="lorcana">Lorcana</button>
     <button class="wish-tcg-tab" data-wish-tcg="magic">Magic</button>
   </div>
+  <div class="pf-grid" id="wishFoldersGrid"></div>
+</section>
+
+<!-- VIEW: WISHLIST FOLDER DETAIL -->
+<section class="view" id="view-wish-detail" hidden>
+  <div class="breadcrumb">
+    <a data-view="home">← Accueil</a><span>/</span><a id="wishDetailBackLink" href="#">Mes Wishlists</a><span>/</span><span id="wishDetailCrumb">Dossier</span>
+  </div>
+  <div class="sets-head" style="align-items:flex-start;flex-wrap:wrap;gap:14px">
+    <div style="flex:1;min-width:240px">
+      <h2 class="view-title" id="wishDetailTitle">Dossier</h2>
+      <p class="view-sub" id="wishDetailMeta">— cartes</p>
+      <p class="view-sub" id="wishDetailNote" style="margin-top:4px;font-style:italic"></p>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="pf-mark-all-btn" id="wishHideFoundBtn">Masquer trouvées</button>
+      <button class="pf-mark-all-btn" id="wishRenameBtn">Renommer</button>
+      <button class="pf-mark-all-btn" id="wishDeleteBtn" style="color:#e74c3c;border-color:rgba(231,76,60,.4)">Supprimer</button>
+    </div>
+  </div>
+  <div class="page-search">
+    <input type="search" id="wishSearchInput" placeholder="Filtrer ce dossier…">
+    <button class="clear" id="wishSearchClear" aria-label="Effacer">×</button>
+  </div>
   <div class="card-grid" id="wishGrid"></div>
 </section>
+
+<!-- MODAL: CRÉER UN DOSSIER WISHLIST -->
+<div class="modal-overlay hidden" id="createWishModal">
+  <div class="modal-box">
+    <button class="modal-close" id="createWishClose">×</button>
+    <h3 class="modal-title">Nouveau dossier wishlist</h3>
+    <div class="form-field">
+      <label>Nom du dossier</label>
+      <input type="text" id="newWishName" placeholder="Ex. Brocante de Vincennes" maxlength="60">
+    </div>
+    <div class="form-field">
+      <label>Note (lieu, date, contexte…) <span style="color:var(--mut);font-weight:400">— facultatif</span></label>
+      <input type="text" id="newWishNote" placeholder="Ex. Dimanche 23 juin, place du marché" maxlength="120">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-gold-outline" id="createWishCancel">Annuler</button>
+      <button class="btn-gold" id="createWishConfirm">Créer le dossier</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: CHOISIR UN DOSSIER WISHLIST (pour ajouter une carte via ♥) -->
+<div class="modal-overlay hidden" id="pickWishModal">
+  <div class="modal-box">
+    <button class="modal-close" id="pickWishClose">×</button>
+    <h3 class="modal-title">Ajouter à une wishlist</h3>
+    <p class="view-sub" style="margin:0 0 14px">Dans quel dossier veux-tu ajouter cette carte ?</p>
+    <div id="pickWishList" style="display:flex;flex-direction:column;gap:8px;max-height:340px;overflow-y:auto"></div>
+    <div class="modal-actions">
+      <button class="btn-gold-outline" id="pickWishCreateNew">+ Nouveau dossier</button>
+      <button class="btn-gold-outline" id="pickWishCancel">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: SYNC PORTFOLIO (carte trouvée → la marquer comme possédée ailleurs) -->
+<div class="modal-overlay hidden" id="syncPfModal">
+  <div class="modal-box">
+    <button class="modal-close" id="syncPfClose">×</button>
+    <h3 class="modal-title">🎉 Carte trouvée !</h3>
+    <p class="view-sub" style="margin:0 0 14px" id="syncPfText">Cette carte fait partie d'un ou plusieurs de tes portfolios. Veux-tu la marquer comme possédée ?</p>
+    <div id="syncPfList" style="display:flex;flex-direction:column;gap:8px;max-height:340px;overflow-y:auto;margin-bottom:14px"></div>
+    <div class="modal-actions">
+      <button class="btn-gold-outline" id="syncPfSkip">Plus tard</button>
+      <button class="btn-gold" id="syncPfConfirm">Marquer comme possédée</button>
+    </div>
+  </div>
+</div>
 
 <!-- VIEW: SHOP -->
 <section class="view" id="view-shop" hidden>
@@ -1474,7 +1579,7 @@ new Chart(ctx, {
 })();
 
 /* === ROUTING === */
-const ALL_VIEWS = ['home','login','compte','sets-pokemon','sets-lorcana','sets-magic','era-detail','set-detail','pf-detail','wishlist','shop','guide','guide-article'];
+const ALL_VIEWS = ['home','login','compte','sets-pokemon','sets-lorcana','sets-magic','era-detail','set-detail','pf-detail','wishlist','wish-detail','shop','guide','guide-article'];
 function showView(name){
   if(!ALL_VIEWS.includes(name)) name='home';
   document.querySelectorAll('.view').forEach(v => v.hidden = (v.id !== 'view-'+name));
@@ -2995,78 +3100,259 @@ function translateCardNameToFr(name){
 })();
 
 
-/* === WISHLIST === */
-const WISH_KEY = 'soridex_wishlist_v1';
+/* === WISHLIST — SYSTÈME DE DOSSIERS THÉMATIQUES === */
+const WISH_KEY = 'soridex_wishlist_v1';              // legacy : ancienne wishlist plate (migration)
+const WISH_FOLDERS_KEY = 'soridex_wishlist_folders_v1';
 const _visibleCards = {}; // apiId -> {entry, tcg} pour les cartes actuellement rendues
 let currentWishTcg = 'all';
+let currentWishFolderId = null;
+let _wishHideFound = false;
+let _pendingPickEntry = null; // entry à ajouter quand on choisit le dossier
 
-function getWishlist(){try{return JSON.parse(localStorage.getItem(WISH_KEY)||'[]');}catch(e){return [];}}
-function saveWishlist(a){localStorage.setItem(WISH_KEY, JSON.stringify(a));}
-function isInWishlist(apiId){ return getWishlist().some(c => c.apiId === apiId); }
-function toggleWishlist(entry, tcg){
-  const arr = getWishlist();
-  const idx = arr.findIndex(c => c.apiId === entry.apiId);
-  if(idx >= 0){
-    arr.splice(idx, 1);
-    saveWishlist(arr);
-    return false; // retiré
-  } else {
-    arr.push({...entry, tcg, addedAt: Date.now()});
-    saveWishlist(arr);
-    return true; // ajouté
+/* --- Stockage --- */
+function getWishlistFolders(){
+  let arr;
+  try{ arr = JSON.parse(localStorage.getItem(WISH_FOLDERS_KEY) || '[]'); }catch(e){ arr = []; }
+  // Migration unique depuis l'ancienne wishlist plate
+  if(arr.length === 0){
+    let legacy = [];
+    try{ legacy = JSON.parse(localStorage.getItem(WISH_KEY) || '[]'); }catch(e){}
+    if(legacy.length > 0){
+      const def = {
+        id: 'wf_legacy_' + Date.now(),
+        name: 'Ma wishlist',
+        note: '',
+        createdAt: Date.now(),
+        cards: legacy.map(c => ({...c, found: false, foundAt: null}))
+      };
+      arr = [def];
+      try{ localStorage.setItem(WISH_FOLDERS_KEY, JSON.stringify(arr)); }catch(e){}
+    }
   }
+  return arr;
+}
+function saveWishlistFolders(arr){ localStorage.setItem(WISH_FOLDERS_KEY, JSON.stringify(arr)); }
+
+/* --- API rétrocompatible pour le ♥ partout ailleurs --- */
+function getWishlist(){
+  const folders = getWishlistFolders();
+  const flat = [];
+  const seen = new Set();
+  for(const f of folders){
+    for(const c of (f.cards||[])){
+      if(seen.has(c.apiId)) continue;
+      seen.add(c.apiId);
+      flat.push(c);
+    }
+  }
+  return flat;
+}
+function isInWishlist(apiId){
+  const folders = getWishlistFolders();
+  return folders.some(f => (f.cards||[]).some(c => c.apiId === apiId));
 }
 function favButtonHtml(apiId){
   const active = isInWishlist(apiId);
-  return `<button class="fav-btn ${active?'active':''}" data-fav-id="${escapeHtml(apiId)}" title="${active?'Retirer de la wishlist':'Ajouter à la wishlist'}" aria-label="Favoris">♥</button>`;
+  return `<button class="fav-btn ${active?'active':''}" data-fav-id="${escapeHtml(apiId)}" title="${active?'Retirer des wishlists':'Ajouter à une wishlist'}" aria-label="Favoris">♥</button>`;
 }
 
-// Affichage de la wishlist
+/* --- Opérations sur les dossiers --- */
+function createWishFolder(name, note){
+  const arr = getWishlistFolders();
+  const folder = {
+    id: 'wf_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+    name: (name||'').trim() || 'Nouveau dossier',
+    note: (note||'').trim(),
+    createdAt: Date.now(),
+    cards: []
+  };
+  arr.push(folder);
+  saveWishlistFolders(arr);
+  return folder;
+}
+function deleteWishFolder(id){
+  saveWishlistFolders(getWishlistFolders().filter(f => f.id !== id));
+}
+function renameWishFolder(id, name, note){
+  const arr = getWishlistFolders();
+  const f = arr.find(x => x.id === id);
+  if(!f) return;
+  if(name != null) f.name = name.trim() || f.name;
+  if(note != null) f.note = note.trim();
+  saveWishlistFolders(arr);
+}
+function addCardToWishFolder(folderId, entry, tcg){
+  const arr = getWishlistFolders();
+  const f = arr.find(x => x.id === folderId);
+  if(!f) return false;
+  if((f.cards||[]).some(c => c.apiId === entry.apiId)) return false;
+  f.cards = f.cards || [];
+  f.cards.push({...entry, tcg, found: false, foundAt: null, addedAt: Date.now()});
+  saveWishlistFolders(arr);
+  return true;
+}
+function removeCardFromAllWishFolders(apiId){
+  const arr = getWishlistFolders();
+  let changed = false;
+  for(const f of arr){
+    const before = (f.cards||[]).length;
+    f.cards = (f.cards||[]).filter(c => c.apiId !== apiId);
+    if(f.cards.length !== before) changed = true;
+  }
+  if(changed) saveWishlistFolders(arr);
+  return changed;
+}
+function toggleFoundInFolder(folderId, apiId){
+  const arr = getWishlistFolders();
+  const f = arr.find(x => x.id === folderId);
+  if(!f) return null;
+  const c = (f.cards||[]).find(x => x.apiId === apiId);
+  if(!c) return null;
+  c.found = !c.found;
+  c.foundAt = c.found ? Date.now() : null;
+  saveWishlistFolders(arr);
+  return c;
+}
+
+/* --- Scan des portfolios pour une carte donnée --- */
+function findCardInPortfolios(apiId){
+  const out = [];
+  const pfs = getPortfolios();
+  for(const pf of pfs){
+    (pf.cards||[]).forEach((c, idx) => {
+      if(c.apiId === apiId){
+        out.push({pfId: pf.id, pfName: pf.name, tcg: pf.tcg, cardIdx: idx, alreadyOwned: c.owned !== false, variant: c.variant || null, cardName: c.name});
+      }
+    });
+  }
+  return out;
+}
+function markCardOwnedInPortfolio(pfId, cardIdx){
+  const arr = getPortfolios();
+  const pf = arr.find(p => p.id === pfId);
+  if(!pf || !pf.cards || !pf.cards[cardIdx]) return false;
+  pf.cards[cardIdx].owned = true;
+  savePortfolios(arr);
+  return true;
+}
+
+/* --- Navigation : vue principale wishlist (liste des dossiers) --- */
 function showWishlist(){
   const user = getUser();
   if(!user){
-    alert('Connecte-toi pour accéder à ta wishlist.');
+    alert('Connecte-toi pour accéder à tes wishlists.');
     goToAccount();
     return;
   }
+  currentWishFolderId = null;
   showView('wishlist');
-  renderWishlist();
+  renderWishFolders();
 }
-function renderWishlist(){
-  const wish = getWishlist();
-  let filtered = currentWishTcg === 'all' ? wish : wish.filter(c => c.tcg === currentWishTcg);
+function renderWishFolders(){
+  const folders = getWishlistFolders();
+  const grid = document.getElementById('wishFoldersGrid');
+  if(!grid) return;
+  const createCard = `<button class="pf-create" id="createWishBtn"><span class="plus">+</span><span>Nouveau dossier wishlist</span></button>`;
+  const filtered = folders.filter(f => {
+    if(currentWishTcg === 'all') return true;
+    if(!f.cards || f.cards.length === 0) return true;
+    return f.cards.some(c => c.tcg === currentWishTcg);
+  });
+  if(folders.length === 0){
+    grid.innerHTML = `<div class="wish-empty" style="grid-column:1/-1">
+      <span class="ico">♡</span>
+      <h3>Aucune wishlist pour le moment</h3>
+      <p>Crée un dossier thématique (brocante, convention, manques d'un set…). Tu pourras ensuite y ajouter des cartes via le ♥.</p>
+    </div>${createCard}`;
+    const b = document.getElementById('createWishBtn');
+    if(b) b.addEventListener('click', openCreateWishModal);
+    return;
+  }
+  grid.innerHTML = filtered.map(f => {
+    const total = (f.cards||[]).length;
+    const found = (f.cards||[]).filter(c => c.found).length;
+    const remaining = total - found;
+    const totalValue = (f.cards||[]).reduce((s,c) => s + (c.marketPrice||0), 0);
+    const tcgs = [...new Set((f.cards||[]).map(c => c.tcg))];
+    const icons = tcgs.map(t => PF_ICONS[t]||'').join(' ');
+    const progPct = total > 0 ? Math.round((found/total)*100) : 0;
+    return `<div class="pf-card" data-wish-id="${f.id}">
+      <div class="pf-cover">${icons || '♡'}</div>
+      <div class="pf-name">${escapeHtml(f.name)}</div>
+      ${f.note ? `<div class="pf-meta" style="font-style:italic;color:var(--mut);font-size:11px;margin-bottom:4px">${escapeHtml(f.note)}</div>` : ''}
+      <div class="pf-meta">
+        <span>${found}/${total} trouvées${remaining>0 ? ' · '+remaining+' à dénicher' : ''}</span>
+        <span class="pf-value" title="Valeur cumulée">€${totalValue.toFixed(2)}</span>
+      </div>
+      ${total > 0 ? `<div class="wish-prog"><div class="wish-prog-bar" style="width:${progPct}%"></div></div>` : ''}
+    </div>`;
+  }).join('') + createCard;
+  document.getElementById('createWishBtn').addEventListener('click', openCreateWishModal);
+  grid.querySelectorAll('.pf-card[data-wish-id]').forEach(el => {
+    el.addEventListener('click', () => showWishFolderDetail(el.dataset.wishId));
+  });
+}
+
+/* --- Vue détail d'un dossier wishlist --- */
+function showWishFolderDetail(folderId){
+  const folder = getWishlistFolders().find(f => f.id === folderId);
+  if(!folder){ showWishlist(); return; }
+  currentWishFolderId = folderId;
+  _wishHideFound = false;
+  _searchState.wish = '';
+  const inp = document.getElementById('wishSearchInput');
+  if(inp){ inp.value = ''; const ps = inp.closest('.page-search'); if(ps) ps.classList.remove('has-value'); }
+  showView('wish-detail');
+  document.getElementById('wishDetailTitle').textContent = folder.name;
+  document.getElementById('wishDetailCrumb').textContent = folder.name;
+  document.getElementById('wishDetailNote').textContent = folder.note || '';
+  document.getElementById('wishHideFoundBtn').textContent = 'Masquer trouvées';
+  renderWishFolderDetail();
+}
+function renderWishFolderDetail(){
+  const folder = getWishlistFolders().find(f => f.id === currentWishFolderId);
+  const grid = document.getElementById('wishGrid');
+  if(!folder || !grid) return;
+  const all = folder.cards || [];
+  const foundCount = all.filter(c => c.found).length;
+  const totalValue = all.reduce((s,c) => s + (c.marketPrice||0), 0);
+  document.getElementById('wishDetailMeta').textContent = `${all.length} carte${all.length>1?'s':''} · ${foundCount} trouvée${foundCount>1?'s':''} · valeur cumulée €${totalValue.toFixed(2)}`;
+
+  let filtered = all.slice();
+  if(_wishHideFound) filtered = filtered.filter(c => !c.found);
   if(_searchState.wish){
     filtered = filtered.filter(c => {
       const fr = c.tcg === 'pokemon' ? translateCardNameToFr(c.name) : c.name;
       return matchesSearch(c.name, _searchState.wish) || matchesSearch(fr, _searchState.wish) || matchesSearch(c.number || '', _searchState.wish);
     });
   }
-  const grid = document.getElementById('wishGrid');
-  document.getElementById('wishSub').textContent = `${wish.length} carte${wish.length>1?'s':''} dans ta wishlist (${currentWishTcg === 'all' ? 'tous TCG' : currentWishTcg}).`;
   if(filtered.length === 0){
     grid.innerHTML = `<div class="wish-empty" style="grid-column:1/-1">
       <span class="ico">♡</span>
-      <h3>${wish.length === 0 ? 'Wishlist vide' : 'Aucune carte pour ce TCG'}</h3>
-      <p>${wish.length === 0 ? 'Tape sur le cœur d\'une carte pour l\'ajouter à ta wishlist.' : 'Change de TCG ou explore les sets pour ajouter des cartes.'}</p>
+      <h3>${all.length === 0 ? 'Dossier vide' : 'Aucune carte à afficher'}</h3>
+      <p>${all.length === 0 ? 'Va sur un set ou un personnage et clique sur le ♥ pour ajouter des cartes ici.' : 'Change le filtre ou affiche les cartes trouvées.'}</p>
     </div>`;
     return;
   }
-  // Tri par date d'ajout descendant
-  filtered.sort((a,b) => (b.addedAt||0) - (a.addedAt||0));
+  filtered.sort((a,b) => {
+    if((a.found?1:0) !== (b.found?1:0)) return (a.found?1:0) - (b.found?1:0);
+    return (b.addedAt||0) - (a.addedAt||0);
+  });
   const TCG_LABEL = {pokemon:'PKMN', lorcana:'LCA', magic:'MTG'};
   grid.innerHTML = filtered.map(c => {
     const displayName = c.tcg === 'pokemon' ? translateCardNameToFr(c.name) : c.name;
     const market = c.marketPrice != null ? `€${c.marketPrice.toFixed(2)}` : '—';
     const imgSrc = smartImg(c.img || '');
     const large = smartImg(c.largeImg || c.img || '');
-    // Construire les liens : on garde Cardmarket/eBay si on les a
     const cmUrl = c.tcg === 'pokemon' ? `https://www.cardmarket.com/fr/Pokemon/Products/Search?searchString=${encodeURIComponent(c.name)}`
                 : c.tcg === 'magic' ? `https://www.cardmarket.com/fr/Magic/Products/Search?searchString=${encodeURIComponent(c.name)}`
                 : `https://www.cardmarket.com/fr/Lorcana/Products/Search?searchString=${encodeURIComponent(c.name)}`;
     const ebQuery = `${c.name} ${c.setName||''} ${c.number||''}`;
-    return `<div class="card-item">
-      <div class="card-img">
+    const foundCls = c.found ? 'wishcard-found' : '';
+    return `<div class="card-item wishcard ${foundCls}" data-wish-card="${escapeHtml(c.apiId)}">
+      <div class="card-img wishcard-img" title="${c.found?'Cliquer pour remettre comme à trouver':'Cliquer pour marquer trouvée'}">
         <img src="${imgSrc}" data-large="${large}" alt="${escapeHtml(displayName)}" loading="lazy">
+        ${c.found ? '<div class="pfcard-owned-badge">✓</div>' : ''}
         ${favButtonHtml(c.apiId)}
       </div>
       <div class="card-info">
@@ -3082,45 +3368,234 @@ function renderWishlist(){
   }).join('');
 }
 
-// Listener tabs TCG wishlist (délégation)
+/* --- Clic sur l'image d'une carte du dossier → toggle found + sync portfolios --- */
+document.addEventListener('click', (e) => {
+  const imgWrap = e.target.closest('.wishcard-img');
+  if(!imgWrap) return;
+  if(e.target.closest('.fav-btn')) return; // le ♥ a son propre handler
+  const card = imgWrap.closest('.wishcard');
+  if(!card) return;
+  e.preventDefault();
+  const apiId = card.dataset.wishCard;
+  const updated = toggleFoundInFolder(currentWishFolderId, apiId);
+  if(!updated) return;
+  renderWishFolderDetail();
+  if(updated.found){
+    const matches = findCardInPortfolios(apiId);
+    const toMark = matches.filter(m => !m.alreadyOwned);
+    if(toMark.length > 0){
+      openSyncPfModal(updated, toMark);
+    }
+  }
+});
+
+/* --- Tabs TCG (sur la vue liste de dossiers) --- */
 document.addEventListener('click', (e) => {
   const tab = e.target.closest('#wishTcgTabs .wish-tcg-tab');
   if(!tab) return;
   currentWishTcg = tab.dataset.wishTcg;
   document.querySelectorAll('#wishTcgTabs .wish-tcg-tab').forEach(t => t.classList.toggle('active', t === tab));
-  renderWishlist();
+  renderWishFolders();
 });
 
-// Listener cœur (délégation) : ajoute/retire de la wishlist
+/* --- Boutons header du détail --- */
+document.addEventListener('DOMContentLoaded', () => {
+  const back = document.getElementById('wishDetailBackLink');
+  if(back) back.addEventListener('click', (e) => { e.preventDefault(); showWishlist(); });
+  const hide = document.getElementById('wishHideFoundBtn');
+  if(hide) hide.addEventListener('click', () => {
+    _wishHideFound = !_wishHideFound;
+    hide.textContent = _wishHideFound ? 'Afficher trouvées' : 'Masquer trouvées';
+    renderWishFolderDetail();
+  });
+  const rename = document.getElementById('wishRenameBtn');
+  if(rename) rename.addEventListener('click', () => {
+    const f = getWishlistFolders().find(x => x.id === currentWishFolderId);
+    if(!f) return;
+    const newName = prompt('Nouveau nom du dossier :', f.name);
+    if(newName === null) return;
+    const newNote = prompt('Note (lieu, date…) — laisse vide pour effacer :', f.note || '');
+    if(newNote === null) return;
+    renameWishFolder(currentWishFolderId, newName, newNote);
+    showWishFolderDetail(currentWishFolderId);
+  });
+  const del = document.getElementById('wishDeleteBtn');
+  if(del) del.addEventListener('click', () => {
+    const f = getWishlistFolders().find(x => x.id === currentWishFolderId);
+    if(!f) return;
+    if(!confirm(`Supprimer définitivement le dossier "${f.name}" et ses ${(f.cards||[]).length} carte(s) ? Cette action est irréversible.`)) return;
+    deleteWishFolder(currentWishFolderId);
+    showWishlist();
+  });
+});
+
+/* --- Modal CRÉATION de dossier --- */
+function openCreateWishModal(){
+  document.getElementById('newWishName').value = '';
+  document.getElementById('newWishNote').value = '';
+  document.getElementById('createWishModal').classList.remove('hidden');
+  setTimeout(() => document.getElementById('newWishName').focus(), 50);
+}
+function closeCreateWishModal(){
+  document.getElementById('createWishModal').classList.add('hidden');
+}
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('createWishClose').addEventListener('click', closeCreateWishModal);
+  document.getElementById('createWishCancel').addEventListener('click', closeCreateWishModal);
+  document.getElementById('createWishModal').addEventListener('click', (e) => {
+    if(e.target.id === 'createWishModal') closeCreateWishModal();
+  });
+  document.getElementById('createWishConfirm').addEventListener('click', () => {
+    const name = document.getElementById('newWishName').value.trim();
+    const note = document.getElementById('newWishNote').value.trim();
+    if(!name){ alert('Donne un nom à ton dossier.'); return; }
+    const folder = createWishFolder(name, note);
+    closeCreateWishModal();
+    if(_pendingPickEntry){
+      addCardToWishFolder(folder.id, _pendingPickEntry.entry, _pendingPickEntry.tcg);
+      _pendingPickEntry = null;
+      document.querySelectorAll('.fav-btn').forEach(h => {
+        const id = h.dataset.favId;
+        const active = isInWishlist(id);
+        h.classList.toggle('active', active);
+        h.title = active ? 'Retirer des wishlists' : 'Ajouter à une wishlist';
+      });
+    }
+    if(!document.getElementById('view-wishlist').hidden) renderWishFolders();
+  });
+});
+
+/* --- Modal PICK (choisir dossier pour une carte) --- */
+function openPickWishModal(entry, tcg){
+  _pendingPickEntry = {entry, tcg};
+  const folders = getWishlistFolders();
+  const list = document.getElementById('pickWishList');
+  list.innerHTML = folders.map(f => {
+    const total = (f.cards||[]).length;
+    const has = (f.cards||[]).some(c => c.apiId === entry.apiId);
+    return `<button class="pick-wish-row ${has?'has':''}" data-pick-id="${f.id}" ${has?'disabled':''}>
+      <div class="pick-wish-name">${escapeHtml(f.name)}${has?' <span style="color:var(--mut);font-weight:400">— déjà dedans</span>':''}</div>
+      <div class="pick-wish-meta">${total} carte${total>1?'s':''}${f.note?' · '+escapeHtml(f.note):''}</div>
+    </button>`;
+  }).join('');
+  document.getElementById('pickWishModal').classList.remove('hidden');
+}
+function closePickWishModal(){
+  document.getElementById('pickWishModal').classList.add('hidden');
+  _pendingPickEntry = null;
+}
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('pickWishClose').addEventListener('click', closePickWishModal);
+  document.getElementById('pickWishCancel').addEventListener('click', closePickWishModal);
+  document.getElementById('pickWishModal').addEventListener('click', (e) => {
+    if(e.target.id === 'pickWishModal') closePickWishModal();
+  });
+  document.getElementById('pickWishCreateNew').addEventListener('click', () => {
+    document.getElementById('pickWishModal').classList.add('hidden');
+    openCreateWishModal();
+  });
+  document.getElementById('pickWishList').addEventListener('click', (e) => {
+    const btn = e.target.closest('.pick-wish-row');
+    if(!btn || btn.disabled) return;
+    const fid = btn.dataset.pickId;
+    if(_pendingPickEntry){
+      addCardToWishFolder(fid, _pendingPickEntry.entry, _pendingPickEntry.tcg);
+      _pendingPickEntry = null;
+      document.querySelectorAll('.fav-btn').forEach(h => {
+        const id = h.dataset.favId;
+        const active = isInWishlist(id);
+        h.classList.toggle('active', active);
+        h.title = active ? 'Retirer des wishlists' : 'Ajouter à une wishlist';
+      });
+    }
+    closePickWishModal();
+  });
+});
+
+/* --- Modal SYNC PORTFOLIO --- */
+let _syncCandidates = [];
+function openSyncPfModal(card, candidates){
+  _syncCandidates = candidates;
+  const displayName = card.tcg === 'pokemon' ? translateCardNameToFr(card.name) : card.name;
+  document.getElementById('syncPfText').innerHTML = `Tu as trouvé <strong style="color:var(--gold-2)">${escapeHtml(displayName)}</strong> ! Cette carte est dans ${candidates.length} de tes portfolios. Sélectionne ceux où la marquer comme possédée :`;
+  const list = document.getElementById('syncPfList');
+  list.innerHTML = candidates.map((m, i) => `
+    <label class="sync-pf-row">
+      <input type="checkbox" data-sync-idx="${i}" checked>
+      <div class="sync-pf-info">
+        <div class="sync-pf-name">${escapeHtml(m.pfName)} <span style="color:var(--mut);font-size:11px">${PF_ICONS[m.tcg]||''}</span></div>
+        ${m.variant ? `<div class="sync-pf-meta">Variante : ${escapeHtml(m.variant)}</div>` : ''}
+      </div>
+    </label>
+  `).join('');
+  document.getElementById('syncPfModal').classList.remove('hidden');
+}
+function closeSyncPfModal(){
+  document.getElementById('syncPfModal').classList.add('hidden');
+  _syncCandidates = [];
+}
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('syncPfClose').addEventListener('click', closeSyncPfModal);
+  document.getElementById('syncPfSkip').addEventListener('click', closeSyncPfModal);
+  document.getElementById('syncPfModal').addEventListener('click', (e) => {
+    if(e.target.id === 'syncPfModal') closeSyncPfModal();
+  });
+  document.getElementById('syncPfConfirm').addEventListener('click', () => {
+    const checks = document.querySelectorAll('#syncPfList input[type=checkbox]:checked');
+    let count = 0;
+    checks.forEach(cb => {
+      const idx = parseInt(cb.dataset.syncIdx, 10);
+      const m = _syncCandidates[idx];
+      if(m && markCardOwnedInPortfolio(m.pfId, m.cardIdx)) count++;
+    });
+    closeSyncPfModal();
+    if(count > 0){
+      const t = document.createElement('div');
+      t.className = 'wish-toast';
+      t.textContent = `✓ Carte marquée comme possédée dans ${count} portfolio${count>1?'s':''}`;
+      document.body.appendChild(t);
+      setTimeout(() => t.classList.add('show'), 10);
+      setTimeout(() => { t.classList.remove('show'); setTimeout(()=>t.remove(), 300); }, 2800);
+    }
+  });
+});
+
+/* --- Listener ♥ : ajoute (avec picker si plusieurs dossiers) / retire de tous --- */
 document.addEventListener('click', (e) => {
   const heart = e.target.closest('.fav-btn');
   if(!heart) return;
   e.preventDefault();
   e.stopPropagation();
-  // Bloquer si pas connecté
   if(!getUser()){
-    if(confirm('Connecte-toi pour ajouter des cartes à ta wishlist. Aller à la connexion ?')){
+    if(confirm('Connecte-toi pour utiliser tes wishlists. Aller à la connexion ?')){
       goToAccount();
     }
     return;
   }
   const apiId = heart.dataset.favId;
-  // Si on est dans la wishlist on connaît déjà l'entrée — on la retire
-  const wishEntry = getWishlist().find(c => c.apiId === apiId);
-  if(wishEntry){
-    toggleWishlist(wishEntry, wishEntry.tcg);
+  if(isInWishlist(apiId)){
+    removeCardFromAllWishFolders(apiId);
     heart.classList.remove('active');
-    heart.title = 'Ajouter à la wishlist';
-    // Si on est sur la wishlist, re-render
-    if(!document.getElementById('view-wishlist').hidden) renderWishlist();
+    heart.title = 'Ajouter à une wishlist';
+    if(!document.getElementById('view-wishlist').hidden) renderWishFolders();
+    if(!document.getElementById('view-wish-detail').hidden) renderWishFolderDetail();
     return;
   }
-  // Sinon, on cherche dans _visibleCards (rendu en cours)
   const meta = _visibleCards[apiId];
   if(!meta){ console.warn('Carte non trouvée dans _visibleCards', apiId); return; }
-  const added = toggleWishlist(meta.entry, meta.tcg);
-  heart.classList.toggle('active', added);
-  heart.title = added ? 'Retirer de la wishlist' : 'Ajouter à la wishlist';
+  const folders = getWishlistFolders();
+  if(folders.length === 0){
+    const f = createWishFolder('Ma wishlist', '');
+    addCardToWishFolder(f.id, meta.entry, meta.tcg);
+    heart.classList.add('active');
+    heart.title = 'Retirer des wishlists';
+  } else if(folders.length === 1){
+    addCardToWishFolder(folders[0].id, meta.entry, meta.tcg);
+    heart.classList.add('active');
+    heart.title = 'Retirer des wishlists';
+  } else {
+    openPickWishModal(meta.entry, meta.tcg);
+  }
 });
 
 
@@ -3169,8 +3644,9 @@ function initPageSearches(){
   });
   setupPageSearch('wishSearchInput', 'wishSearchClear', (q) => {
     _searchState.wish = q;
-    renderWishlist();
+    if(typeof renderWishFolderDetail === 'function') renderWishFolderDetail();
   });
+  window._wishDetailSearchInited = true;
   setupPageSearch('setSearchInput', 'setSearchClear', (q) => {
     _searchState.set = q;
     if(window._setSearchCallback) window._setSearchCallback();
@@ -3267,12 +3743,20 @@ document.addEventListener('click', (e) => {
   renderShop();
 });
 
-// Lancement initial : render quand on entre dans la vue shop
+// Re-init la barre de recherche wishlist quand on entre dans la vue détail
 const _origShowView = showView;
 showView = function(name){
   _origShowView(name);
   if(name === 'shop') renderShop();
   if(name === 'guide') window.scrollTo({top:0, behavior:'smooth'});
+  // S'assurer que la search bar wish-detail est branchée (en cas de premier passage tardif)
+  if(name === 'wish-detail' && !window._wishDetailSearchInited){
+    setupPageSearch('wishSearchInput', 'wishSearchClear', (q) => {
+      _searchState.wish = q;
+      renderWishFolderDetail();
+    });
+    window._wishDetailSearchInited = true;
+  }
 };
 
 
