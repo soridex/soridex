@@ -788,6 +788,30 @@
     .car-arrow.prev{left:6px}
     .car-arrow.next{right:6px}
   }
+
+  /* === MODALES LÉGALES (Mentions Légales / CGU) === */
+  .legal-modal-overlay{position:fixed;inset:0;background:rgba(8,10,28,.78);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;z-index:10000;padding:20px;animation:legalFadeIn .2s ease}
+  .legal-modal-overlay.is-open{display:flex}
+  @keyframes legalFadeIn{from{opacity:0}to{opacity:1}}
+  .legal-modal{background:#14172e;border:1px solid rgba(255,255,255,.08);border-radius:16px;width:100%;max-width:760px;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.5);animation:legalSlideUp .25s ease}
+  @keyframes legalSlideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+  .legal-modal-header{display:flex;justify-content:flex-end;padding:14px 18px 0}
+  .legal-modal-close{background:rgba(255,255,255,.06);border:none;color:#fff;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:18px;line-height:1;transition:background .15s}
+  .legal-modal-close:hover{background:rgba(255,255,255,.12)}
+  .legal-modal-body{padding:8px 36px 36px;overflow-y:auto;color:#cdd2e8;line-height:1.65;font-size:15px}
+  .legal-content h2{color:#fff;font-size:26px;margin:0 0 4px}
+  .legal-content h3{color:#fff;font-size:17px;margin:28px 0 10px}
+  .legal-content .legal-meta{color:#7a83a8;font-size:13px;font-style:italic;margin:0 0 20px}
+  .legal-content p{margin:0 0 12px}
+  .legal-content ul{margin:0 0 12px;padding-left:22px}
+  .legal-content li{margin-bottom:6px}
+  .legal-content a{color:var(--gold-2,#f5b942);text-decoration:none}
+  .legal-content a:hover{text-decoration:underline}
+  .legal-content strong{color:#fff}
+  .legal-modal-body::-webkit-scrollbar{width:8px}
+  .legal-modal-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:4px}
+  .footer-link{background:none;border:none;color:inherit;font:inherit;cursor:pointer;padding:0;text-decoration:none;transition:.15s}
+  .footer-link:hover{color:var(--gold-2,#f5b942)}
 </style>
 </head>
 <body>
@@ -1376,9 +1400,9 @@
 
 <footer>
   <div class="footer-row">
-    <a href="#">Mentions Légales</a>
-    <a href="#">CGU</a>
-    <a href="#">Nous Contacter</a>
+    <button type="button" class="footer-link" onclick="openLegalModal('mentions')">Mentions Légales</button>
+    <button type="button" class="footer-link" onclick="openLegalModal('cgu')">CGU</button>
+    <a href="mailto:slepleux@gmail.com" class="footer-link">Nous Contacter</a>
     <span>© Soridex 2026</span>
     <span class="footer-spark">✦</span>
   </div>
@@ -3658,5 +3682,144 @@ document.addEventListener('click', (e)=>{
   setTimeout(()=>{ try{ renderDashboard(); }catch(e){} }, 15000);
 })();
 </script>
+<!-- ============ MODALE LÉGALE (Mentions / CGU) ============ -->
+<div class="legal-modal-overlay" id="legalModal" onclick="if(event.target===this)closeLegalModal()">
+  <div class="legal-modal">
+    <div class="legal-modal-header">
+      <button class="legal-modal-close" onclick="closeLegalModal()" aria-label="Fermer">✕</button>
+    </div>
+    <div class="legal-modal-body" id="legalModalBody"></div>
+  </div>
+</div>
+
+<script>
+const MENTIONS_LEGALES_HTML = `
+<div class="legal-content">
+  <h2>Mentions Légales</h2>
+  <p class="legal-meta">Dernière mise à jour : 15 juin 2026</p>
+
+  <h3>1. Éditeur du site</h3>
+  <p>Le site <strong>Soridex</strong> est édité par :<br>
+  <strong>Solène Lepleux</strong>, entrepreneure individuelle<br>
+  Adresse : 30 rue du Docteur Bertrand, 94440 Villecresnes, France<br>
+  SIREN : 999 258 783<br>
+  Email : <a href="mailto:slepleux@gmail.com">slepleux@gmail.com</a></p>
+
+  <h3>2. Directrice de la publication</h3>
+  <p>Solène Lepleux</p>
+
+  <h3>3. Hébergement</h3>
+  <p><strong>Frontend</strong> — Vercel Inc.<br>
+  440 N Barranca Ave #4133, Covina, CA 91723, États-Unis<br>
+  Site : <a href="https://vercel.com" target="_blank" rel="noopener">vercel.com</a></p>
+  <p><strong>Backend & base de données</strong> — Supabase, Inc.<br>
+  970 Toa Payoh North #07-04, Singapour 318992<br>
+  Site : <a href="https://supabase.com" target="_blank" rel="noopener">supabase.com</a></p>
+
+  <h3>4. Propriété intellectuelle</h3>
+  <p>L'ensemble des éléments composant le site Soridex (textes, graphismes, logo, interface, code source) est la propriété exclusive de Solène Lepleux, sauf mention contraire. Toute reproduction, représentation, modification ou exploitation, partielle ou totale, sans autorisation écrite préalable est interdite.</p>
+  <p>Les noms, logos, illustrations et marques liés à <em>Disney Lorcana</em> sont la propriété de The Walt Disney Company et Ravensburger AG. Les noms, logos, illustrations et marques liés à <em>Pokémon</em> sont la propriété de Nintendo, Game Freak, Creatures Inc. et The Pokémon Company. Soridex n'est ni affilié, ni sponsorisé, ni approuvé par ces sociétés.</p>
+
+  <h3>5. Données utilisées</h3>
+  <p>Soridex utilise les données publiques fournies par :</p>
+  <ul>
+    <li><strong>Lorcana API</strong> — données et illustrations Disney Lorcana</li>
+    <li><strong>Pokémon TCG API</strong> — données et illustrations Pokémon</li>
+  </ul>
+  <p>Les prix affichés sont indicatifs, issus de sources tierces, et peuvent différer des prix réels du marché.</p>
+
+  <h3>6. Données personnelles</h3>
+  <p>Le traitement des données personnelles est détaillé dans les <a href="#" onclick="openLegalModal('cgu');return false;">Conditions Générales d'Utilisation</a>. Conformément au RGPD et à la loi Informatique et Libertés, vous disposez d'un droit d'accès, de rectification, de portabilité et d'effacement de vos données. Pour exercer ces droits, contactez : <a href="mailto:slepleux@gmail.com">slepleux@gmail.com</a>.</p>
+
+  <h3>7. Cookies</h3>
+  <p>Soridex utilise le stockage local du navigateur (localStorage) pour mettre en cache les données de cartes et améliorer les performances. Aucun cookie de traçage publicitaire n'est utilisé.</p>
+
+  <h3>8. Contact</h3>
+  <p>Pour toute question : <a href="mailto:slepleux@gmail.com">slepleux@gmail.com</a></p>
+</div>`;
+
+const CGU_HTML = `
+<div class="legal-content">
+  <h2>Conditions Générales d'Utilisation</h2>
+  <p class="legal-meta">Dernière mise à jour : 15 juin 2026</p>
+
+  <h3>1. Objet</h3>
+  <p>Les présentes Conditions Générales d'Utilisation (ci-après « CGU ») ont pour objet de définir les modalités et conditions d'utilisation du service <strong>Soridex</strong> (ci-après « le Service »), application web de suivi et de gestion de collections de cartes à jouer (Trading Card Games), éditée par Solène Lepleux.</p>
+
+  <h3>2. Acceptation des CGU</h3>
+  <p>L'inscription et l'utilisation du Service impliquent l'acceptation pleine et entière des présentes CGU. Si vous n'acceptez pas ces conditions, vous devez renoncer à utiliser Soridex.</p>
+
+  <h3>3. Accès au Service</h3>
+  <p>Le Service est accessible gratuitement à toute personne disposant d'un accès internet. Certaines fonctionnalités (portfolio personnel, partage public, synchronisation multi-appareils) nécessitent la création d'un compte utilisateur.</p>
+  <p>L'éditeur se réserve le droit d'introduire ultérieurement des fonctionnalités payantes (modèle freemium). Les utilisateurs seront informés au préalable de toute modification du modèle économique.</p>
+
+  <h3>4. Compte utilisateur</h3>
+  <p>L'inscription requiert un nom d'utilisateur unique, une adresse email valide et un mot de passe. L'utilisateur s'engage à :</p>
+  <ul>
+    <li>fournir des informations exactes lors de l'inscription ;</li>
+    <li>préserver la confidentialité de ses identifiants ;</li>
+    <li>informer l'éditeur de toute utilisation non autorisée de son compte.</li>
+  </ul>
+  <p>L'utilisateur peut supprimer son compte à tout moment en contactant <a href="mailto:slepleux@gmail.com">slepleux@gmail.com</a>.</p>
+
+  <h3>5. Données personnelles (RGPD)</h3>
+  <p><strong>Responsable du traitement :</strong> Solène Lepleux, 30 rue du Docteur Bertrand, 94440 Villecresnes.</p>
+  <p><strong>Données collectées :</strong></p>
+  <ul>
+    <li>nom d'utilisateur, adresse email, mot de passe (chiffré) ;</li>
+    <li>contenu de votre portfolio (cartes possédées, dossiers, valeurs) ;</li>
+    <li>paramètres de partage public des dossiers.</li>
+  </ul>
+  <p><strong>Finalités :</strong> fournir l'accès au compte, sauvegarder la collection, permettre le partage public si activé par l'utilisateur.</p>
+  <p><strong>Base légale :</strong> exécution du contrat (CGU) et consentement.</p>
+  <p><strong>Durée de conservation :</strong> les données sont conservées tant que le compte est actif. La suppression du compte entraîne la suppression des données associées sous 30 jours.</p>
+  <p><strong>Sous-traitants :</strong> les données sont hébergées par Supabase Inc. (base de données et authentification). Aucune donnée n'est revendue ni transmise à des tiers à des fins commerciales.</p>
+  <p><strong>Vos droits :</strong> conformément au RGPD, vous disposez d'un droit d'accès, de rectification, d'effacement, de portabilité, de limitation et d'opposition. Pour les exercer : <a href="mailto:slepleux@gmail.com">slepleux@gmail.com</a>. Vous pouvez également introduire une réclamation auprès de la CNIL (<a href="https://www.cnil.fr" target="_blank" rel="noopener">www.cnil.fr</a>).</p>
+
+  <h3>6. Utilisation du Service</h3>
+  <p>L'utilisateur s'engage à ne pas :</p>
+  <ul>
+    <li>utiliser le Service à des fins illégales ou frauduleuses ;</li>
+    <li>tenter de porter atteinte à la sécurité ou au fonctionnement du Service ;</li>
+    <li>extraire massivement les données (scraping) sans autorisation écrite ;</li>
+    <li>partager publiquement des contenus contrevenant aux droits de tiers.</li>
+  </ul>
+  <p>Tout manquement peut entraîner la suspension ou la suppression du compte sans préavis.</p>
+
+  <h3>7. Partage public de dossiers</h3>
+  <p>L'utilisateur peut rendre certains dossiers de sa collection accessibles publiquement via une URL de partage. Il reconnaît être seul responsable du contenu rendu public et peut désactiver le partage à tout moment depuis son portfolio.</p>
+
+  <h3>8. Propriété intellectuelle</h3>
+  <p>Le code, l'interface et le concept du Service appartiennent à Solène Lepleux. Les données et illustrations des cartes proviennent des bases de données publiques Lorcana API et Pokémon TCG API ; les marques et illustrations associées restent la propriété de leurs ayants droit respectifs (cf. Mentions Légales).</p>
+  <p>Le contenu créé par l'utilisateur (organisation des dossiers, notes) reste sa propriété ; il accorde à l'éditeur une licence non exclusive nécessaire au fonctionnement du Service.</p>
+
+  <h3>9. Disponibilité et responsabilité</h3>
+  <p>L'éditeur met en œuvre les moyens raisonnables pour assurer la disponibilité du Service, sans garantie d'un fonctionnement ininterrompu. Soridex étant proposé gratuitement, l'éditeur ne saurait être tenu responsable des dommages directs ou indirects résultant d'une interruption, d'une perte de données ou d'une inexactitude des prix affichés. Les valeurs de cartes sont indicatives et ne constituent pas un conseil financier.</p>
+
+  <h3>10. Modification des CGU</h3>
+  <p>L'éditeur se réserve le droit de modifier les présentes CGU à tout moment. Les utilisateurs seront informés des modifications substantielles par email ou notification dans le Service. La poursuite de l'utilisation après modification vaut acceptation des nouvelles CGU.</p>
+
+  <h3>11. Loi applicable et juridiction</h3>
+  <p>Les présentes CGU sont régies par le droit français. En cas de litige et à défaut de résolution amiable, les tribunaux français seront seuls compétents.</p>
+
+  <h3>12. Contact</h3>
+  <p>Pour toute question relative aux présentes CGU : <a href="mailto:slepleux@gmail.com">slepleux@gmail.com</a></p>
+</div>`;
+
+function openLegalModal(type){
+  const body=document.getElementById('legalModalBody');
+  const modal=document.getElementById('legalModal');
+  body.innerHTML=type==='mentions'?MENTIONS_LEGALES_HTML:CGU_HTML;
+  body.scrollTop=0;
+  modal.classList.add('is-open');
+  document.body.style.overflow='hidden';
+}
+function closeLegalModal(){
+  document.getElementById('legalModal').classList.remove('is-open');
+  document.body.style.overflow='';
+}
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeLegalModal();});
+</script>
+
 </body>
 </html>
