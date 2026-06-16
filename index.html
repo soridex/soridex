@@ -2,8 +2,42 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Soridex — Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Soridex — Le dashboard des collectionneurs TCG</title>
+<meta name="description" content="Suis tes cartes Pokémon, Lorcana et Magic en un seul endroit. Crée des portfolios thématiques, des wishlists, et garde un œil sur les cotes Cardmarket en temps réel.">
+<meta name="theme-color" content="#0c0a1f">
+
+<!-- Open Graph (Facebook, LinkedIn, WhatsApp, Discord, etc.) -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Soridex">
+<meta property="og:title" content="Soridex — Le dashboard des collectionneurs TCG">
+<meta property="og:description" content="Suis tes cartes Pokémon, Lorcana et Magic en un seul endroit. Portfolios thématiques, wishlists, cotes Cardmarket en temps réel.">
+<meta property="og:url" content="https://soridex.vercel.app/">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:image" content="https://soridex.vercel.app/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Soridex — Dashboard pour collectionneurs Pokémon, Lorcana et Magic">
+
+<!-- Twitter / X -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Soridex — Le dashboard des collectionneurs TCG">
+<meta name="twitter:description" content="Portfolios thématiques, wishlists, cotes Cardmarket en temps réel pour Pokémon, Lorcana et Magic.">
+<meta name="twitter:image" content="https://soridex.vercel.app/og-image.png">
+
+<!-- Favicon SVG inline (✦ doré sur fond bleu nuit) -->
+<link rel="icon" type="image/svg+xml" href='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="%23f0d488"/><stop offset="1" stop-color="%23a67c2a"/></linearGradient></defs><rect width="64" height="64" rx="12" fill="%230c0a1f"/><path d="M32 8 L36 28 L56 32 L36 36 L32 56 L28 36 L8 32 L28 28 Z" fill="url(%23g)"/></svg>'>
+<link rel="apple-touch-icon" href='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="%23f0d488"/><stop offset="1" stop-color="%23a67c2a"/></linearGradient></defs><rect width="180" height="180" rx="36" fill="%230c0a1f"/><path d="M90 30 L100 80 L155 90 L100 100 L90 155 L80 100 L25 90 L80 80 Z" fill="url(%23g)"/></svg>'>
+
+<!-- PWA — installable comme une app sur iOS/Android -->
+<link rel="manifest" href='data:application/manifest+json;charset=utf-8,{"name":"Soridex","short_name":"Soridex","description":"Dashboard des collectionneurs TCG","start_url":"/","display":"standalone","background_color":"%230c0a1f","theme_color":"%230c0a1f","orientation":"portrait-primary","lang":"fr","icons":[{"src":"data:image/svg%2Bxml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 512 512%22><rect width=%22512%22 height=%22512%22 rx=%22102%22 fill=%22%230c0a1f%22/><path d=%22M256 64 L290 224 L448 256 L290 288 L256 448 L222 288 L64 256 L222 224 Z%22 fill=%22%23f0d488%22/></svg>","sizes":"512x512","type":"image/svg+xml","purpose":"any"}]}'>
+
+<!-- iOS Safari : installation en plein écran sans barre Safari -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Soridex">
+<meta name="mobile-web-app-capable" content="yes">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Cinzel:wght@500;600;700&display=swap" rel="stylesheet">
@@ -483,6 +517,223 @@
     letter-spacing:.1em;text-transform:uppercase;
     padding:3px 9px;border-radius:5px;margin-bottom:10px;
     box-shadow:0 2px 6px rgba(74,222,128,.3);
+  }
+
+  /* ============================================
+     HOME — Landing hero, features, ticker, mobile
+     ============================================ */
+
+  /* Landing hero */
+  .landing-hero{
+    display:grid;grid-template-columns:1.6fr 1fr;gap:32px;
+    align-items:center;padding:42px 38px;
+    background:linear-gradient(135deg,rgba(212,168,90,.08),rgba(167,139,250,.05));
+    border:1px solid rgba(212,168,90,.2);border-radius:18px;
+    margin-bottom:32px;position:relative;overflow:hidden;
+  }
+  .landing-hero::before{
+    content:'';position:absolute;top:-40%;left:-10%;width:60%;height:200%;
+    background:radial-gradient(ellipse,rgba(212,168,90,.12),transparent 60%);
+    pointer-events:none;
+  }
+  .hero-title{
+    font-family:"Cinzel";font-size:42px;color:#fff;
+    line-height:1.15;margin:0 0 14px;font-weight:700;
+    letter-spacing:.01em;position:relative;
+  }
+  .hero-gold{background:linear-gradient(135deg,var(--gold-2),var(--gold-deep));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .hero-sub{
+    color:#cbb9e0;font-size:16px;line-height:1.55;
+    margin:0 0 24px;max-width:540px;position:relative;
+  }
+  .hero-cta{display:flex;gap:12px;flex-wrap:wrap;position:relative;margin-bottom:18px}
+  .hero-cta .btn-gold,.hero-cta .btn-gold-outline{font-size:14px;padding:12px 22px}
+  .hero-pill{
+    display:inline-block;font-size:12px;color:var(--gold-2);
+    background:rgba(212,168,90,.1);padding:6px 14px;border-radius:20px;
+    border:1px solid rgba(212,168,90,.25);position:relative;font-weight:600;
+  }
+  .hero-right{display:flex;align-items:center;justify-content:center;position:relative}
+  .hero-sparkle{
+    font-size:180px;color:var(--gold-2);opacity:.4;
+    filter:drop-shadow(0 0 40px rgba(212,168,90,.5));
+    animation:sparkleFloat 6s ease-in-out infinite;
+  }
+  @keyframes sparkleFloat{
+    0%,100%{transform:translateY(0) rotate(0deg);opacity:.4}
+    50%{transform:translateY(-12px) rotate(8deg);opacity:.6}
+  }
+  @media (max-width:760px){
+    .landing-hero{grid-template-columns:1fr;padding:28px 22px;text-align:center}
+    .hero-title{font-size:30px}
+    .hero-right{display:none}
+    .hero-cta{justify-content:center}
+  }
+
+  /* Features carousel */
+  .features-carousel{margin-bottom:32px}
+  .features-track{
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));
+    gap:16px;
+  }
+  .feature-card{
+    background:var(--surf);border:1px solid var(--line2);
+    border-radius:14px;padding:20px;transition:.2s;
+    position:relative;overflow:hidden;
+  }
+  .feature-card:hover{
+    transform:translateY(-3px);border-color:var(--gold-deep);
+    box-shadow:0 8px 24px rgba(212,168,90,.1);
+  }
+  .feature-card.upcoming{opacity:.85;border-style:dashed}
+  .feature-ico{
+    width:48px;height:48px;border-radius:12px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:22px;margin-bottom:14px;color:#fff;
+    box-shadow:0 4px 14px rgba(0,0,0,.3);
+  }
+  .feature-name{
+    color:#fff;font-weight:700;font-size:15px;
+    margin-bottom:6px;letter-spacing:.01em;
+  }
+  .feature-desc{color:var(--mut);font-size:12.5px;line-height:1.5}
+  .soon-pill{
+    display:inline-block;background:rgba(212,168,90,.15);
+    color:var(--gold-2);font-size:9px;font-weight:800;
+    padding:2px 6px;border-radius:4px;
+    letter-spacing:.1em;text-transform:uppercase;
+    margin-left:6px;vertical-align:middle;
+  }
+
+  /* Sets à venir — ticker horizontal */
+  .upcoming-section{margin-bottom:32px}
+  .upcoming-head{
+    display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;
+    margin-bottom:14px;
+  }
+  .upcoming-sub{
+    color:var(--mut);font-size:12px;letter-spacing:.03em;
+  }
+  .upcoming-track{
+    display:flex;gap:12px;overflow-x:auto;
+    padding:4px 4px 14px;
+    scroll-snap-type:x mandatory;
+    scrollbar-width:thin;scrollbar-color:var(--gold-deep) transparent;
+  }
+  .upcoming-track::-webkit-scrollbar{height:6px}
+  .upcoming-track::-webkit-scrollbar-thumb{background:var(--gold-deep);border-radius:4px}
+  .upcoming-card{
+    flex:0 0 240px;scroll-snap-align:start;
+    background:var(--surf);border:1px solid var(--line2);
+    border-radius:12px;padding:16px;cursor:default;
+    transition:.18s;position:relative;
+  }
+  .upcoming-card:hover{
+    border-color:var(--gold-deep);transform:translateY(-2px);
+    box-shadow:0 6px 18px rgba(212,168,90,.12);
+  }
+  .upcoming-tcg{
+    display:inline-block;font-size:10px;font-weight:800;
+    letter-spacing:.1em;padding:3px 8px;border-radius:5px;
+    margin-bottom:10px;text-transform:uppercase;
+  }
+  .upcoming-tcg.pokemon{background:rgba(251,191,36,.15);color:#fbbf24}
+  .upcoming-tcg.lorcana{background:rgba(167,139,250,.15);color:#a78bfa}
+  .upcoming-tcg.magic{background:rgba(239,68,68,.15);color:#ef4444}
+  .upcoming-name{
+    color:#fff;font-size:15px;font-weight:700;
+    line-height:1.3;margin-bottom:6px;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+    overflow:hidden;
+  }
+  .upcoming-date{
+    color:var(--gold-2);font-size:12px;font-weight:600;
+    margin-bottom:6px;
+  }
+  .upcoming-countdown{
+    font-size:11px;color:var(--mut);font-style:italic;
+  }
+  .upcoming-loading{padding:20px;text-align:center;color:var(--mut);font-size:13px}
+
+  /* Mobile teaser */
+  .mobile-teaser-section{margin-bottom:32px}
+  .mobile-teaser{
+    display:grid;grid-template-columns:1.4fr 1fr;gap:32px;
+    align-items:center;padding:36px;
+    background:linear-gradient(135deg,rgba(167,139,250,.06),rgba(212,168,90,.04));
+    border:1px solid var(--line2);border-radius:18px;
+  }
+  .mt-eyebrow{
+    display:inline-block;font-size:11px;color:#a78bfa;
+    background:rgba(167,139,250,.12);padding:5px 12px;border-radius:14px;
+    font-weight:700;letter-spacing:.08em;margin-bottom:14px;
+  }
+  .mt-title{
+    font-family:"Cinzel";color:#fff;font-size:26px;
+    margin:0 0 12px;line-height:1.2;font-weight:700;
+  }
+  .mt-sub{color:#cbb9e0;font-size:14px;line-height:1.6;margin:0 0 18px}
+  .mt-steps{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+  .mt-step{
+    display:flex;align-items:center;gap:10px;
+    font-size:13px;color:var(--tx);
+  }
+  .mt-num{
+    flex-shrink:0;width:22px;height:22px;border-radius:50%;
+    background:linear-gradient(135deg,var(--gold-2),var(--gold-deep));
+    color:#1a1430;font-weight:800;font-size:11px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .mt-future{
+    font-size:12px;color:var(--mut);font-style:italic;
+    padding-top:12px;border-top:1px solid var(--line2);
+  }
+  .mt-phone-wrap{display:flex;justify-content:center;align-items:center}
+  .mt-phone{
+    width:240px;height:480px;background:#000;border-radius:38px;
+    padding:8px;box-shadow:0 20px 50px rgba(0,0,0,.6),0 0 0 2px #3a3050;
+    position:relative;overflow:hidden;
+  }
+  .mt-notch{
+    position:absolute;top:8px;left:50%;transform:translateX(-50%);
+    width:100px;height:22px;background:#000;border-radius:14px;z-index:2;
+  }
+  .mt-screen{
+    width:100%;height:100%;background:#0c0a1f;border-radius:30px;
+    padding:38px 14px 50px;overflow:hidden;position:relative;
+  }
+  .mt-app-header{margin-bottom:16px}
+  .mt-logo-line{
+    color:var(--gold-2);font-size:13px;font-weight:700;
+    text-align:center;margin-bottom:6px;letter-spacing:.1em;
+  }
+  .mt-nav{
+    color:var(--mut);font-size:9px;text-align:center;
+    letter-spacing:.04em;
+  }
+  .mt-app-card{
+    background:rgba(255,255,255,.04);border:1px solid var(--line2);
+    border-radius:9px;padding:10px;margin-bottom:10px;
+  }
+  .mt-app-card.alt{background:rgba(167,139,250,.06);border-color:rgba(167,139,250,.2)}
+  .mt-app-cardname{color:#fff;font-size:11px;font-weight:700;margin-bottom:3px}
+  .mt-app-cardmeta{color:var(--mut);font-size:9px;margin-bottom:6px}
+  .mt-app-bar{height:4px;background:rgba(255,255,255,.05);border-radius:3px;overflow:hidden;margin-bottom:5px}
+  .mt-app-fill{height:100%;background:linear-gradient(90deg,var(--gold-deep),var(--gold-2))}
+  .mt-app-val{color:var(--gold-2);font-size:11px;font-weight:800;text-align:right}
+  .mt-app-tabbar{
+    position:absolute;bottom:12px;left:14px;right:14px;
+    display:flex;justify-content:space-around;
+    padding:8px;background:rgba(255,255,255,.04);border-radius:14px;
+    backdrop-filter:blur(8px);
+  }
+  .mt-app-tabbar span{font-size:13px;color:var(--mut);transition:.15s}
+  .mt-app-tabbar span.active{color:var(--gold-2)}
+  @media (max-width:760px){
+    .mobile-teaser{grid-template-columns:1fr;padding:24px;text-align:center}
+    .mt-steps{text-align:left}
+    .mt-phone{width:200px;height:400px}
+    .mt-screen{padding:32px 12px 44px}
   }
 
   /* Wishlist - même grille que les cartes */
@@ -1090,6 +1341,59 @@
 <!-- VIEW: HOME -->
 <section class="view" id="view-home">
 
+  <!-- LANDING HERO (visible non-connectés uniquement) -->
+  <section class="section landing-hero" id="landingHero" hidden>
+    <div class="hero-left">
+      <h1 class="hero-title">Le dashboard des collectionneurs <span class="hero-gold">TCG</span></h1>
+      <p class="hero-sub">Suis tes cartes Pokémon, Lorcana et Magic en un seul endroit. Crée des portfolios thématiques, des wishlists, et garde un œil sur les cotes Cardmarket en temps réel.</p>
+      <div class="hero-cta">
+        <button class="btn-gold" id="heroSignupBtn">Créer mon compte gratuit</button>
+        <button class="btn-gold-outline" id="heroDiscoverBtn">Découvrir les sets</button>
+      </div>
+      <div class="hero-pill">✨ Plus de 300 sets référencés · 3 TCG · gratuit</div>
+    </div>
+    <div class="hero-right">
+      <div class="hero-sparkle">✦</div>
+    </div>
+  </section>
+
+  <!-- SORIDEX C'EST QUOI (carrousel features, visible non-connectés) -->
+  <section class="section features-carousel" id="featuresCarousel" hidden>
+    <h2 class="section-title">Soridex, c'est quoi ?</h2>
+    <div class="features-track" id="featuresTrack">
+      <div class="feature-card">
+        <div class="feature-ico" style="background:linear-gradient(135deg,#ec4899,#be185d)">📁</div>
+        <div class="feature-name">Portfolios thématiques</div>
+        <div class="feature-desc">Crée des portfolios par set, par personnage ou par chasse perso. Coche les cartes au fur et à mesure que tu les obtiens.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-ico" style="background:linear-gradient(135deg,#a78bfa,#7c3aed)">♥</div>
+        <div class="feature-name">Wishlists pour la chasse</div>
+        <div class="feature-desc">Liste les cartes à chasser en brocante, convention ou en ligne. Marque-les trouvées et la sync se fait avec tes portfolios.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-ico" style="background:linear-gradient(135deg,#4ade80,#16a34a)">✓</div>
+        <div class="feature-name">Cartes possédées</div>
+        <div class="feature-desc">Marque tes cartes possédées d'un clic sur n'importe quelle vue de set. Sans avoir à créer de portfolio.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-ico" style="background:linear-gradient(135deg,#fbbf24,#a16207)">€</div>
+        <div class="feature-name">Cotes en temps réel</div>
+        <div class="feature-desc">Prix Cardmarket (EUR) actualisés automatiquement pour chaque carte. Tendance 30 jours sur les Pokémon.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-ico" style="background:linear-gradient(135deg,#22d3ee,#0e7490)">📚</div>
+        <div class="feature-name">Guide débutant</div>
+        <div class="feature-desc">Tout pour bien collectionner : analyser une carte, reconnaître les raretés, le grading, la conservation. Sans bullshit.</div>
+      </div>
+      <div class="feature-card upcoming">
+        <div class="feature-ico" style="background:linear-gradient(135deg,#d4a857,#6b5333)">🔔</div>
+        <div class="feature-name">Alertes prix <span class="soon-pill">Bientôt</span></div>
+        <div class="feature-desc">Reçois une notification quand une carte de ta collection prend ou perd de la valeur de manière significative.</div>
+      </div>
+    </div>
+  </section>
+
   <section class="section">
     <h2 class="section-title">Dashboard Soridex</h2>
     <div class="stats-grid">
@@ -1106,6 +1410,17 @@
       </div>
       <div class="stat-card"><div class="stat-label">Sets disponibles</div><div class="stat-value"><span id="dashTotalSets">—</span> <span class="stat-unit">sets</span></div></div>
       <div class="stat-card"><div class="stat-label">Cartes totales</div><div class="stat-value"><span id="dashTotalCards">—</span> <span class="stat-unit">cartes</span></div></div>
+    </div>
+  </section>
+
+  <!-- SETS À VENIR (ticker auto) -->
+  <section class="section upcoming-section">
+    <div class="upcoming-head">
+      <h2 class="section-title" style="margin:0">📅 Prochaines sorties</h2>
+      <span class="upcoming-sub" id="upcomingSub">Chargement…</span>
+    </div>
+    <div class="upcoming-track" id="upcomingTrack">
+      <div class="upcoming-loading">Chargement des sorties à venir…</div>
     </div>
   </section>
 
@@ -1177,6 +1492,48 @@
           </div>
         </div>
         <div class="chart-wrap"><canvas id="priceChart"></canvas></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MOBILE TEASER : installable PWA + app à venir -->
+  <section class="section mobile-teaser-section">
+    <div class="mobile-teaser">
+      <div class="mt-text">
+        <div class="mt-eyebrow">📱 Sur mobile</div>
+        <h3 class="mt-title">Soridex dans ta poche, dès aujourd'hui</h3>
+        <p class="mt-sub">Installe Soridex comme une vraie app sur ton iPhone ou ton Android : ouvre le site sur ton phone, puis utilise <strong>"Ajouter à l'écran d'accueil"</strong>. Pas de store, pas d'installation lourde, juste un raccourci natif qui se met à jour tout seul.</p>
+        <div class="mt-steps">
+          <div class="mt-step"><span class="mt-num">1</span>Ouvre soridex.vercel.app dans Safari ou Chrome</div>
+          <div class="mt-step"><span class="mt-num">2</span>Menu de partage <span style="font-size:14px">⎙</span> → "Ajouter à l'écran d'accueil"</div>
+          <div class="mt-step"><span class="mt-num">3</span>Soridex apparaît comme une app dans ton tiroir</div>
+        </div>
+        <div class="mt-future">🚀 Une app native iOS / Android est dans les cartons pour 2026.</div>
+      </div>
+      <div class="mt-phone-wrap">
+        <div class="mt-phone">
+          <div class="mt-notch"></div>
+          <div class="mt-screen">
+            <div class="mt-app-header">
+              <div class="mt-logo-line">✦ <strong>SORIDEX</strong></div>
+              <div class="mt-nav">⌕ Explorer · Portfolios · ♥</div>
+            </div>
+            <div class="mt-app-card">
+              <div class="mt-app-cardname">Évoli & évolutions</div>
+              <div class="mt-app-cardmeta">⚡ Pokémon · 8 cartes</div>
+              <div class="mt-app-bar"><div class="mt-app-fill" style="width:62%"></div></div>
+              <div class="mt-app-val">€38,40</div>
+            </div>
+            <div class="mt-app-card alt">
+              <div class="mt-app-cardname">Brocante dimanche</div>
+              <div class="mt-app-cardmeta">♥ Wishlist · 3/12 trouvées</div>
+              <div class="mt-app-bar"><div class="mt-app-fill" style="width:25%;background:linear-gradient(90deg,#ec4899,#a78bfa)"></div></div>
+            </div>
+            <div class="mt-app-tabbar">
+              <span>⌕</span><span>📁</span><span>♥</span><span class="active">●</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </section>
@@ -1870,6 +2227,10 @@ function showView(name){
   document.querySelectorAll('.navlink').forEach(l => l.classList.toggle('active', l.dataset.view === name));
   if(name==='home') document.querySelector('.navlink[data-view="home"]').classList.add('active');
   if(name==='home' && typeof renderDashboard === 'function'){ try{ renderDashboard(); }catch(e){} }
+  if(name==='home'){
+    if(typeof applyLandingState === 'function') applyLandingState();
+    if(typeof loadUpcomingSets === 'function') loadUpcomingSets();
+  }
   window.scrollTo({top:0,behavior:'smooth'});
   history.replaceState(null,'','#/'+name);
 }
@@ -1878,7 +2239,7 @@ function showView(name){
 const AUTH_KEY='soridex_user_v1';
 function getUser(){try{return JSON.parse(localStorage.getItem(AUTH_KEY)||'null');}catch(e){return null;}}
 function setUser(u){localStorage.setItem(AUTH_KEY,JSON.stringify(u));}
-function logout(){localStorage.removeItem(AUTH_KEY); showView('home');}
+function logout(){localStorage.removeItem(AUTH_KEY); showView('home'); try{applyLandingState();}catch(e){}}
 function goToAccount(){const u=getUser(); if(u){showView('compte'); renderCompte();} else {showView('login'); resetAuthForm('login');}}
 let authMode='login';
 function resetAuthForm(mode){
@@ -2141,7 +2502,7 @@ function lcCardToPfEntry(c, setInfo){
   const lcLarge = (c.image_uris && c.image_uris.digital && (c.image_uris.digital.large || c.image_uris.digital.normal)) || '';
   return {
     apiId: c.id, name: c.version ? `${c.name} — ${c.version}` : c.name,
-    img: (c.image_uris && c.image_uris.digital && c.image_uris.digital.small) || '',
+    img: (c.image_uris && c.image_uris.digital && (c.image_uris.digital.normal || c.image_uris.digital.small)) || '',
     largeImg: lcLarge,
     setName: setInfo ? setInfo.name : (c.set ? c.set.name : ''),
     setReleaseDate: setInfo ? String(setInfo.year) : (c.set && c.set.released_at ? c.set.released_at : null),
@@ -2158,7 +2519,7 @@ function lcCardToPfEntries(c, setInfo){
   const lcLarge = (c.image_uris && c.image_uris.digital && (c.image_uris.digital.large || c.image_uris.digital.normal)) || '';
   const baseEntry = {
     name: baseName,
-    img: (c.image_uris && c.image_uris.digital && c.image_uris.digital.small) || '',
+    img: (c.image_uris && c.image_uris.digital && (c.image_uris.digital.normal || c.image_uris.digital.small)) || '',
     largeImg: lcLarge,
     setName: setInfo ? setInfo.name : (c.set ? c.set.name : ''),
     setReleaseDate: setInfo ? String(setInfo.year) : (c.set && c.set.released_at ? c.set.released_at : null),
@@ -2192,11 +2553,11 @@ function mgCardToPfEntry(c, setInfo){
   else if(p.usd) market = parseFloat(p.usd) * USD_TO_EUR;
   let img = '', mgLarge = '';
   if(c.image_uris){
-    img = c.image_uris.small || '';
-    mgLarge = c.image_uris.normal || c.image_uris.large || img;
+    img = c.image_uris.normal || c.image_uris.small || '';
+    mgLarge = c.image_uris.large || c.image_uris.normal || img;
   } else if(c.card_faces && c.card_faces[0] && c.card_faces[0].image_uris){
-    img = c.card_faces[0].image_uris.small || '';
-    mgLarge = c.card_faces[0].image_uris.normal || c.card_faces[0].image_uris.large || img;
+    img = c.card_faces[0].image_uris.normal || c.card_faces[0].image_uris.small || '';
+    mgLarge = c.card_faces[0].image_uris.large || c.card_faces[0].image_uris.normal || img;
   }
   return {
     apiId: c.id, name: c.printed_name || c.name,
@@ -3067,7 +3428,7 @@ async function showLorcanaSetCards(slug){
       });
     }
     grid.innerHTML=list.map(c=>{
-      const img=(c.image_uris&&c.image_uris.digital&&c.image_uris.digital.small)||'';
+      const img=(c.image_uris&&c.image_uris.digital&&(c.image_uris.digital.normal||c.image_uris.digital.small))||'';
       const full=c.version?`${c.name} — ${c.version}`:c.name;
       const num=`${c.collector_number}/${setInfo.count}`;
       const pN=c.prices&&c.prices.usd?parseFloat(c.prices.usd)*USD_TO_EUR:null;
@@ -3217,8 +3578,8 @@ async function showMagicSetCards(setCode){
     }
     grid.innerHTML=list.map(c=>{
       let img='';
-      if(c.image_uris&&c.image_uris.small) img=c.image_uris.small;
-      else if(c.card_faces&&c.card_faces[0]&&c.card_faces[0].image_uris) img=c.card_faces[0].image_uris.small;
+      if(c.image_uris && (c.image_uris.normal || c.image_uris.small)) img = c.image_uris.normal || c.image_uris.small;
+      else if(c.card_faces && c.card_faces[0] && c.card_faces[0].image_uris) img = c.card_faces[0].image_uris.normal || c.card_faces[0].image_uris.small;
       const num=`${c.collector_number}/${setInfo?setInfo.card_count:'?'}`;
       const p=c.prices||{};
       const variants=[];
@@ -3448,7 +3809,7 @@ function translateCardNameToFr(name){
           name: c.version ? `${c.name} — ${c.version}` : c.name,
           set: c.set ? c.set.name : '',
           num: c.collector_number || '',
-          img: (c.image_uris && c.image_uris.digital && c.image_uris.digital.small) || '',
+          img: (c.image_uris && c.image_uris.digital && (c.image_uris.digital.normal || c.image_uris.digital.small)) || '',
           action: () => {
             const setCode = c.set ? (c.set.code || '') : '';
             const lcSet = LORCANA_SETS.find(s => s.lorcastCode === setCode);
@@ -3566,8 +3927,8 @@ async function showGlobalSearchResults(query){
   if(tasks[1].status === 'fulfilled'){
     (tasks[1].value.data || []).forEach(c => {
       let img = '', largeImg = '';
-      if(c.image_uris){ img = c.image_uris.small || ''; largeImg = c.image_uris.normal || c.image_uris.large || img; }
-      else if(c.card_faces && c.card_faces[0] && c.card_faces[0].image_uris){ img = c.card_faces[0].image_uris.small || ''; largeImg = c.card_faces[0].image_uris.normal || c.card_faces[0].image_uris.large || img; }
+      if(c.image_uris){ img = c.image_uris.normal || c.image_uris.small || ''; largeImg = c.image_uris.large || c.image_uris.normal || img; }
+      else if(c.card_faces && c.card_faces[0] && c.card_faces[0].image_uris){ img = c.card_faces[0].image_uris.normal || c.card_faces[0].image_uris.small || ''; largeImg = c.card_faces[0].image_uris.large || c.card_faces[0].image_uris.normal || img; }
       let market = null;
       const p = c.prices || {};
       if(p.eur) market = parseFloat(p.eur);
@@ -3594,7 +3955,7 @@ async function showGlobalSearchResults(query){
       const pN = c.prices && c.prices.usd ? parseFloat(c.prices.usd) * USD_TO_EUR : null;
       const pF = c.prices && c.prices.usd_foil ? parseFloat(c.prices.usd_foil) * USD_TO_EUR : null;
       const market = pF != null && (pN == null || pF > pN) ? pF : pN;
-      const img = (c.image_uris && c.image_uris.digital && c.image_uris.digital.small) || '';
+      const img = (c.image_uris && c.image_uris.digital && (c.image_uris.digital.normal || c.image_uris.digital.small)) || '';
       const largeImg = (c.image_uris && c.image_uris.digital && (c.image_uris.digital.large || c.image_uris.digital.normal)) || '';
       const name = c.version ? `${c.name} — ${c.version}` : c.name;
       const entry = {
@@ -5069,6 +5430,119 @@ function pokemonSparkline(c){
 }
 
 
+/* === HOME — Landing vs Dashboard + Sets à venir === */
+
+// Affiche/cache les sections landing (hero + features) selon login
+function applyLandingState(){
+  const isLogged = !!getUser();
+  const hero = document.getElementById('landingHero');
+  const features = document.getElementById('featuresCarousel');
+  if(hero) hero.hidden = isLogged;
+  if(features) features.hidden = isLogged;
+}
+
+// Sets à venir : agrège les 3 APIs et garde uniquement les sorties futures
+let _upcomingCache = null;
+let _upcomingLoading = false;
+async function loadUpcomingSets(force){
+  if(_upcomingLoading) return;
+  if(_upcomingCache && !force){ renderUpcomingSets(_upcomingCache); return; }
+  _upcomingLoading = true;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const out = [];
+
+  const tasks = await Promise.allSettled([
+    // Pokémon
+    (async() => {
+      try{
+        const all = await getAllPokemonSetsFromApi();
+        for(const s of all){
+          if(!s.releaseDate) continue;
+          const d = new Date(s.releaseDate.replace(/\//g, '-'));
+          if(isNaN(d.getTime())) continue;
+          if(d > today) out.push({tcg:'pokemon', name:s.name, date:d, dateStr:s.releaseDate, raw:s});
+        }
+      }catch(e){ console.warn('upcoming pokemon', e); }
+    })(),
+    // Magic
+    (async() => {
+      try{
+        if(MAGIC_SETS.length === 0) await loadMagicSets();
+        for(const s of MAGIC_SETS){
+          if(!s.released_at) continue;
+          const d = new Date(s.released_at);
+          if(isNaN(d.getTime())) continue;
+          if(d > today) out.push({tcg:'magic', name:s.name, date:d, dateStr:s.released_at, raw:s});
+        }
+      }catch(e){ console.warn('upcoming magic', e); }
+    })(),
+    // Lorcana
+    (async() => {
+      try{
+        const r = await fetch('https://api.lorcast.com/v0/sets');
+        if(!r.ok) return;
+        const j = await r.json();
+        const arr = j.results || j;
+        if(!Array.isArray(arr)) return;
+        for(const s of arr){
+          if(!s.released_at) continue;
+          const d = new Date(s.released_at);
+          if(isNaN(d.getTime())) continue;
+          if(d > today) out.push({tcg:'lorcana', name:s.name, date:d, dateStr:s.released_at, raw:s});
+        }
+      }catch(e){ console.warn('upcoming lorcana', e); }
+    })(),
+  ]);
+
+  out.sort((a,b) => a.date - b.date);
+  _upcomingCache = out.slice(0, 12); // limit à 12 prochaines sorties
+  _upcomingLoading = false;
+  renderUpcomingSets(_upcomingCache);
+}
+
+function renderUpcomingSets(list){
+  const track = document.getElementById('upcomingTrack');
+  const sub = document.getElementById('upcomingSub');
+  if(!track) return;
+  if(!list || list.length === 0){
+    track.innerHTML = '<div class="upcoming-loading">Aucune sortie à venir détectée pour le moment.</div>';
+    if(sub) sub.textContent = '';
+    return;
+  }
+  if(sub) sub.textContent = `${list.length} sortie${list.length>1?'s':''} programmée${list.length>1?'s':''}`;
+  const TCG_LABEL = {pokemon:'Pokémon', lorcana:'Lorcana', magic:'Magic'};
+  const fmtDate = (d) => d.toLocaleDateString('fr-FR', {day:'2-digit', month:'long', year:'numeric'});
+  const today = new Date(); today.setHours(0,0,0,0);
+  track.innerHTML = list.map(s => {
+    const days = Math.ceil((s.date - today) / (1000*60*60*24));
+    const countdown = days <= 0 ? 'Sortie aujourd\'hui !' :
+                       days === 1 ? 'Demain !' :
+                       days < 7 ? `Dans ${days} jours` :
+                       days < 30 ? `Dans ${Math.round(days/7)} semaines` :
+                       days < 365 ? `Dans ${Math.round(days/30)} mois` :
+                       `Dans ${Math.round(days/365)} an${days>=730?'s':''}`;
+    return `<div class="upcoming-card">
+      <span class="upcoming-tcg ${s.tcg}">${TCG_LABEL[s.tcg]}</span>
+      <div class="upcoming-name">${escapeHtml(s.name)}</div>
+      <div class="upcoming-date">📅 ${fmtDate(s.date)}</div>
+      <div class="upcoming-countdown">⏱ ${countdown}</div>
+    </div>`;
+  }).join('');
+}
+
+// Handlers boutons hero
+document.addEventListener('DOMContentLoaded', () => {
+  const signup = document.getElementById('heroSignupBtn');
+  const discover = document.getElementById('heroDiscoverBtn');
+  if(signup) signup.addEventListener('click', () => {
+    showView('login');
+    if(typeof resetAuthForm === 'function') resetAuthForm('signup');
+  });
+  if(discover) discover.addEventListener('click', () => {
+    showView('sets-pokemon');
+  });
+});
+
 /* === DASHBOARD HOMEPAGE (vraies données tous TCG) === */
 function renderDashboard(){
   // Auth check : si pas loggué, les stats perso sont masquées
@@ -5394,6 +5868,8 @@ document.addEventListener('click', (e)=>{
   if(typeof renderDashboard !== 'function') return;
   // Premier rendu immédiat
   try{ renderDashboard(); }catch(e){}
+  try{ applyLandingState(); }catch(e){}
+  try{ loadUpcomingSets(); }catch(e){}
 
   // Pré-chargement en arrière-plan des catalogues de sets Pokémon et Magic
   // pour que le compteur "Sets disponibles" reflète le vrai total dès la home
