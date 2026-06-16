@@ -1364,6 +1364,31 @@
   }
 
   /* ============ BUSINESS (achat-revente) ============ */
+  .biz-autocomplete-wrap{position:relative}
+  .biz-autocomplete-dropdown{position:absolute;top:100%;left:0;right:0;background:var(--surf);border:1px solid var(--gold-deep);border-radius:10px;margin-top:4px;max-height:320px;overflow-y:auto;z-index:1000;box-shadow:0 12px 32px rgba(0,0,0,.6)}
+  .biz-autocomplete-dropdown.hidden{display:none}
+  .biz-autocomplete-item{display:flex;gap:10px;align-items:center;padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--line2);transition:background .12s}
+  .biz-autocomplete-item:last-child{border-bottom:none}
+  .biz-autocomplete-item:hover{background:rgba(212,168,90,.08)}
+  .biz-autocomplete-img{width:36px;height:50px;border-radius:4px;object-fit:cover;background:var(--bg2);flex-shrink:0}
+  .biz-autocomplete-info{flex:1;min-width:0}
+  .biz-autocomplete-name{font-size:13px;font-weight:600;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .biz-autocomplete-meta{font-size:11px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .biz-autocomplete-price{font-size:13px;color:var(--gold-2);font-weight:700;font-family:"Cinzel",serif;white-space:nowrap;text-align:right;min-width:60px}
+  .biz-autocomplete-loading,.biz-autocomplete-empty{padding:14px;text-align:center;color:var(--mut);font-size:12px}
+  .biz-autocomplete-loading::before{content:"⟳ ";display:inline-block;animation:spin 1s linear infinite}
+  @keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+
+  .biz-cote-pill{display:flex;gap:10px;align-items:center;padding:8px 12px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.3);border-radius:8px;margin:10px 0 0;font-size:12px;color:var(--tx)}
+  .biz-cote-pill.hidden{display:none}
+  .biz-cote-pill .label{color:var(--mut);text-transform:uppercase;letter-spacing:.08em;font-size:10px}
+  .biz-cote-pill .value{font-family:"Cinzel",serif;font-weight:700;color:#6ee7b7}
+  .biz-cote-pill .src{margin-left:auto;font-size:10px;color:var(--mut);font-style:italic}
+
+  .biz-refresh-btn-loading{opacity:.6;pointer-events:none}
+  .biz-tx-cote{font-size:11px;color:var(--mut);margin-top:3px}
+  .biz-tx-cote strong{color:var(--gold-2);font-family:"Cinzel",serif;font-weight:700}
+
   .biz-stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin:20px 0 26px}
   .biz-stat{background:var(--surf);border:1px solid var(--line2);border-radius:14px;padding:16px 18px;position:relative;overflow:hidden}
   .biz-stat::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(180deg,var(--gold-2),var(--gold-deep));opacity:.7}
@@ -2044,6 +2069,7 @@
       <p class="view-sub" id="bizFolderSub"></p>
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn-gold-outline" id="bizRefreshPricesBtn" title="Récupérer les cotes Cardmarket actuelles">⟳ Refresh cotes</button>
       <button class="btn-gold-outline" id="bizFolderRenameBtn">Renommer</button>
       <button class="btn-gold-outline" id="bizFolderDeleteBtn" style="border-color:#dc2626;color:#dc2626">Supprimer</button>
       <button class="btn-gold" id="newTransactionBtn">+ Ajouter une transaction</button>
@@ -2088,10 +2114,12 @@
 
     <div class="biz-form-section">
       <div class="biz-form-section-title">Carte</div>
-      <div class="form-field">
-        <label>Nom de la carte</label>
-        <input type="text" id="bizTxCardName" placeholder="Ex. Charizard ex" maxlength="120">
+      <div class="form-field biz-autocomplete-wrap">
+        <label>Nom de la carte <span style="color:var(--mut);font-weight:400;font-size:11px">— commence à taper pour rechercher</span></label>
+        <input type="text" id="bizTxCardName" placeholder="Ex. Dracaufeu, Elsa, Black Lotus…" maxlength="120" autocomplete="off">
+        <div class="biz-autocomplete-dropdown hidden" id="bizTxAutocomplete"></div>
       </div>
+      <div class="biz-cote-pill hidden" id="bizTxCotePill"></div>
       <div class="biz-form-row">
         <div class="form-field" style="flex:1">
           <label>Numéro <span style="color:var(--mut);font-weight:400">— facultatif</span></label>
@@ -6509,6 +6537,8 @@ function computeTxNet(tx){
 
 function computeFolderStats(folder){
   let invested = 0, stockCost = 0, realized = 0, stockCount = 0, soldCount = 0;
+  let stockMarketValue = 0; // sum of currentTrendPrice for stock items (if available)
+  let stockTrackedCount = 0; // how many stock items have a cote
   (folder.transactions||[]).forEach(tx => {
     const cost = Number(tx.purchasePrice||0) + Number(tx.purchaseShipping||0);
     invested += cost;
@@ -6519,19 +6549,27 @@ function computeFolderStats(folder){
     } else {
       stockCount++;
       stockCost += cost;
+      if(tx.currentTrendPrice != null){
+        stockMarketValue += Number(tx.currentTrendPrice);
+        stockTrackedCount++;
+      }
     }
   });
-  return {invested, stockCost, realized, stockCount, soldCount, total:(folder.transactions||[]).length};
+  const potential = stockTrackedCount > 0 ? (stockMarketValue - stockCost) : null;
+  return {invested, stockCost, realized, stockCount, soldCount, total:(folder.transactions||[]).length, stockMarketValue, stockTrackedCount, potential};
 }
 
 function computeGlobalStats(data){
   let invested = 0, stockCost = 0, realized = 0, stockCount = 0, soldCount = 0;
+  let stockMarketValue = 0, stockTrackedCount = 0;
   (data.folders||[]).forEach(f => {
     const s = computeFolderStats(f);
     invested += s.invested; stockCost += s.stockCost; realized += s.realized;
     stockCount += s.stockCount; soldCount += s.soldCount;
+    stockMarketValue += s.stockMarketValue; stockTrackedCount += s.stockTrackedCount;
   });
-  return {invested, stockCost, realized, stockCount, soldCount};
+  const potential = stockTrackedCount > 0 ? (stockMarketValue - stockCost) : null;
+  return {invested, stockCost, realized, stockCount, soldCount, stockMarketValue, stockTrackedCount, potential};
 }
 
 function tcgLabel(t){
@@ -6643,10 +6681,14 @@ function renderBusinessFolder(){
 
   const s = computeFolderStats(f);
   const sRow = document.getElementById('bizFolderStats');
+  const potentialStat = s.potential !== null
+    ? `<div class="biz-stat"><div class="biz-stat-label">Bénéfice potentiel</div><div class="biz-stat-value ${bizPlClass(s.potential)}">${bizFmt(s.potential)}</div><div class="biz-stat-sub">sur ${s.stockTrackedCount}/${s.stockCount} carte${s.stockCount>1?'s':''} en stock avec cote</div></div>`
+    : `<div class="biz-stat"><div class="biz-stat-label">Bénéfice potentiel</div><div class="biz-stat-value" style="color:var(--mut);font-size:14px">— Refresh les cotes pour estimer</div></div>`;
   sRow.innerHTML = `
     <div class="biz-stat"><div class="biz-stat-label">Total investi</div><div class="biz-stat-value">${bizFmtPlain(s.invested)}</div><div class="biz-stat-sub">${s.total} transaction${s.total>1?'s':''}</div></div>
-    <div class="biz-stat"><div class="biz-stat-label">En stock</div><div class="biz-stat-value">${bizFmtPlain(s.stockCost)}</div><div class="biz-stat-sub">${s.stockCount} à revendre</div></div>
+    <div class="biz-stat"><div class="biz-stat-label">En stock (coût)</div><div class="biz-stat-value">${bizFmtPlain(s.stockCost)}</div><div class="biz-stat-sub">${s.stockCount} à revendre${s.stockTrackedCount > 0 ? ' · valeur cote : '+bizFmtPlain(s.stockMarketValue) : ''}</div></div>
     <div class="biz-stat"><div class="biz-stat-label">Bénéfice réalisé</div><div class="biz-stat-value ${bizPlClass(s.realized)}">${bizFmt(s.realized)}</div><div class="biz-stat-sub">${s.soldCount} vendue${s.soldCount>1?'s':''}</div></div>
+    ${potentialStat}
   `;
 
   const list = document.getElementById('bizTxList');
@@ -6667,13 +6709,24 @@ function renderBusinessFolder(){
 
   list.innerHTML = txs.map(tx => {
     const net = computeTxNet(tx);
-    const netLabel = tx.status === 'sold' ? bizFmt(net) : '<span style="color:var(--mut);font-size:12px">En stock</span>';
-    const netClass = tx.status === 'sold' ? bizPlClass(net) : 'neutral';
     const cost = Number(tx.purchasePrice||0) + Number(tx.purchaseShipping||0);
     const saleTotal = tx.status === 'sold' ? (Number(tx.salePrice||0) - Number(tx.saleShipping||0)) : null;
+    // Bénéfice column: sold = realized, stock = potential (if cote available)
+    let netHtml, netClass;
+    if(tx.status === 'sold'){
+      netHtml = bizFmt(net);
+      netClass = bizPlClass(net);
+    } else if(tx.currentTrendPrice != null){
+      const potential = Number(tx.currentTrendPrice) - cost;
+      netHtml = bizFmt(potential) + '<div class="biz-tx-cote">cote <strong>'+bizFmtPlain(tx.currentTrendPrice)+'</strong></div>';
+      netClass = bizPlClass(potential);
+    } else {
+      netHtml = '<span style="color:var(--mut);font-size:12px">En stock</span><div class="biz-tx-cote">cote non récupérée</div>';
+      netClass = 'neutral';
+    }
     return `<div class="biz-tx-row">
       <div class="biz-tx-card">
-        <div class="biz-tx-cardname">${escapeHtml(tx.cardName||'Sans nom')}</div>
+        <div class="biz-tx-cardname">${escapeHtml(tx.cardName||'Sans nom')}${tx.cardId ? ' <span style="color:#10b981;font-size:10px" title="Carte liée à l\'API">●</span>' : ''}</div>
         <div class="biz-tx-cardmeta">${escapeHtml(tx.cardNumber||'')}${tx.cardNumber && tx.tcg ? ' · ' : ''}${tx.tcg ? tcgLabel(tx.tcg) : ''}${tx.purchaseDate ? ' · '+tx.purchaseDate : ''}</div>
       </div>
       <div>
@@ -6687,8 +6740,8 @@ function renderBusinessFolder(){
         ${tx.status === 'sold' ? `<div class="biz-tx-cardmeta" style="margin-top:3px">${bizFmtPlain(saleTotal)} net · ${escapeHtml(tx.salePlatform||'')}</div>` : ''}
       </div>
       <div>
-        <div class="biz-tx-col-label">Bénéfice</div>
-        <div class="biz-tx-pl ${netClass}">${netLabel}</div>
+        <div class="biz-tx-col-label">${tx.status === 'sold' ? 'Bénéfice' : 'Potentiel'}</div>
+        <div class="biz-tx-pl ${netClass}">${netHtml}</div>
       </div>
       <div class="biz-tx-actions">
         <button class="biz-tx-btn" onclick="openTxModal('${tx.id}')" title="Éditer">✎</button>
@@ -6763,11 +6816,16 @@ function deleteBusinessFolder(){
 /* ----- Transaction modal ----- */
 function openTxModal(txId){
   bizEditingTxId = txId || null;
+  bizSelectedCard = null;
   const m = document.getElementById('bizTxModal');
   const title = document.getElementById('bizTxModalTitle');
   const data = getBusinessData();
   const f = data.folders.find(x => x.id === bizCurrentFolderId);
   if(!f) return;
+
+  // Reset autocomplete state
+  const dd = document.getElementById('bizTxAutocomplete'); if(dd){ dd.classList.add('hidden'); dd.innerHTML=''; }
+  const pill = document.getElementById('bizTxCotePill'); if(pill) pill.classList.add('hidden');
 
   // Reset fields
   document.getElementById('bizTxCardName').value = '';
@@ -6801,6 +6859,27 @@ function openTxModal(txId){
       document.getElementById('bizTxSalePrice').value = tx.salePrice ?? '';
       document.getElementById('bizTxSaleShipping').value = tx.saleShipping ?? 0;
       document.getElementById('bizTxNotes').value = tx.notes||'';
+      // Restore card link if saved
+      if(tx.cardId){
+        bizSelectedCard = {
+          id: tx.cardId,
+          name: tx.cardName || '',
+          number: tx.cardNumber || '',
+          setName: tx.setName || '',
+          imageUrl: tx.imageUrl || '',
+          trendPrice: tx.currentTrendPrice != null ? tx.currentTrendPrice : null,
+          lowPrice: tx.currentLowPrice != null ? tx.currentLowPrice : null,
+          tcg: tx.tcg
+        };
+        // Re-render pill
+        if(pill){
+          if(bizSelectedCard.trendPrice != null){
+            pill.classList.remove('hidden');
+            const lowTxt = bizSelectedCard.lowPrice != null ? ` · prix bas <span class="value">${bizSelectedCard.lowPrice.toFixed(2)} €</span>` : '';
+            pill.innerHTML = `<span class="label">Cote actuelle</span><span class="value">${bizSelectedCard.trendPrice.toFixed(2)} €</span>${lowTxt}<span class="src">via ${bizSelectedCard.tcg === 'pokemon' ? 'Cardmarket' : (bizSelectedCard.tcg === 'magic' ? 'Scryfall' : 'Lorcast')}</span>`;
+          }
+        }
+      }
     }
   } else {
     title.textContent = 'Nouvelle transaction';
@@ -6833,10 +6912,16 @@ function updateBizTxNetPreview(){
     const fv = parseFloat(document.getElementById('bizTxSaleShipping').value)||0;
     const net = (pv - fv) - (pa + fa);
     const cls = bizPlClass(net);
-    el.innerHTML = `Bénéfice net : <span class="pl ${cls}">${bizFmt(net)}</span>`;
+    el.innerHTML = `Bénéfice net réalisé : <span class="pl ${cls}">${bizFmt(net)}</span>`;
   } else {
     const cost = pa + fa;
-    el.innerHTML = `Coût total d'achat : <span class="pl neutral">${bizFmtPlain(cost)}</span> · cote actuelle à venir (étape 2)`;
+    if(bizSelectedCard && bizSelectedCard.trendPrice != null && pa > 0){
+      const potential = bizSelectedCard.trendPrice - cost;
+      const cls = bizPlClass(potential);
+      el.innerHTML = `Coût total : <span class="pl neutral">${bizFmtPlain(cost)}</span> · Cote actuelle : <span class="pl neutral">${bizFmtPlain(bizSelectedCard.trendPrice)}</span> · Potentiel : <span class="pl ${cls}">${bizFmt(potential)}</span>`;
+    } else {
+      el.innerHTML = `Coût total d'achat : <span class="pl neutral">${bizFmtPlain(cost)}</span>${bizSelectedCard ? '' : ' · sélectionne une carte dans l\'autocomplete pour voir la cote actuelle'}`;
+    }
   }
 }
 function confirmTransaction(){
@@ -6861,7 +6946,13 @@ function confirmTransaction(){
     status,
     saleDate: null, salePlatform: null, salePrice: null, saleShipping: null,
     notes: (document.getElementById('bizTxNotes').value||'').trim(),
-    currentTrendPrice: null, currentLowPrice: null, lastPriceUpdate: null
+    // Step 2: card link + cotes
+    cardId: bizSelectedCard ? bizSelectedCard.id : null,
+    imageUrl: bizSelectedCard ? bizSelectedCard.imageUrl : null,
+    setName: bizSelectedCard ? bizSelectedCard.setName : null,
+    currentTrendPrice: bizSelectedCard ? bizSelectedCard.trendPrice : null,
+    currentLowPrice: bizSelectedCard ? bizSelectedCard.lowPrice : null,
+    lastPriceUpdate: bizSelectedCard && bizSelectedCard.trendPrice != null ? Date.now() : null
   };
   if(status === 'sold'){
     const pv = parseFloat(document.getElementById('bizTxSalePrice').value);
@@ -6899,7 +6990,278 @@ function deleteTransaction(txId){
   renderBusinessFolder();
 }
 
-/* ----- Wire Business event handlers ----- */
+/* ----- STEP 2 : API search + refresh cotes ----- */
+const BIZ_SEARCH_DEBOUNCE_MS = 350;
+let bizSearchTimer = null;
+let bizSearchAbort = null;
+let bizSelectedCard = null; // {id, name, number, setName, imageUrl, trendPrice, lowPrice, tcg}
+
+function bizMapPokemonResult(c){
+  const cm = (c.cardmarket && c.cardmarket.prices) || {};
+  let displayName = c.name;
+  if(typeof POKE_FR_EN !== 'undefined'){
+    for(const [fr, en] of Object.entries(POKE_FR_EN)){
+      if(en && en.length >= 4 && c.name.includes(en)){ displayName = c.name.replace(en, fr); break; }
+    }
+  }
+  const total = c.set ? (c.set.printedTotal || c.set.total || '?') : '?';
+  return {
+    id: c.id,
+    name: displayName,
+    number: c.number ? (c.number + (c.set ? '/'+total : '')) : '',
+    setName: c.set ? c.set.name : '',
+    imageUrl: (c.images && c.images.small) || '',
+    trendPrice: (cm.trendPrice != null) ? cm.trendPrice : null,
+    lowPrice: (cm.lowPrice != null) ? cm.lowPrice : null,
+    tcg: 'pokemon'
+  };
+}
+function bizMapLorcanaResult(c){
+  const usd = c.prices && c.prices.usd ? parseFloat(c.prices.usd) : null;
+  const rate = (typeof USD_TO_EUR === 'number') ? USD_TO_EUR : 0.92;
+  let img = '';
+  if(c.image_uris){
+    if(c.image_uris.digital && c.image_uris.digital.small) img = c.image_uris.digital.small;
+    else if(c.image_uris.small) img = c.image_uris.small;
+  }
+  const name = c.name + (c.version ? ' — ' + c.version : (c.subtitle ? ' — ' + c.subtitle : ''));
+  return {
+    id: c.id,
+    name,
+    number: c.collector_number ? (c.collector_number + (c.set && c.set.card_count ? '/'+c.set.card_count : '')) : '',
+    setName: c.set ? (c.set.name || c.set.code) : '',
+    imageUrl: img,
+    trendPrice: usd ? +(usd * rate).toFixed(2) : null,
+    lowPrice: null,
+    tcg: 'lorcana'
+  };
+}
+function bizMapMagicResult(c){
+  const rate = (typeof USD_TO_EUR === 'number') ? USD_TO_EUR : 0.92;
+  const eur = c.prices && c.prices.eur ? parseFloat(c.prices.eur) : null;
+  const usd = c.prices && c.prices.usd ? parseFloat(c.prices.usd) : null;
+  const trend = eur != null ? eur : (usd != null ? +(usd * rate).toFixed(2) : null);
+  let img = '';
+  if(c.image_uris && c.image_uris.small) img = c.image_uris.small;
+  else if(c.card_faces && c.card_faces[0] && c.card_faces[0].image_uris) img = c.card_faces[0].image_uris.small;
+  return {
+    id: c.id,
+    name: c.printed_name || c.name,
+    number: c.collector_number || '',
+    setName: c.set_name || '',
+    imageUrl: img,
+    trendPrice: trend,
+    lowPrice: null,
+    tcg: 'magic'
+  };
+}
+
+async function bizSearchCards(tcg, query){
+  if(!query || query.trim().length < 2) return [];
+  if(bizSearchAbort){ try{bizSearchAbort.abort();}catch(e){} }
+  bizSearchAbort = new AbortController();
+  const signal = bizSearchAbort.signal;
+
+  const q = query.trim();
+  try {
+    if(tcg === 'pokemon'){
+      // Translate FR → EN if known
+      let qEn = q;
+      if(typeof POKE_FR_EN !== 'undefined'){
+        const lower = q.toLowerCase();
+        for(const [fr, en] of Object.entries(POKE_FR_EN)){
+          if(fr.toLowerCase() === lower){ qEn = en; break; }
+        }
+      }
+      const res = await fetch(`https://api.pokemontcg.io/v2/cards?q=name:*${encodeURIComponent(qEn)}*&pageSize=10&orderBy=-set.releaseDate`, {signal});
+      if(!res.ok) return [];
+      const data = await res.json();
+      return (data.data||[]).map(bizMapPokemonResult);
+    }
+    if(tcg === 'lorcana'){
+      const res = await fetch(`https://api.lorcast.com/v0/cards/search?q=${encodeURIComponent('name:'+q)}`, {signal});
+      if(!res.ok) return [];
+      const data = await res.json();
+      return (data.results||[]).slice(0,10).map(bizMapLorcanaResult);
+    }
+    if(tcg === 'magic'){
+      // Try FR first, fall back to default
+      let res = await fetch(`https://api.scryfall.com/cards/search?q=${encodeURIComponent(q+' lang:fr include:multilingual')}&order=released&unique=cards`, {signal, headers:{'Accept':'application/json'}});
+      if(!res.ok){
+        res = await fetch(`https://api.scryfall.com/cards/search?q=${encodeURIComponent(q)}&order=released&unique=cards`, {signal, headers:{'Accept':'application/json'}});
+        if(!res.ok) return [];
+      }
+      const data = await res.json();
+      return (data.data||[]).slice(0,10).map(bizMapMagicResult);
+    }
+    return [];
+  } catch(e){
+    if(e.name === 'AbortError') return null;
+    console.warn('Biz search error:', e);
+    return [];
+  }
+}
+
+function bizRenderAutocomplete(results, query){
+  const dd = document.getElementById('bizTxAutocomplete');
+  if(!dd) return;
+  if(results === null){ return; } // aborted
+  if(!query || query.trim().length < 2){
+    dd.classList.add('hidden');
+    dd.innerHTML = '';
+    return;
+  }
+  if(results.length === 0){
+    dd.classList.remove('hidden');
+    dd.innerHTML = '<div class="biz-autocomplete-empty">Aucune carte trouvée pour ce TCG. Vérifie l\'orthographe ou tape en anglais.</div>';
+    return;
+  }
+  dd.classList.remove('hidden');
+  dd.innerHTML = results.map((r, i) => {
+    const price = r.trendPrice != null ? r.trendPrice.toFixed(2)+' €' : '—';
+    return `<div class="biz-autocomplete-item" data-biz-idx="${i}">
+      ${r.imageUrl ? `<img class="biz-autocomplete-img" src="${r.imageUrl}" alt="" loading="lazy">` : '<div class="biz-autocomplete-img"></div>'}
+      <div class="biz-autocomplete-info">
+        <div class="biz-autocomplete-name">${escapeHtml(r.name)}</div>
+        <div class="biz-autocomplete-meta">${escapeHtml(r.setName||'')}${r.number ? ' · n°'+escapeHtml(r.number) : ''}</div>
+      </div>
+      <div class="biz-autocomplete-price">${price}</div>
+    </div>`;
+  }).join('');
+  // Wire selection
+  dd.querySelectorAll('.biz-autocomplete-item').forEach((el, i) => {
+    el.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      bizSelectAutocomplete(results[i]);
+    });
+  });
+}
+
+function bizSelectAutocomplete(card){
+  bizSelectedCard = card;
+  document.getElementById('bizTxCardName').value = card.name;
+  if(card.number) document.getElementById('bizTxCardNumber').value = card.number;
+  document.getElementById('bizTxTcg').value = card.tcg;
+  const dd = document.getElementById('bizTxAutocomplete');
+  if(dd){ dd.classList.add('hidden'); dd.innerHTML=''; }
+  // Show cote pill
+  const pill = document.getElementById('bizTxCotePill');
+  if(pill){
+    if(card.trendPrice != null){
+      const lowTxt = card.lowPrice != null ? ` · prix bas <span class="value">${card.lowPrice.toFixed(2)} €</span>` : '';
+      pill.classList.remove('hidden');
+      pill.innerHTML = `<span class="label">Cote actuelle</span><span class="value">${card.trendPrice.toFixed(2)} €</span>${lowTxt}<span class="src">via ${card.tcg === 'pokemon' ? 'Cardmarket' : (card.tcg === 'magic' ? 'Scryfall' : 'Lorcast')}</span>`;
+    } else {
+      pill.classList.remove('hidden');
+      pill.innerHTML = `<span class="label">Cote actuelle</span><span style="color:var(--mut)">non disponible</span><span class="src">via ${card.tcg === 'pokemon' ? 'Cardmarket' : (card.tcg === 'magic' ? 'Scryfall' : 'Lorcast')}</span>`;
+    }
+  }
+  updateBizTxNetPreview();
+}
+
+function bizHandleCardNameInput(){
+  const val = document.getElementById('bizTxCardName').value;
+  // If user is editing manually, lose the sync
+  if(bizSelectedCard && val !== bizSelectedCard.name){
+    bizSelectedCard = null;
+    const pill = document.getElementById('bizTxCotePill'); if(pill) pill.classList.add('hidden');
+  }
+  const tcg = document.getElementById('bizTxTcg').value;
+  if(tcg === 'other'){
+    const dd = document.getElementById('bizTxAutocomplete');
+    if(dd){ dd.classList.add('hidden'); dd.innerHTML=''; }
+    return;
+  }
+  if(bizSearchTimer) clearTimeout(bizSearchTimer);
+  if(!val || val.trim().length < 2){
+    const dd = document.getElementById('bizTxAutocomplete');
+    if(dd){ dd.classList.add('hidden'); dd.innerHTML=''; }
+    return;
+  }
+  // Show loading
+  const dd = document.getElementById('bizTxAutocomplete');
+  if(dd){ dd.classList.remove('hidden'); dd.innerHTML = '<div class="biz-autocomplete-loading">Recherche en cours…</div>'; }
+  bizSearchTimer = setTimeout(async () => {
+    const results = await bizSearchCards(tcg, val);
+    // Make sure the query is still the current one
+    const currentVal = document.getElementById('bizTxCardName').value;
+    if(currentVal !== val) return;
+    bizRenderAutocomplete(results, val);
+  }, BIZ_SEARCH_DEBOUNCE_MS);
+}
+
+/* ----- Refresh cotes ----- */
+async function bizRefreshOneCard(tcg, cardId){
+  try{
+    if(tcg === 'pokemon'){
+      const res = await fetch(`https://api.pokemontcg.io/v2/cards/${encodeURIComponent(cardId)}`);
+      if(!res.ok) return null;
+      const data = await res.json();
+      const c = data.data || {};
+      const cm = (c.cardmarket && c.cardmarket.prices) || {};
+      return {trendPrice: cm.trendPrice != null ? cm.trendPrice : null, lowPrice: cm.lowPrice != null ? cm.lowPrice : null};
+    }
+    if(tcg === 'lorcana'){
+      // Lorcast: /cards/{id}
+      const res = await fetch(`https://api.lorcast.com/v0/cards/${encodeURIComponent(cardId)}`);
+      if(!res.ok) return null;
+      const c = await res.json();
+      const usd = c.prices && c.prices.usd ? parseFloat(c.prices.usd) : null;
+      const rate = (typeof USD_TO_EUR === 'number') ? USD_TO_EUR : 0.92;
+      return {trendPrice: usd != null ? +(usd*rate).toFixed(2) : null, lowPrice: null};
+    }
+    if(tcg === 'magic'){
+      const res = await fetch(`https://api.scryfall.com/cards/${encodeURIComponent(cardId)}`, {headers:{'Accept':'application/json'}});
+      if(!res.ok) return null;
+      const c = await res.json();
+      const eur = c.prices && c.prices.eur ? parseFloat(c.prices.eur) : null;
+      const usd = c.prices && c.prices.usd ? parseFloat(c.prices.usd) : null;
+      const rate = (typeof USD_TO_EUR === 'number') ? USD_TO_EUR : 0.92;
+      return {trendPrice: eur != null ? eur : (usd != null ? +(usd*rate).toFixed(2) : null), lowPrice: null};
+    }
+  }catch(e){ console.warn('refresh price error:', e); }
+  return null;
+}
+
+async function bizRefreshFolderPrices(){
+  if(!bizCurrentFolderId) return;
+  const data = getBusinessData();
+  const f = data.folders.find(x => x.id === bizCurrentFolderId);
+  if(!f || !f.transactions || !f.transactions.length) return;
+
+  const btn = document.getElementById('bizRefreshPricesBtn');
+  const refreshable = f.transactions.filter(t => t.cardId && t.status !== 'sold');
+  if(refreshable.length === 0){
+    alert('Aucune carte à rafraîchir : ajoute des transactions via la recherche autocomplete pour pouvoir récupérer les cotes automatiquement.');
+    return;
+  }
+
+  if(btn){ btn.classList.add('biz-refresh-btn-loading'); btn.textContent = `⟳ Refresh… 0/${refreshable.length}`; }
+
+  let done = 0;
+  for(const tx of refreshable){
+    // Rate limit
+    if(tx.tcg === 'pokemon') await new Promise(r => setTimeout(r, 2300));
+    else if(tx.tcg === 'magic') await new Promise(r => setTimeout(r, 120));
+    else if(tx.tcg === 'lorcana') await new Promise(r => setTimeout(r, 200));
+
+    const prices = await bizRefreshOneCard(tx.tcg, tx.cardId);
+    if(prices){
+      tx.currentTrendPrice = prices.trendPrice;
+      tx.currentLowPrice = prices.lowPrice;
+      tx.lastPriceUpdate = Date.now();
+    }
+    done++;
+    if(btn) btn.textContent = `⟳ Refresh… ${done}/${refreshable.length}`;
+    // Save incrementally so progress isn't lost
+    saveBusinessData(data);
+  }
+
+  if(btn){ btn.classList.remove('biz-refresh-btn-loading'); btn.textContent = '⟳ Refresh cotes'; }
+  renderBusinessFolder();
+}
+
+
 document.addEventListener('DOMContentLoaded', function(){
   // New folder button
   const newFolderBtn = document.getElementById('newBusinessFolderBtn');
@@ -6932,6 +7294,28 @@ document.addEventListener('DOMContentLoaded', function(){
     const el = document.getElementById(id);
     if(el) el.addEventListener('input', updateBizTxNetPreview);
   });
+  // STEP 2 wirings
+  const cardNameEl = document.getElementById('bizTxCardName');
+  if(cardNameEl){
+    cardNameEl.addEventListener('input', bizHandleCardNameInput);
+    cardNameEl.addEventListener('focus', bizHandleCardNameInput);
+    cardNameEl.addEventListener('blur', () => {
+      // Delay so click on dropdown item registers (mousedown fires first)
+      setTimeout(() => {
+        const dd = document.getElementById('bizTxAutocomplete');
+        if(dd) dd.classList.add('hidden');
+      }, 200);
+    });
+  }
+  const tcgEl = document.getElementById('bizTxTcg');
+  if(tcgEl) tcgEl.addEventListener('change', () => {
+    // TCG changed → invalidate selection and re-search if there's a query
+    bizSelectedCard = null;
+    const pill = document.getElementById('bizTxCotePill'); if(pill) pill.classList.add('hidden');
+    bizHandleCardNameInput();
+  });
+  const refreshBtn = document.getElementById('bizRefreshPricesBtn');
+  if(refreshBtn) refreshBtn.addEventListener('click', bizRefreshFolderPrices);
 });
 
 /* === ROUTE INITIALE === */
