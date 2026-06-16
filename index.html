@@ -3514,9 +3514,19 @@ async function flushPortfoliosToSb(){
       const { error } = await sb.from('portfolios').upsert(rows);
       if(error) throw error;
     }
+    // Succès : on reset le flag d'erreur si on en avait un
+    if(window._pfSyncErrorShown){ window._pfSyncErrorShown = false; }
   } catch(e){
     console.error('Portfolio sync failed:', e);
     _pfDirty = true;
+    // Surface l'erreur UNE SEULE FOIS par session (pas de spam d'alertes)
+    if(!window._pfSyncErrorShown){
+      window._pfSyncErrorShown = true;
+      const msg = (e && (e.message || e.error_description || e.hint || e.code)) || 'Erreur inconnue';
+      setTimeout(() => {
+        alert('⚠️ Synchronisation Supabase échouée :\n\n' + msg + '\n\n(Tes données sont sauvegardées localement, mais elles ne seront pas visibles sur tes autres appareils tant que ce problème persiste. Vérifie la console pour le détail.)');
+      }, 100);
+    }
   }
 }
 async function loadPortfoliosFromSb(){
@@ -3737,8 +3747,11 @@ async function submitCreatePortfolio(){
         }
       }
     }
+    const pfId = (typeof crypto !== 'undefined' && crypto.randomUUID)
+      ? crypto.randomUUID()
+      : ('pf_' + Date.now() + '_' + Math.random().toString(36).slice(2,10));
     const pf = {
-      id: 'pf_' + Date.now(),
+      id: pfId,
       name, tcg,
       source: { type: currentPfSource },
       cards,
