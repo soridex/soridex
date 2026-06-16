@@ -7,6 +7,9 @@
 <meta name="description" content="Suis tes cartes Pokémon, Lorcana et Magic en un seul endroit. Crée des portfolios thématiques, des wishlists, et garde un œil sur les cotes Cardmarket en temps réel.">
 <meta name="theme-color" content="#0c0a1f">
 
+<!-- Supabase JS SDK (chargé tôt pour que tout le code puisse l'utiliser) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
 <!-- Open Graph (Facebook, LinkedIn, WhatsApp, Discord, etc.) -->
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Soridex">
@@ -2869,10 +2872,80 @@ function showView(name){
 }
 
 /* === AUTH === */
+/* === SUPABASE CLIENT + AUTH RÉELLE === */
+const SUPABASE_URL = 'https://fldwgcrefovtyuwuuhid.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_cfN8YJkFLAhhWIZ2xPdzMg_mGk4NtIO';
+const sb = (typeof supabase !== 'undefined' && supabase.createClient)
+  ? supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+    })
+  : null;
+
 const AUTH_KEY='soridex_user_v1';
-function getUser(){try{return JSON.parse(localStorage.getItem(AUTH_KEY)||'null');}catch(e){return null;}}
-function setUser(u){localStorage.setItem(AUTH_KEY,JSON.stringify(u));}
-function logout(){localStorage.removeItem(AUTH_KEY); showView('home'); try{applyLandingState();}catch(e){}}
+let currentUser = null;
+// Hydrate sync depuis le cache local pour éviter le flash de logged-out au boot
+try { currentUser = JSON.parse(localStorage.getItem(AUTH_KEY)||'null'); } catch(e){ currentUser = null; }
+
+function getUser(){ return currentUser; }
+
+async function logout(){
+  try { if(sb) await sb.auth.signOut(); } catch(e){ console.warn('signOut error', e); }
+  currentUser = null;
+  try { localStorage.removeItem(AUTH_KEY); } catch(e){}
+  showView('home');
+  try{ applyLandingState(); }catch(e){}
+}
+
+// Charge le profil depuis Supabase et met à jour currentUser + cache local
+async function hydrateSession(){
+  if(!sb) return;
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if(session && session.user){
+      // Récupère le pseudo depuis le profile (créé par le trigger)
+      let pseudo = null;
+      try {
+        const { data: profile } = await sb.from('profiles').select('pseudo').eq('id', session.user.id).maybeSingle();
+        if(profile && profile.pseudo) pseudo = profile.pseudo;
+      } catch(e){ console.warn('profile fetch err', e); }
+      if(!pseudo){
+        // Fallback : metadata du user puis email
+        pseudo = (session.user.user_metadata && session.user.user_metadata.pseudo)
+              || (session.user.email ? session.user.email.split('@')[0] : 'user');
+      }
+      currentUser = { id: session.user.id, email: session.user.email, pseudo };
+      try { localStorage.setItem(AUTH_KEY, JSON.stringify(currentUser)); } catch(e){}
+    } else {
+      currentUser = null;
+      try { localStorage.removeItem(AUTH_KEY); } catch(e){}
+    }
+  } catch(e){
+    console.warn('hydrateSession error', e);
+  }
+  // Re-render des sections qui dépendent de l'auth
+  try { applyLandingState(); } catch(e){}
+  try {
+    const homeView = document.getElementById('view-home');
+    if(homeView && !homeView.hidden && typeof renderDashboard === 'function') renderDashboard();
+    const paramView = document.getElementById('view-parametres');
+    if(paramView && !paramView.hidden && typeof renderParametres === 'function') renderParametres();
+  } catch(e){}
+}
+
+// Listener auth state changes (signin depuis un autre onglet, refresh token, etc.)
+if(sb){
+  sb.auth.onAuthStateChange((event) => {
+    if(event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') hydrateSession();
+    else if(event === 'SIGNED_OUT'){
+      currentUser = null;
+      try { localStorage.removeItem(AUTH_KEY); } catch(e){}
+      try { applyLandingState(); } catch(e){}
+    }
+  });
+  // Boot : restore session
+  hydrateSession();
+}
+
 function goToAccount(){const u=getUser(); if(u){showView('compte'); renderCompte();} else {showView('login'); resetAuthForm('login');}}
 let authMode='login';
 function resetAuthForm(mode){
@@ -2885,16 +2958,65 @@ function resetAuthForm(mode){
   document.getElementById('authMsg').innerHTML = '';
 }
 function showAuthMsg(t,k){document.getElementById('authMsg').innerHTML=`<div class="auth-msg ${k}">${t}</div>`;}
-function handleAuthSubmit(){
+
+function bizTranslateAuthError(msg){
+  if(!msg) return 'Erreur inconnue.';
+  if(/invalid login credentials/i.test(msg)) return 'Email ou mot de passe incorrect.';
+  if(/user already registered/i.test(msg) || /already.*exist/i.test(msg)) return 'Un compte existe déjà avec cet email. Connecte-toi.';
+  if(/password.*should.*at least|password.*6/i.test(msg)) return 'Mot de passe trop court (6 caractères minimum).';
+  if(/email.*invalid|invalid.*email/i.test(msg)) return 'Email invalide.';
+  if(/email.*not.*confirmed/i.test(msg)) return 'Email pas encore confirmé — vérifie ta boîte mail (et les spams).';
+  if(/over.*email.*rate|rate.*limit/i.test(msg)) return 'Trop de tentatives — attends quelques minutes.';
+  if(/network|fetch/i.test(msg)) return 'Erreur réseau, vérifie ta connexion.';
+  return msg;
+}
+
+async function handleAuthSubmit(){
+  if(!sb){ showAuthMsg('Connexion à Supabase indisponible — recharge la page.','err'); return; }
   const email=document.getElementById('authEmail').value.trim();
   const pass=document.getElementById('authPass').value;
   const pseudo=document.getElementById('authPseudo').value.trim();
   if(!email||!pass){showAuthMsg('Email et mot de passe requis.','err'); return;}
+  if(pass.length < 6){showAuthMsg('Mot de passe trop court (6 caractères minimum).','err'); return;}
   if(authMode==='signup' && !pseudo){showAuthMsg('Choisis un pseudo.','err'); return;}
-  setUser({pseudo:pseudo||email.split('@')[0], email});
-  showAuthMsg(authMode==='signup'?'Compte créé !':'Connecté !','ok');
-  setTimeout(()=>{showView('compte'); renderCompte();},400);
+
+  const btn = document.getElementById('authSubmit');
+  const origTxt = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = authMode==='signup' ? 'Création en cours…' : 'Connexion en cours…';
+
+  try {
+    if(authMode==='signup'){
+      const { data, error } = await sb.auth.signUp({
+        email, password: pass,
+        options: { data: { pseudo } }
+      });
+      if(error){ showAuthMsg(bizTranslateAuthError(error.message), 'err'); return; }
+      if(data.user && !data.session){
+        // Confirmation email requise
+        showAuthMsg('Compte créé ! Vérifie ta boîte mail (et les spams) pour confirmer ton adresse, puis reviens te connecter.', 'ok');
+        setTimeout(()=>resetAuthForm('login'), 1500);
+      } else if(data.session){
+        // Auto-confirmé (email confirmation désactivée dans les settings Supabase)
+        await hydrateSession();
+        showAuthMsg('Compte créé et connecté !','ok');
+        setTimeout(()=>goToAccount(), 600);
+      }
+    } else {
+      const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+      if(error){ showAuthMsg(bizTranslateAuthError(error.message), 'err'); return; }
+      await hydrateSession();
+      showAuthMsg('Connecté !','ok');
+      setTimeout(()=>goToAccount(), 400);
+    }
+  } catch(e){
+    showAuthMsg('Erreur : '+(e.message||e),'err');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = origTxt;
+  }
 }
+
 document.querySelectorAll('.auth-tab').forEach(t=>t.addEventListener('click',()=>resetAuthForm(t.dataset.tab)));
 document.getElementById('authSubmit').addEventListener('click',handleAuthSubmit);
 ['authEmail','authPass','authPseudo'].forEach(id=>document.getElementById(id).addEventListener('keypress',e=>{if(e.key==='Enter') handleAuthSubmit();}));
