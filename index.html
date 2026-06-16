@@ -3485,6 +3485,25 @@ function _getSyncedIds(){
 function _setSyncedIds(set){
   try { localStorage.setItem(PF_SYNCED_KEY, JSON.stringify([...set])); } catch(_){}
 }
+// Migration : au tout premier boot avec le nouveau code, si on a des portfolios
+// en cache local mais aucun ID enregistré comme "synced", on initialise le set
+// avec tous les IDs locaux. On suppose qu'ils ont déjà été syncés dans le passé
+// (sinon comment seraient-ils là ?). Sans ça, la première suppression distante
+// serait incorrectement interprétée comme "à réinjecter" → zombie.
+(function migrateSyncedIds(){
+  try {
+    const synced = JSON.parse(localStorage.getItem(PF_SYNCED_KEY) || 'null');
+    if(synced !== null) return; // déjà initialisé
+    const local = JSON.parse(localStorage.getItem(PF_KEY) || '[]');
+    if(Array.isArray(local) && local.length){
+      const ids = local.filter(p => p && p.id).map(p => p.id);
+      localStorage.setItem(PF_SYNCED_KEY, JSON.stringify(ids));
+      console.log('[soridex] migration: marqué', ids.length, 'portfolio(s) local(aux) comme déjà-syncés');
+    } else {
+      localStorage.setItem(PF_SYNCED_KEY, '[]');
+    }
+  } catch(_){}
+})();
 
 function getPortfolios(){ return _pfCache; }
 function savePortfolios(a, opts){
