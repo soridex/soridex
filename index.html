@@ -2548,6 +2548,15 @@
     </div>
 
     <div class="biz-form-section">
+      <div class="biz-form-section-title">Cote actuelle (optionnel)</div>
+      <div class="form-field">
+        <label>Override manuel de la cote (€) — laisse vide pour utiliser la cote auto Cardmarket</label>
+        <input type="number" step="0.01" min="0" id="bizTxCustomCote" placeholder="Ex: 27.27 si tu as vu un meilleur prix sur Cardmarket">
+        <div style="font-size:11px;color:var(--mut);margin-top:4px;line-height:1.4">💡 L'API Pokémon TCG met parfois 1-3 jours à se synchroniser avec Cardmarket. Si la cote auto semble fausse, mets le bon prix ici manuellement.</div>
+      </div>
+    </div>
+
+    <div class="biz-form-section">
       <div class="biz-form-section-title">État</div>
       <div class="biz-status-toggle">
         <label class="biz-status-opt"><input type="radio" name="bizTxStatus" value="stock" checked> En stock</label>
@@ -7614,6 +7623,15 @@ function computeTxNet(tx){
   return null;
 }
 
+
+// Cote effective : si l'utilisateur a saisi un override manuel, on l'utilise.
+// Sinon on tombe sur la cote auto Cardmarket (currentTrendPrice).
+function getEffectiveCote(tx){
+  if(tx && tx.customCote != null && !isNaN(tx.customCote) && tx.customCote > 0) return Number(tx.customCote);
+  if(tx && tx.currentTrendPrice != null) return Number(tx.currentTrendPrice);
+  return null;
+}
+
 function computeFolderStats(folder){
   let invested = 0, stockCost = 0, realized = 0, stockCount = 0, soldCount = 0;
   let stockMarketValue = 0; // sum of currentTrendPrice for stock items (if available)
@@ -7628,8 +7646,9 @@ function computeFolderStats(folder){
     } else {
       stockCount++;
       stockCost += cost;
-      if(tx.currentTrendPrice != null){
-        stockMarketValue += Number(tx.currentTrendPrice);
+      const _cote = getEffectiveCote(tx);
+      if(_cote != null){
+        stockMarketValue += _cote;
         stockTrackedCount++;
       }
     }
@@ -7858,13 +7877,17 @@ function renderBusinessFolder(){
     if(tx.status === 'sold'){
       netHtml = bizFmt(net);
       netClass = bizPlClass(net);
-    } else if(tx.currentTrendPrice != null){
-      const potential = Number(tx.currentTrendPrice) - cost;
-      netHtml = bizFmt(potential) + '<div class="biz-tx-cote">cote <strong>'+bizFmtPlain(tx.currentTrendPrice)+'</strong></div>';
-      netClass = bizPlClass(potential);
     } else {
-      netHtml = '<span style="color:var(--mut);font-size:12px">En stock</span><div class="biz-tx-cote">cote non récupérée</div>';
-      netClass = 'neutral';
+      const _coteEff = getEffectiveCote(tx);
+      if(_coteEff != null){
+        const potential = _coteEff - cost;
+        const isManual = tx.customCote != null && tx.customCote > 0;
+        netHtml = bizFmt(potential) + '<div class="biz-tx-cote">cote <strong>'+bizFmtPlain(_coteEff)+'</strong>'+(isManual?' <span style="color:var(--gold-2);font-size:9px;margin-left:3px">(manuelle)</span>':'')+'</div>';
+        netClass = bizPlClass(potential);
+      } else {
+        netHtml = '<span style="color:var(--mut);font-size:12px">En stock</span><div class="biz-tx-cote">cote non récupérée</div>';
+        netClass = 'neutral';
+      }
     }
     return `<div class="biz-tx-row">
       <div class="biz-tx-card">
@@ -7985,6 +8008,7 @@ function openTxModal(txId){
   document.getElementById('bizTxPurchaseSource').value = 'Cardmarket';
   document.getElementById('bizTxPurchasePrice').value = '';
   document.getElementById('bizTxPurchaseShipping').value = '0';
+  document.getElementById('bizTxCustomCote').value = '';
   document.querySelector('input[name="bizTxStatus"][value="stock"]').checked = true;
   document.getElementById('bizTxSaleDate').value = '';
   document.getElementById('bizTxSalePlatform').value = 'Cardmarket';
@@ -8003,6 +8027,7 @@ function openTxModal(txId){
       document.getElementById('bizTxPurchaseSource').value = tx.purchaseSource||'Cardmarket';
       document.getElementById('bizTxPurchasePrice').value = tx.purchasePrice ?? '';
       document.getElementById('bizTxPurchaseShipping').value = tx.purchaseShipping ?? 0;
+      document.getElementById('bizTxCustomCote').value = (tx.customCote != null && tx.customCote > 0) ? tx.customCote : '';
       document.querySelector(`input[name="bizTxStatus"][value="${tx.status||'stock'}"]`).checked = true;
       document.getElementById('bizTxSaleDate').value = tx.saleDate||'';
       document.getElementById('bizTxSalePlatform').value = tx.salePlatform||'Cardmarket';
@@ -8094,6 +8119,8 @@ function confirmTransaction(){
   }
 
   const status = document.querySelector('input[name="bizTxStatus"]:checked').value;
+  const customCoteRaw = document.getElementById('bizTxCustomCote').value;
+  const customCote = customCoteRaw === '' ? null : parseFloat(customCoteRaw);
   const tx = {
     cardName,
     cardNumber: (document.getElementById('bizTxCardNumber').value||'').trim(),
@@ -8109,8 +8136,11 @@ function confirmTransaction(){
     cardId: bizSelectedCard ? bizSelectedCard.id : null,
     imageUrl: bizSelectedCard ? bizSelectedCard.imageUrl : null,
     setName: bizSelectedCard ? bizSelectedCard.setName : null,
+    // Cote auto via API
     currentTrendPrice: bizSelectedCard ? bizSelectedCard.trendPrice : null,
     currentLowPrice: bizSelectedCard ? bizSelectedCard.lowPrice : null,
+    // Cote manuelle (override) — si présente, est utilisée à la place de currentTrendPrice
+    customCote: (customCote != null && !isNaN(customCote) && customCote > 0) ? customCote : null,
     lastPriceUpdate: bizSelectedCard && bizSelectedCard.trendPrice != null ? Date.now() : null
   };
   if(status === 'sold'){
@@ -8185,13 +8215,17 @@ function bizMapPokemonResult(c){
     }
   }
   const total = c.set ? (c.set.printedTotal || c.set.total || '?') : '?';
+  // Max des signaux de prix Cardmarket pour mieux capter les hausses récentes
+  const cands = [cm.trendPrice, cm.avg1, cm.avg7, cm.avg30, cm.averageSellPrice, cm.suggestedPrice]
+    .filter(p => typeof p === 'number' && p > 0);
+  const bestTrend = cands.length ? Math.max(...cands) : null;
   return {
     id: c.id,
     name: displayName,
     number: c.number ? (c.number + (c.set ? '/'+total : '')) : '',
     setName: c.set ? c.set.name : '',
     imageUrl: (c.images && c.images.small) || '',
-    trendPrice: (cm.trendPrice != null) ? cm.trendPrice : null,
+    trendPrice: bestTrend,
     lowPrice: (cm.lowPrice != null) ? cm.lowPrice : null,
     tcg: 'pokemon'
   };
@@ -8430,7 +8464,12 @@ async function bizRefreshOneCard(tcg, cardId){
       const data = await res.json();
       const c = data.data || {};
       const cm = (c.cardmarket && c.cardmarket.prices) || {};
-      return {trendPrice: cm.trendPrice != null ? cm.trendPrice : null, lowPrice: cm.lowPrice != null ? cm.lowPrice : null};
+      // Prendre le MAX de tous les signaux de prix "central"
+      // pour mieux capter les cartes en hausse (trendPrice de l'API a souvent du lag)
+      const candidates = [cm.trendPrice, cm.avg1, cm.avg7, cm.avg30, cm.averageSellPrice, cm.suggestedPrice]
+        .filter(p => typeof p === 'number' && p > 0);
+      const trendPrice = candidates.length ? Math.max(...candidates) : null;
+      return {trendPrice, lowPrice: cm.lowPrice != null ? cm.lowPrice : null};
     }
     if(tcg === 'lorcana'){
       // Lorcast: /cards/{id}
