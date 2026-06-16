@@ -1394,6 +1394,39 @@
   .card-detail-divider{border-top:1px solid var(--line2);margin:6px 0 14px}
   .card-detail-actions-row{display:flex;gap:8px;flex-wrap:wrap}
   .card-detail-actions-row button{flex:1;min-width:140px}
+  .card-detail-action-btns{display:flex;gap:8px;flex-wrap:wrap;width:100%}
+  .card-detail-action-btns .own-btn,
+  .card-detail-action-btns .fav-btn{
+    position:static !important;
+    width:auto !important;
+    height:auto !important;
+    flex:1;min-width:160px;
+    border-radius:10px !important;
+    padding:11px 14px !important;
+    font-size:13px !important;
+    font-weight:600 !important;
+    transform:none !important;
+  }
+  .card-detail-action-btns .own-btn{
+    background:rgba(16,185,129,.1);
+    border:1px solid rgba(16,185,129,.4);
+    color:#6ee7b7;
+  }
+  .card-detail-action-btns .own-btn.active{
+    background:rgba(16,185,129,.25);
+    color:#fff;
+    border-color:#10b981;
+  }
+  .card-detail-action-btns .fav-btn{
+    background:rgba(236,72,153,.1);
+    border:1px solid rgba(236,72,153,.4);
+    color:#f9a8d4;
+  }
+  .card-detail-action-btns .fav-btn.active{
+    background:rgba(236,72,153,.25);
+    color:#fff;
+    border-color:#ec4899;
+  }
   .card-detail-error{color:#fca5a5;font-size:13px;text-align:center;padding:20px}
 
   @media (max-width:680px){
@@ -1945,6 +1978,10 @@
               <span>🔎</span> Ventes eBay
             </a>
           </div>
+
+          <div class="card-detail-divider"></div>
+
+          <div class="card-detail-actions-row" id="cardDetailUserActions"></div>
         </div>
         <div class="card-detail-error" id="cardDetailError" hidden></div>
       </div>
@@ -4254,6 +4291,46 @@ async function loadCardDetail(tcg, id, fallback){
   updEl.textContent = updatedAt ? `Dernière maj cote : ${updatedAt}` : '';
   document.getElementById('cardDetailCm').href = cardmarketUrl || '#';
   document.getElementById('cardDetailEbay').href = `https://www.ebay.fr/sch/i.html?_nkw=${encodeURIComponent(ebayQuery.trim())}&LH_Sold=1&LH_Complete=1`;
+
+  // Action buttons : populate _visibleCards et rendre les boutons ♥ / ✓
+  // existants pour qu'ils marchent via la délégation
+  try {
+    if(card){
+      let entry = null;
+      if(tcg === 'pokemon' && typeof pkCardToPfEntry === 'function'){
+        entry = pkCardToPfEntry(card, card.set);
+      } else if(tcg === 'lorcana' && typeof lcCardToPfEntry === 'function'){
+        entry = lcCardToPfEntry(card, card.set ? {name:card.set.name, count:card.set.card_count, year:card.set.released_at ? new Date(card.set.released_at).getFullYear() : ''} : null);
+      } else if(tcg === 'magic'){
+        const eur = card.prices && card.prices.eur ? parseFloat(card.prices.eur) : null;
+        const usd = card.prices && card.prices.usd ? parseFloat(card.prices.usd) : null;
+        const market = eur != null ? eur : (usd != null ? +(usd * ((typeof USD_TO_EUR==='number')?USD_TO_EUR:0.92)).toFixed(2) : null);
+        let img = imgUrl;
+        entry = {
+          apiId: card.id, name: card.printed_name || card.name,
+          img, largeImg: img,
+          setName: card.set_name || '',
+          setReleaseDate: card.released_at || null,
+          number: card.collector_number || '',
+          rarity: card.rarity || '',
+          marketPrice: market, pricePaid: 0, qty: 1, owned: false,
+          addedAt: Date.now()
+        };
+      }
+      if(entry && entry.apiId){
+        _visibleCards[entry.apiId] = {entry, tcg};
+        const actionsEl = document.getElementById('cardDetailUserActions');
+        if(actionsEl){
+          // boutons existants : favButtonHtml + ownButtonHtml, ils sont câblés via délégation globale
+          actionsEl.innerHTML = `
+            <div class="card-detail-action-btns">
+              ${(typeof ownButtonHtml === 'function') ? `<button class="own-btn ${(typeof isOwnedAnywhere === 'function' && isOwnedAnywhere(entry.apiId)) ? 'active' : ''}" data-own-id="${escapeHtml(entry.apiId)}" title="J'ai cette carte">✓ Marquer possédée</button>` : ''}
+              ${(typeof favButtonHtml === 'function') ? `<button class="fav-btn ${(typeof isInWishlist === 'function' && isInWishlist(entry.apiId)) ? 'active' : ''}" data-fav-id="${escapeHtml(entry.apiId)}" title="Ajouter à une wishlist">♥ Ajouter à une wishlist</button>` : ''}
+            </div>`;
+        }
+      }
+    }
+  } catch(e){ console.warn('Modal action buttons wire err:', e); }
 }
 
 // Wire close
@@ -5018,15 +5095,32 @@ function translateCardNameToFr(name){
     const qPokemon = qEn || q;
     const qPokemonEnc = encodeURIComponent(qPokemon);
 
+    // Détection : si la query ressemble à un numéro de carte (ex: "147" ou "147/086"),
+    // on bascule en recherche par numéro côté API
+    const isCardNumber = /^\d+(\/\d+)?$/.test(q.trim());
+    let pokemonQ, magicQ, lorcanaQ;
+    if(isCardNumber){
+      const parts = q.trim().split('/');
+      const num = parts[0].replace(/^0+/,'') || '0';
+      const total = parts[1] ? parts[1].replace(/^0+/,'') : null;
+      pokemonQ = total ? `number:${num} set.printedTotal:${total}` : `number:${num}`;
+      magicQ = `cn:${num}`;
+      lorcanaQ = `collector_number:${num}`;
+    } else {
+      pokemonQ = `name:*${qPokemon}*`;
+      magicQ = `${q} lang:fr include:multilingual`;
+      lorcanaQ = `name:${q}`;
+    }
+
     const tasks = await Promise.allSettled([
       // Pokémon
-      fetch(`https://api.pokemontcg.io/v2/cards?q=name:*${qPokemonEnc}*&pageSize=8&orderBy=-set.releaseDate`, {signal})
+      fetch(`https://api.pokemontcg.io/v2/cards?q=${encodeURIComponent(pokemonQ)}&pageSize=8&orderBy=-set.releaseDate&select=id,name,number,images,cardmarket,set,rarity`, {signal})
         .then(r => r.json()).catch(() => ({data: []})),
-      // Magic (cartes FR en priorité)
-      fetch(`https://api.scryfall.com/cards/search?q=${qEnc}+lang:fr+include:multilingual&order=released&unique=cards`, {signal, headers:{'Accept':'application/json'}})
+      // Magic
+      fetch(`https://api.scryfall.com/cards/search?q=${encodeURIComponent(magicQ)}&order=released&unique=cards`, {signal, headers:{'Accept':'application/json'}})
         .then(r => r.ok ? r.json() : Promise.resolve({data: []})).catch(() => ({data: []})),
       // Lorcana
-      fetch(`https://api.lorcast.com/v0/cards/search?q=name%3A${qEnc}`, {signal})
+      fetch(`https://api.lorcast.com/v0/cards/search?q=${encodeURIComponent(lorcanaQ)}`, {signal})
         .then(r => r.ok ? r.json() : Promise.resolve({results: []})).catch(() => ({results: []})),
     ]);
 
