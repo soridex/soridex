@@ -1351,6 +1351,18 @@
   .legal-modal-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:4px}
   .footer-link{background:none;border:none;color:inherit;font:inherit;cursor:pointer;padding:0;text-decoration:none;transition:.15s}
   .footer-link:hover{color:var(--gold-2,#f5b942)}
+  /* ============ ACCOUNT SUB-NAV ============ */
+  .account-subnav{display:flex;gap:6px;flex-wrap:wrap;padding:8px;background:var(--bg2);border:1px solid var(--line2);border-radius:14px;margin-bottom:22px}
+  .acc-tab{flex:1;min-width:130px;display:flex;align-items:center;justify-content:center;gap:8px;padding:11px 14px;border-radius:10px;font-size:13px;font-weight:600;letter-spacing:.05em;color:var(--mut);text-decoration:none;transition:.18s;cursor:pointer;border:1px solid transparent;text-transform:uppercase}
+  .acc-tab:hover{color:var(--tx);background:rgba(212,168,90,.06);border-color:var(--line2)}
+  .acc-tab.active{background:linear-gradient(135deg,rgba(212,168,90,.18),rgba(212,168,90,.08));border-color:var(--gold-deep);color:var(--gold-2);box-shadow:0 0 0 1px rgba(212,168,90,.2),0 4px 14px rgba(212,168,90,.1)}
+  .acc-tab .ico{font-size:16px;font-weight:400}
+  .acc-tab.active .ico{color:var(--gold-2)}
+  @media (max-width:680px){
+    .acc-tab{min-width:0;padding:10px 8px;font-size:11px;flex:1 1 calc(50% - 4px)}
+    .acc-tab .ico{font-size:14px}
+  }
+
   /* ============ BUSINESS (achat-revente) ============ */
   .biz-stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin:20px 0 26px}
   .biz-stat{background:var(--surf);border:1px solid var(--line2);border-radius:14px;padding:16px 18px;position:relative;overflow:hidden}
@@ -1433,12 +1445,9 @@
     </a>
     <nav class="navlinks">
       <a class="navlink active" href="#" data-view="home">Explorateur TCG</a>
-      <a class="navlink" href="#" data-nav="portfolios">Mes Portfolios</a>
-      <a class="navlink" href="#" data-nav="wishlist">Wishlist</a>
       <a class="navlink" href="#" data-view="shop">Boutique</a>
       <a class="navlink" href="#" data-view="guide">Guide</a>
       <a class="navlink" href="#" data-nav="compte">Compte</a>
-      <a class="navlink" href="#" data-nav="business">Business</a>
     </nav>
   </div>
   <div class="search-row">
@@ -1718,22 +1727,44 @@
 </section>
 
 <!-- VIEW: COMPTE -->
-<section class="view" id="view-compte" hidden>
-  <div class="compte-head">
+<!-- VIEW: PARAMETRES (compte settings) -->
+<section class="view" id="view-parametres" hidden>
+  <div class="account-subnav">
+    <a class="acc-tab active" href="#" data-nav="parametres"><span class="ico">⚙</span>Paramètres</a>
+    <a class="acc-tab" href="#" data-nav="compte"><span class="ico">📁</span>Portfolios</a>
+    <a class="acc-tab" href="#" data-nav="wishlist"><span class="ico">♥</span>Wishlists</a>
+    <a class="acc-tab" href="#" data-nav="business"><span class="ico">€</span>Business</a>
+  </div>
+  <div class="sets-head">
     <div>
-      <h2 class="view-title">Mon Compte</h2>
-      <p class="view-sub">Tes cartes possédées et tes portfolios thématiques.</p>
-    </div>
-    <div class="user-card">
-      <div class="user-avatar" id="userAvatar">?</div>
-      <div class="user-info">
-        <span class="user-pseudo" id="userPseudo">—</span>
-        <span class="user-mail" id="userMail">—</span>
-      </div>
-      <button class="logout-btn" id="logoutBtn">Déconnexion</button>
+      <h2 class="view-title">Paramètres du compte</h2>
+      <p class="view-sub">Tes informations de connexion et tes préférences.</p>
     </div>
   </div>
-  <h2 class="section-title">Mes Portfolios</h2>
+  <div class="user-card" style="max-width:520px">
+    <div class="user-avatar" id="paramAvatar">?</div>
+    <div class="user-info">
+      <span class="user-pseudo" id="paramPseudo">—</span>
+      <span class="user-mail" id="paramMail">—</span>
+    </div>
+    <button class="logout-btn" id="paramLogoutBtn">Déconnexion</button>
+  </div>
+</section>
+
+<!-- VIEW: COMPTE (Portfolios) -->
+<section class="view" id="view-compte" hidden>
+  <div class="account-subnav">
+    <a class="acc-tab" href="#" data-nav="parametres"><span class="ico">⚙</span>Paramètres</a>
+    <a class="acc-tab active" href="#" data-nav="compte"><span class="ico">📁</span>Portfolios</a>
+    <a class="acc-tab" href="#" data-nav="wishlist"><span class="ico">♥</span>Wishlists</a>
+    <a class="acc-tab" href="#" data-nav="business"><span class="ico">€</span>Business</a>
+  </div>
+  <div class="sets-head">
+    <div>
+      <h2 class="view-title">Mes Portfolios</h2>
+      <p class="view-sub">Tes cartes possédées et tes portfolios thématiques.</p>
+    </div>
+  </div>
   <div class="portfolio-tabs">
     <button class="pf-tab active" data-pf-filter="all">Tous</button>
     <button class="pf-tab" data-pf-filter="pokemon">Pokémon</button>
@@ -1875,8 +1906,11 @@
 
 <!-- VIEW: WISHLIST (LISTE DES DOSSIERS) -->
 <section class="view" id="view-wishlist" hidden>
-  <div class="breadcrumb">
-    <a data-view="home">← Accueil</a><span>/</span><span>Mes Wishlists</span>
+  <div class="account-subnav">
+    <a class="acc-tab" href="#" data-nav="parametres"><span class="ico">⚙</span>Paramètres</a>
+    <a class="acc-tab" href="#" data-nav="compte"><span class="ico">📁</span>Portfolios</a>
+    <a class="acc-tab active" href="#" data-nav="wishlist"><span class="ico">♥</span>Wishlists</a>
+    <a class="acc-tab" href="#" data-nav="business"><span class="ico">€</span>Business</a>
   </div>
   <div class="sets-head">
     <div>
@@ -1982,7 +2016,12 @@
 
 <!-- ============ VIEW: BUSINESS (achat-revente) ============ -->
 <section class="view" id="view-business" hidden>
-  <div class="breadcrumb"><a data-view="home">← Accueil</a><span>/</span><span>Business</span></div>
+  <div class="account-subnav">
+    <a class="acc-tab" href="#" data-nav="parametres"><span class="ico">⚙</span>Paramètres</a>
+    <a class="acc-tab" href="#" data-nav="compte"><span class="ico">📁</span>Portfolios</a>
+    <a class="acc-tab" href="#" data-nav="wishlist"><span class="ico">♥</span>Wishlists</a>
+    <a class="acc-tab active" href="#" data-nav="business"><span class="ico">€</span>Business</a>
+  </div>
   <div class="sets-head">
     <div>
       <h2 class="view-title">€ Business — Achat-Revente</h2>
@@ -2786,7 +2825,7 @@ new Chart(ctx, {
 })();
 
 /* === ROUTING === */
-const ALL_VIEWS = ['home','login','compte','sets-pokemon','sets-lorcana','sets-magic','era-detail','set-detail','pf-detail','wishlist','wish-detail','global-search','shop','guide','guide-article','business','business-folder'];
+const ALL_VIEWS = ['home','login','compte','sets-pokemon','sets-lorcana','sets-magic','era-detail','set-detail','pf-detail','wishlist','wish-detail','global-search','shop','guide','guide-article','business','business-folder','parametres'];
 function showView(name){
   if(!ALL_VIEWS.includes(name)) name='home';
   document.querySelectorAll('.view').forEach(v => v.hidden = (v.id !== 'view-'+name));
@@ -2831,7 +2870,8 @@ function handleAuthSubmit(){
 document.querySelectorAll('.auth-tab').forEach(t=>t.addEventListener('click',()=>resetAuthForm(t.dataset.tab)));
 document.getElementById('authSubmit').addEventListener('click',handleAuthSubmit);
 ['authEmail','authPass','authPseudo'].forEach(id=>document.getElementById(id).addEventListener('keypress',e=>{if(e.key==='Enter') handleAuthSubmit();}));
-document.getElementById('logoutBtn').addEventListener('click',logout);
+const lgBtn = document.getElementById('paramLogoutBtn');
+if(lgBtn) lgBtn.addEventListener('click',logout);
 
 /* === PORTFOLIOS === */
 const PF_KEY='soridex_portfolios_v1';
@@ -2841,9 +2881,10 @@ const PF_ICONS={pokemon:'⚡',lorcana:'✨',magic:'🔥'};
 let currentPfFilter='all';
 function renderCompte(){
   const u=getUser(); if(!u){showView('login'); return;}
-  document.getElementById('userPseudo').textContent=u.pseudo;
-  document.getElementById('userMail').textContent=u.email;
-  document.getElementById('userAvatar').textContent=u.pseudo.slice(0,1).toUpperCase();
+  // User card moved to view-parametres; render it there too (safe even if not on view)
+  const pseudoEl=document.getElementById('userPseudo'); if(pseudoEl) pseudoEl.textContent=u.pseudo;
+  const mailEl=document.getElementById('userMail'); if(mailEl) mailEl.textContent=u.email;
+  const avatarEl=document.getElementById('userAvatar'); if(avatarEl) avatarEl.textContent=u.pseudo.slice(0,1).toUpperCase();
   renderPortfolios(currentPfFilter);
 }
 document.querySelectorAll('.pf-tab').forEach(t=>t.addEventListener('click',()=>{currentPfFilter=t.dataset.pfFilter; document.querySelectorAll('.pf-tab').forEach(x=>x.classList.toggle('active',x===t)); renderPortfolios(currentPfFilter);}));
@@ -6392,6 +6433,7 @@ document.addEventListener('click', (e)=>{
     if(n==='compte'||n==='portfolios') goToAccount();
     else if(n==='wishlist') showWishlist();
     else if(n==='business') showBusiness();
+    else if(n==='parametres') showParametres();
     return;
   }
 
@@ -6497,8 +6539,37 @@ function tcgLabel(t){
 }
 
 function showBusiness(){
+  const user = getUser();
+  if(!user){
+    alert('Connecte-toi pour accéder à ton espace Business.');
+    goToAccount();
+    return;
+  }
+  bizCurrentFolderId = null;
   showView('business');
   renderBusiness();
+}
+
+function showParametres(){
+  const user = getUser();
+  if(!user){ goToAccount(); return; }
+  showView('parametres');
+  renderParametres();
+}
+
+function renderParametres(){
+  const user = getUser();
+  if(!user) return;
+  // User card render
+  const avatarEl = document.getElementById('paramAvatar');
+  const pseudoEl = document.getElementById('paramPseudo');
+  const mailEl = document.getElementById('paramMail');
+  if(pseudoEl) pseudoEl.textContent = user.username || user.pseudo || '—';
+  if(mailEl) mailEl.textContent = user.email || '—';
+  if(avatarEl){
+    const p = (user.username || user.pseudo || user.email || '?').trim();
+    avatarEl.textContent = p[0] ? p[0].toUpperCase() : '?';
+  }
 }
 
 function renderBusiness(){
@@ -6554,6 +6625,8 @@ function renderBusiness(){
 // Helper for safe HTML (uses existing escapeHtml defined earlier in the file)
 
 function openBusinessFolder(folderId){
+  const user = getUser();
+  if(!user){ alert('Connecte-toi pour accéder à ton espace Business.'); goToAccount(); return; }
   bizCurrentFolderId = folderId;
   showView('business-folder');
   renderBusinessFolder();
@@ -6865,6 +6938,9 @@ document.addEventListener('DOMContentLoaded', function(){
 (function(){
   const hash=location.hash.replace(/^#\//,'');
   if(hash==='compte') goToAccount();
+  else if(hash==='wishlist') showWishlist();
+  else if(hash==='business' || hash==='business-folder') showBusiness();
+  else if(hash==='parametres') showParametres();
   else if(ALL_VIEWS.includes(hash)) showView(hash);
   else showView('home');
 })();
