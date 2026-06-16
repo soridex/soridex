@@ -3477,13 +3477,19 @@ let _pfSyncTimer = null;
 const PF_SYNC_DEBOUNCE = 400;
 
 function getPortfolios(){ return _pfCache; }
-function savePortfolios(a){
+function savePortfolios(a, opts){
   _pfCache = a || [];
   _pfDirty = true;
   // Cache local (offline fallback / boot speed)
   try { localStorage.setItem(PF_KEY, JSON.stringify(_pfCache)); } catch(e){}
-  if(_pfSyncTimer) clearTimeout(_pfSyncTimer);
-  _pfSyncTimer = setTimeout(flushPortfoliosToSb, PF_SYNC_DEBOUNCE);
+  if(_pfSyncTimer){ clearTimeout(_pfSyncTimer); _pfSyncTimer = null; }
+  // opts.flushNow = true → sync immédiat (créations/suppressions de portfolio).
+  // Sinon debounce 400ms (toggles de cartes en rafale).
+  if(opts && opts.flushNow){
+    flushPortfoliosToSb();
+  } else {
+    _pfSyncTimer = setTimeout(flushPortfoliosToSb, PF_SYNC_DEBOUNCE);
+  }
 }
 async function flushPortfoliosToSb(){
   if(!sb || !currentUser || !_pfDirty) return;
@@ -3518,7 +3524,7 @@ async function loadPortfoliosFromSb(){
   try {
     const { data, error } = await sb.from('portfolios').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: true });
     if(error) throw error;
-    _pfCache = (data||[]).map(row => {
+    const remote = (data||[]).map(row => {
       const obj = row.data && typeof row.data === 'object' && row.data.id ? row.data : {id: row.id, name: row.name, tcg: row.tcg, cards: []};
       // Garde-fous : si data n'a pas l'id, le prendre de la row
       if(!obj.id) obj.id = row.id;
@@ -3527,6 +3533,22 @@ async function loadPortfoliosFromSb(){
       if(!Array.isArray(obj.cards)) obj.cards = [];
       return obj;
     });
+    // MERGE : récupère le cache local et garde les portfolios présents en local
+    // mais absents de Supabase (= jamais syncés à cause d'un refresh trop rapide
+    // ou d'un network kill au beforeunload). On les réinjecte et on relance un flush.
+    let localCache = [];
+    try { localCache = JSON.parse(localStorage.getItem(PF_KEY) || '[]'); } catch(_){}
+    const remoteIds = new Set(remote.map(p => p.id));
+    const unsynced = (Array.isArray(localCache) ? localCache : []).filter(p => p && p.id && !remoteIds.has(p.id));
+    if(unsynced.length){
+      console.warn('[soridex] récupération de', unsynced.length, 'portfolio(s) non syncé(s) depuis le cache local');
+      _pfCache = remote.concat(unsynced);
+      _pfDirty = true;
+      // Re-push vers Supabase (sans bloquer le boot)
+      setTimeout(() => { try { flushPortfoliosToSb(); } catch(e){ console.error(e); } }, 0);
+    } else {
+      _pfCache = remote;
+    }
     try { localStorage.setItem(PF_KEY, JSON.stringify(_pfCache)); } catch(e){}
   } catch(e){
     console.error('loadPortfoliosFromSb:', e);
@@ -3722,7 +3744,7 @@ async function submitCreatePortfolio(){
       cards,
       createdAt: Date.now()
     };
-    const arr = getPortfolios(); arr.push(pf); savePortfolios(arr);
+    const arr = getPortfolios(); arr.push(pf); savePortfolios(arr, {flushNow:true});
     closeCreatePfModal();
     showPortfolioDetail(pf.id);
   }catch(err){
@@ -4274,7 +4296,7 @@ function renderPfCards(pf){
 function deletePortfolio(pfId){
   if(!confirm('Supprimer définitivement ce portfolio ?')) return;
   const arr = getPortfolios().filter(p => p.id !== pfId);
-  savePortfolios(arr);
+  savePortfolios(arr, {flushNow:true});
   showView('compte');
   renderCompte();
 }
