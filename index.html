@@ -3190,6 +3190,24 @@ async function loadAllUserDataFromSb(){
   ]);
 }
 
+// Force flush immédiat (utilisé sur beforeunload, visibilitychange, etc.)
+function flushAllPendingNow(){
+  if(_pfSyncTimer){ clearTimeout(_pfSyncTimer); _pfSyncTimer = null; }
+  if(_wishSyncTimer){ clearTimeout(_wishSyncTimer); _wishSyncTimer = null; }
+  if(_bizSyncTimer){ clearTimeout(_bizSyncTimer); _bizSyncTimer = null; }
+  if(_pfDirty && typeof flushPortfoliosToSb === 'function') flushPortfoliosToSb();
+  if(_wishDirty && typeof flushWishlistsToSb === 'function') flushWishlistsToSb();
+  if(_bizDirty && typeof flushBusinessToSb === 'function') flushBusinessToSb();
+}
+
+// CRUCIAL : sur fermeture d'onglet / changement d'onglet / pause de l'app PWA,
+// on force le flush immédiat pour pas perdre les modifs des dernières secondes
+window.addEventListener('beforeunload', flushAllPendingNow);
+window.addEventListener('pagehide', flushAllPendingNow);
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState === 'hidden') flushAllPendingNow();
+});
+
 // Listener auth state changes (signin depuis un autre onglet, refresh token, etc.)
 if(sb){
   sb.auth.onAuthStateChange((event) => {
@@ -3287,7 +3305,7 @@ const PF_KEY='soridex_portfolios_v1'; // legacy cache only
 // _pfCache déjà déclaré au boot
 let _pfDirty = false;
 let _pfSyncTimer = null;
-const PF_SYNC_DEBOUNCE = 800;
+const PF_SYNC_DEBOUNCE = 400;
 
 function getPortfolios(){ return _pfCache; }
 function savePortfolios(a){
@@ -5471,7 +5489,7 @@ let _pendingPickEntry = null; // entry à ajouter quand on choisit le dossier
 // _wishCache déjà déclaré au boot
 let _wishDirty = false;
 let _wishSyncTimer = null;
-const WISH_SYNC_DEBOUNCE = 800;
+const WISH_SYNC_DEBOUNCE = 400;
 
 function getWishlistFolders(){ return _wishCache; }
 function saveWishlistFolders(arr){
@@ -7166,7 +7184,7 @@ let bizEditingFolderId = null;
 // _bizCache déjà déclaré au boot
 let _bizDirty = false;
 let _bizSyncTimer = null;
-const BIZ_SYNC_DEBOUNCE = 800;
+const BIZ_SYNC_DEBOUNCE = 400;
 
 function getBusinessData(){ return _bizCache; }
 function saveBusinessData(d){
