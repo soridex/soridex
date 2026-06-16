@@ -1247,6 +1247,27 @@
     font-size:13px;color:var(--gold-2);line-height:1.5;
   }
   .guide-callout strong{color:#fff}
+  .guide-callout.danger{background:rgba(239,68,68,.08);border-left-color:#ef4444;color:#fca5a5}
+  .guide-callout.danger strong{color:#fecaca}
+  .guide-callout.success{background:rgba(34,197,94,.06);border-left-color:#22c55e;color:#86efac}
+  .guide-callout.success strong{color:#bbf7d0}
+  .fake-tell-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0}
+  @media (max-width:780px){.fake-tell-grid{grid-template-columns:1fr}}
+  .fake-tell{background:rgba(255,255,255,.03);border:1px solid var(--line2);border-radius:9px;padding:12px 14px}
+  .fake-tell.real{border-color:rgba(34,197,94,.35);background:rgba(34,197,94,.04)}
+  .fake-tell.fake{border-color:rgba(239,68,68,.35);background:rgba(239,68,68,.04)}
+  .fake-tell-label{font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px}
+  .fake-tell.real .fake-tell-label{color:#86efac}
+  .fake-tell.fake .fake-tell-label{color:#fca5a5}
+  .fake-tell-text{font-size:13px;color:var(--tx);line-height:1.55}
+  .fake-tcg-block{background:rgba(255,255,255,.02);border:1px solid var(--line2);border-radius:10px;padding:14px 16px;margin:12px 0}
+  .fake-tcg-block .fake-tcg-head{display:flex;align-items:center;gap:8px;font-weight:800;font-size:14px;color:#fff;margin-bottom:8px}
+  .fake-tcg-block.pokemon .fake-tcg-head{color:#fbbf24}
+  .fake-tcg-block.lorcana .fake-tcg-head{color:#c084fc}
+  .fake-tcg-block.magic .fake-tcg-head{color:#fb923c}
+  .fake-tcg-block ul{margin:6px 0 0;padding-left:18px}
+  .fake-tcg-block li{font-size:13px;line-height:1.6;color:var(--tx);margin-bottom:4px}
+  .fake-tcg-block li strong{color:#fff}
   .guide-grading-table{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin:14px 0}
   .guide-grader{
     background:rgba(255,255,255,.03);border:1px solid var(--line2);border-radius:9px;padding:12px 14px;
@@ -1924,9 +1945,10 @@
     <div class="guide-toc-grid">
       <a class="guide-toc-link" href="#g-analyze"><span class="num">1</span>Analyser une carte</a>
       <a class="guide-toc-link" href="#g-buy"><span class="num">2</span>Où acheter</a>
-      <a class="guide-toc-link" href="#g-grading"><span class="num">3</span>Le grading (PCA, PSA)</a>
-      <a class="guide-toc-link" href="#g-storage"><span class="num">4</span>Conservation</a>
-      <a class="guide-toc-link" href="#g-mistakes"><span class="num">5</span>Erreurs à éviter</a>
+      <a class="guide-toc-link" href="#g-fakes"><span class="num">3</span>Repérer les fakes</a>
+      <a class="guide-toc-link" href="#g-grading"><span class="num">4</span>Le grading (PCA, PSA)</a>
+      <a class="guide-toc-link" href="#g-storage"><span class="num">5</span>Conservation</a>
+      <a class="guide-toc-link" href="#g-mistakes"><span class="num">6</span>Erreurs à éviter</a>
     </div>
   </div>
 
@@ -2006,8 +2028,159 @@
     <div class="guide-callout">⚠️ <strong>Règle d'or</strong> — Avant tout achat &gt; 20 €, vérifie la cote sur Cardmarket via Soridex. Une "occasion" trop belle = souvent fake ou état dégradé non mentionné.</div>
   </article>
 
+  <article class="guide-section" id="g-fakes">
+    <h3><span class="ico">🕵️</span>3. Repérer les fakes — Le guide anti-arnaque</h3>
+    <p>Le marché TCG est miné par les contrefaçons, surtout depuis le boom 2020. <strong>Pokémon</strong> est de loin le plus copié, mais <strong>Lorcana</strong> commence à apparaître sur Vinted et AliExpress, et les fakes <strong>Magic</strong> traînent depuis 30 ans. Bonne nouvelle : 95 % des fakes se repèrent en 30 secondes une fois que tu sais où regarder.</p>
+
+    <div class="guide-callout danger"><strong>⚠️ Avant tout</strong> — Aucun test physique destructif n'est nécessaire. Si quelqu'un te dit "déchire la carte pour vérifier le noyau noir", il te demande de détruire ta carte. Les tests qui suivent sont 100 % non-invasifs.</div>
+
+    <h4>① Les 4 tests visuels universels (tous TCG)</h4>
+    <p>À faire dans l'ordre, en 1 minute, sur n'importe quelle carte suspecte :</p>
+
+    <div class="fake-tell-grid">
+      <div class="fake-tell real">
+        <div class="fake-tell-label">✓ Vraie carte</div>
+        <div class="fake-tell-text"><strong>Couleurs saturées et profondes</strong>, noirs vraiment noirs, contrastes nets. La carte a une légère <strong>texture grainée</strong> sous le doigt.</div>
+      </div>
+      <div class="fake-tell fake">
+        <div class="fake-tell-label">✗ Fake</div>
+        <div class="fake-tell-text">Couleurs <strong>fades ou au contraire sursaturées</strong> (rose flashy au lieu de rouge profond). Surface trop <strong>lisse, plastique ou cireuse</strong>.</div>
+      </div>
+      <div class="fake-tell real">
+        <div class="fake-tell-label">✓ Vraie carte</div>
+        <div class="fake-tell-text"><strong>Police nette et constante</strong>. L'italique sur le nom de l'attaque, le kerning, les accents — tout est propre même à la loupe.</div>
+      </div>
+      <div class="fake-tell fake">
+        <div class="fake-tell-label">✗ Fake</div>
+        <div class="fake-tell-text"><strong>Lettres floues, mal alignées</strong>, espacement irrégulier, faux italiques (juste penchés), parfois fautes d'orthographe ou caractères chinois cachés.</div>
+      </div>
+      <div class="fake-tell real">
+        <div class="fake-tell-label">✓ Vraie carte</div>
+        <div class="fake-tell-text"><strong>Bordures parfaitement régulières</strong>, coupe nette, épaisseur de carte ≈ 0,3 mm (l'épaisseur de 2 feuilles de papier épais).</div>
+      </div>
+      <div class="fake-tell fake">
+        <div class="fake-tell-label">✗ Fake</div>
+        <div class="fake-tell-text">Bordures <strong>asymétriques</strong>, coupe au cutter visible, carte <strong>trop fine</strong> (papier) <strong>ou trop épaisse</strong> (carton bricolé).</div>
+      </div>
+      <div class="fake-tell real">
+        <div class="fake-tell-label">✓ Vraie carte</div>
+        <div class="fake-tell-text">Holographie avec un <strong>pattern régulier</strong> (cosmos, vagues, étoiles selon le set). Au contre-jour, la carte est <strong>opaque</strong>.</div>
+      </div>
+      <div class="fake-tell fake">
+        <div class="fake-tell-label">✗ Fake</div>
+        <div class="fake-tell-text">Holographie <strong>arc-en-ciel uniforme</strong> type sticker de cahier d'école. Au contre-jour, on voit la <strong>lumière passer à travers</strong> (papier trop fin).</div>
+      </div>
+    </div>
+
+    <div class="guide-callout">💡 <strong>Le test du contre-jour (le plus fiable)</strong> — Place la carte devant une lampe ou la lumière du jour. Une vraie carte Pokémon/Lorcana/Magic possède un <strong>noyau opaque</strong> (couche noire intercalée entre deux cartonnages). Tu ne dois <strong>rien voir</strong> en transparence. Si la lumière traverse, c'est un fake imprimé sur papier glacé. 100 % fiable.</div>
+
+    <h4>② Le verso — Le détail que les contrefacteurs ratent toujours</h4>
+    <p>C'est <strong>LE test à faire en premier</strong>. Les contrefacteurs concentrent leurs efforts sur le recto (le visuel). Le verso est souvent baclé : bordure trop épaisse, couleur off, pokéball/logo mal positionné.</p>
+
+    <div class="fake-tcg-block pokemon">
+      <div class="fake-tcg-head">⚡ Pokémon — Au verso</div>
+      <ul>
+        <li><strong>Pokéball centrée verticalement</strong>, bleu uniforme et profond (#3B5BA7). Pas de violet, pas de turquoise.</li>
+        <li><strong>"Pokémon" en haut</strong>, lettrage jaune avec contour noir parfaitement net.</li>
+        <li>Le motif autour de la pokéball doit être <strong>parfaitement symétrique</strong>. Les fakes ont souvent un côté légèrement décalé.</li>
+        <li><strong>Aucun éclat holographique au dos</strong> sur une carte standard (sauf très rares promos officielles type World Championship).</li>
+      </ul>
+    </div>
+
+    <div class="fake-tcg-block lorcana">
+      <div class="fake-tcg-head">✨ Lorcana — Au verso</div>
+      <ul>
+        <li>Logo <strong>"Disney Lorcana"</strong> centré, dégradé violet/turquoise profond. Les fakes ont souvent un violet "barbie" trop clair.</li>
+        <li><strong>Texture matte</strong> au dos, même sur les cartes Foil (le foil est uniquement au recto chez Ravensburger).</li>
+        <li>Bordure du dos identique à celle du recto (pas plus épaisse).</li>
+        <li>Mention <strong>"© Disney"</strong> en bas, microscopique mais lisible à la loupe — absente sur la plupart des fakes.</li>
+      </ul>
+    </div>
+
+    <div class="fake-tcg-block magic">
+      <div class="fake-tcg-head">🔥 Magic: The Gathering — Au verso</div>
+      <ul>
+        <li>Le célèbre <strong>"dos brun" Magic</strong>, avec la rosette centrale et le slogan "Deckmaster" en haut.</li>
+        <li>Couleur du dos : <strong>brun chaud uniforme</strong>, pas rougeâtre ni grisâtre.</li>
+        <li>Les <strong>4 ovales jaune-blanc</strong> autour de la rosette doivent être nets, pas baveux.</li>
+        <li>Pour les cartes vintage (Beta, Unlimited, Revised), le dos peut légèrement varier — toujours croiser avec Scryfall.</li>
+      </ul>
+    </div>
+
+    <h4>③ Les détails spécifiques au recto</h4>
+
+    <div class="fake-tcg-block pokemon">
+      <div class="fake-tcg-head">⚡ Pokémon — Au recto</div>
+      <ul>
+        <li><strong>Symboles d'énergie</strong> en bas (éclair, feu, eau...) : doivent être <strong>parfaitement ronds, contours nets</strong>. Les fakes ont des éclairs aux bords bavés.</li>
+        <li><strong>Symbole du set</strong> en bas à droite (à côté du numéro) : doit être présent, net, et correspondre au set affiché. Croise sur <strong>Bulbapedia</strong> ou <strong>pokumon.com</strong>.</li>
+        <li>Le <strong>"PV" / "HP"</strong> en haut : police rouge spécifique, jamais en italique penché.</li>
+        <li>La mention <strong>©Nintendo/Creatures/GAME FREAK</strong> en bas — absente sur 90 % des fakes. Date du copyright cohérente avec le set.</li>
+        <li><strong>Numéro de carte</strong> au format <code>X/Y</code> ou <code>XXX/XXX</code>. Vérifie que Y correspond au nombre total de cartes du set.</li>
+      </ul>
+    </div>
+
+    <div class="fake-tcg-block lorcana">
+      <div class="fake-tcg-head">✨ Lorcana — Au recto</div>
+      <ul>
+        <li><strong>Logo encre</strong> en haut à gauche (la goutte colorée selon le type — ambre, améthyste, émeraude, rubis, saphir, acier) : doit être <strong>net et profond</strong>, pas délavé.</li>
+        <li><strong>Foil Lorcana</strong> : effet "sable scintillant" très fin et homogène. Les fakes utilisent un foil type Pokémon avec arc-en-ciel franc — pas le bon rendu.</li>
+        <li>L'<strong>inkwell</strong> (cercle autour du coût en haut à gauche) : présent ou absent selon que la carte est jouable comme encre. Cohérent avec la base de données officielle <code>lorcana-api.com</code>.</li>
+        <li><strong>Numéro de collection</strong> en bas à gauche au format <code>X/204</code> (ou autre selon le set). Croise avec Cardmarket pour confirmer l'existence.</li>
+        <li>Mention <strong>"©Disney"</strong> et <strong>"Ravensburger"</strong> en bas — toujours présentes sur les officielles.</li>
+      </ul>
+    </div>
+
+    <div class="fake-tcg-block magic">
+      <div class="fake-tcg-head">🔥 Magic — Au recto</div>
+      <ul>
+        <li><strong>Symboles de mana</strong> (rond avec chiffre, gouttes colorées) : circulaires parfaits, dégradés propres.</li>
+        <li><strong>Symbole de l'extension</strong> en milieu à droite, à côté du type. Couleur indique la rareté (noir = common, argent = uncommon, or = rare, doré-rouge = mythic).</li>
+        <li>Le <strong>copyright Wizards of the Coast</strong> en bas, avec année cohérente.</li>
+        <li><strong>Cartes Reserved List</strong> (Black Lotus, Power 9, duals...) : <strong>extrême prudence</strong>. Quasi systématiquement fakes en dehors de boutiques spécialisées ou de gradés PSA/BGS authentifiés.</li>
+      </ul>
+    </div>
+
+    <h4>④ Les 6 red flags du vendeur</h4>
+    <ul>
+      <li><strong>Refus d'envoyer des photos supplémentaires</strong> (recto + verso + tranche + zoom holo). Un vendeur honnête le fait en 2 min.</li>
+      <li><strong>Photos qui sont en réalité des scans Cardmarket</strong> (mêmes photos que les autres vendeurs). Demande une photo avec un papier daté à côté.</li>
+      <li><strong>Prix &lt; 50 % du trend Cardmarket</strong> sur une carte chase. Personne ne brade un vrai Charizard alt art.</li>
+      <li><strong>Compte récent, 0 avis</strong>, ou avis tous d'un coup à la même date.</li>
+      <li><strong>Refuse Cardmarket</strong> et veut un paiement direct PayPal "entre amis", virement, ou crypto. Pas de protection acheteur = pas d'achat.</li>
+      <li><strong>Justification émotionnelle</strong> : "collection de mon fils", "héritage", "j'y connais rien". Souvent légitime sur des cartes basiques, presque toujours bidon sur des chase à &gt; 100 €.</li>
+    </ul>
+
+    <h4>⑤ Plateformes — Le classement risque/sécurité</h4>
+    <div class="fake-tell-grid">
+      <div class="fake-tell real">
+        <div class="fake-tell-label">✓ Faible risque</div>
+        <div class="fake-tell-text"><strong>Cardmarket</strong> (vendeurs notés, protection acheteur), <strong>boutiques physiques spécialisées</strong>, <strong>cartes gradées PCA/PSA/BGS</strong> (l'organisme a authentifié pour toi).</div>
+      </div>
+      <div class="fake-tell fake">
+        <div class="fake-tell-label">✗ Risque élevé</div>
+        <div class="fake-tell-text"><strong>Vinted, Leboncoin, Wallapop</strong> sur chase cards. <strong>TikTok Lives / Whatnot</strong> (impossible de vérifier en direct). <strong>AliExpress, Wish, Temu</strong> (100 % fakes).</div>
+      </div>
+    </div>
+
+    <div class="guide-callout success"><strong>✓ Le réflexe Soridex</strong> — Quand tu repères une carte sur Vinted ou eBay, vérifie d'abord son existence officielle (Bulbapedia pour Pokémon, lorcana-api pour Lorcana, Scryfall pour Magic). Puis croise le prix avec le trend Cardmarket via Soridex. Si la carte n'existe pas dans la base officielle, c'est un fake (ou une carte custom assumée). Si le prix est &lt; 50 % du trend, soit fake, soit état caché.</div>
+
+    <h4>⑥ Que faire si tu t'es fait avoir ?</h4>
+    <ul>
+      <li><strong>Sur Cardmarket</strong> : ouvre une réclamation sous 7 jours avec photos, le service est très réactif et rembourse dans 90 % des cas.</li>
+      <li><strong>Sur Vinted</strong> : "Signaler un problème" sous 2 jours après réception. Joins photos comparatives (vraie vs reçue) — le service support tranche souvent en faveur de l'acheteur.</li>
+      <li><strong>PayPal "biens et services"</strong> : 180 jours pour ouvrir un litige, remboursement très souvent obtenu sur preuve.</li>
+      <li><strong>Vendeur sur réseaux sociaux</strong> : si paiement "amis et famille", c'est quasi perdu. Signale le compte et préviens la communauté (Discord, groupes Facebook TCG France).</li>
+      <li><strong>Garde le fake</strong> — utile pour la pédagogie sur tes lives, ou pour comparer si tu reçois une autre carte douteuse.</li>
+    </ul>
+
+    <div class="guide-callout danger"><strong>🚫 À ne jamais faire</strong> — Revendre un fake en le présentant comme authentique (même par "erreur"). C'est de l'escroquerie. Si tu détectes un fake dans ton stock, marque-le clairement ou détruis-le.</div>
+
+    <div class="guide-callout">🎯 <strong>TL;DR — Le réflexe en 30 secondes</strong> — 1) Contre-jour (opacité ?) · 2) Verso (couleurs et symétrie) · 3) Texture sous le doigt · 4) Croiser le numéro/set sur Bulbapedia, lorcana-api ou Scryfall. Si les 4 passent, à 95 % c'est authentique.</div>
+  </article>
+
   <article class="guide-section" id="g-grading">
-    <h3><span class="ico">🛡</span>3. Le grading — Qu'est-ce que c'est ?</h3>
+    <h3><span class="ico">🛡</span>4. Le grading — Qu'est-ce que c'est ?</h3>
     <p>Le <strong>grading</strong> (ou gradation) consiste à envoyer une carte chez un organisme spécialisé qui va l'authentifier, l'évaluer sur une note de 1 à 10, puis l'encapsuler dans un boîtier scellé inviolable. Une carte gradée 10 peut valoir <strong>×5 à ×20</strong> la version non gradée.</p>
     <h4>Les 4 critères de notation</h4>
     <ul>
@@ -2053,7 +2226,7 @@
   </article>
 
   <article class="guide-section" id="g-storage">
-    <h3><span class="ico">🗄</span>4. Conservation : sleeves, top loaders, classeurs</h3>
+    <h3><span class="ico">🗄</span>5. Conservation : sleeves, top loaders, classeurs</h3>
     <p>Une carte mal protégée perd 30-80 % de sa valeur en quelques mois. Voici le matériel essentiel.</p>
     <h4>Hiérarchie de protection (du moins au plus protecteur)</h4>
     <ul>
@@ -2076,7 +2249,7 @@
   </article>
 
   <article class="guide-section" id="g-mistakes">
-    <h3><span class="ico">⚠</span>5. Les 7 erreurs classiques du débutant</h3>
+    <h3><span class="ico">⚠</span>6. Les 7 erreurs classiques du débutant</h3>
     <ul>
       <li><strong>Acheter sans vérifier la cote</strong> — Toujours checker Soridex / Cardmarket avant. Vraiment.</li>
       <li><strong>Manipuler les cartes hors sleeves</strong> — Une seule manip à mains nues = perte de valeur sur une carte de haute rareté.</li>
