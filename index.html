@@ -2115,8 +2115,8 @@
     <div class="biz-form-section">
       <div class="biz-form-section-title">Carte</div>
       <div class="form-field biz-autocomplete-wrap">
-        <label>Nom de la carte <span style="color:var(--mut);font-weight:400;font-size:11px">— commence à taper pour rechercher</span></label>
-        <input type="text" id="bizTxCardName" placeholder="Ex. Dracaufeu, Elsa, Black Lotus…" maxlength="120" autocomplete="off">
+        <label>Nom ou numéro de la carte <span style="color:var(--mut);font-weight:400;font-size:11px">— tape un nom ou un numéro (ex: 199/191)</span></label>
+        <input type="text" id="bizTxCardName" placeholder="Ex. Dracaufeu, 25, 199/191, Elsa, Black Lotus…" maxlength="120" autocomplete="off">
         <div class="biz-autocomplete-dropdown hidden" id="bizTxAutocomplete"></div>
       </div>
       <div class="biz-cote-pill hidden" id="bizTxCotePill"></div>
@@ -6991,10 +6991,25 @@ function deleteTransaction(txId){
 }
 
 /* ----- STEP 2 : API search + refresh cotes ----- */
-const BIZ_SEARCH_DEBOUNCE_MS = 350;
+const BIZ_SEARCH_DEBOUNCE_MS = 250;
 let bizSearchTimer = null;
 let bizSearchAbort = null;
 let bizSelectedCard = null; // {id, name, number, setName, imageUrl, trendPrice, lowPrice, tcg}
+const bizSearchCache = new Map(); // key = `${tcg}:${query}` → results
+const BIZ_SEARCH_CACHE_MAX = 30;
+
+function bizCacheGet(tcg, q){ return bizSearchCache.get(tcg+':'+q.toLowerCase()); }
+function bizCacheSet(tcg, q, results){
+  if(bizSearchCache.size >= BIZ_SEARCH_CACHE_MAX){
+    const firstKey = bizSearchCache.keys().next().value;
+    bizSearchCache.delete(firstKey);
+  }
+  bizSearchCache.set(tcg+':'+q.toLowerCase(), results);
+}
+
+// Detect if query looks like a card number ("25", "199/191", "025/091")
+function bizIsCardNumber(q){ return /^\d+(\/\d+)?$/.test(q.trim()); }
+function bizExtractNumber(q){ return q.trim().split('/')[0].replace(/^0+/, '') || '0'; }
 
 function bizMapPokemonResult(c){
   const cm = (c.cardmarket && c.cardmarket.prices) || {};
@@ -7057,42 +7072,80 @@ function bizMapMagicResult(c){
 }
 
 async function bizSearchCards(tcg, query){
-  if(!query || query.trim().length < 2) return [];
+  if(!query || query.trim().length < 1) return [];
+  const q = query.trim();
+  // Min length: 1 for numbers, 2 for names
+  const isNumber = bizIsCardNumber(q);
+  if(!isNumber && q.length < 2) return [];
+
+  // In-memory cache
+  const cached = bizCacheGet(tcg, q);
+  if(cached) return cached;
+
   if(bizSearchAbort){ try{bizSearchAbort.abort();}catch(e){} }
   bizSearchAbort = new AbortController();
   const signal = bizSearchAbort.signal;
 
-  const q = query.trim();
   try {
     if(tcg === 'pokemon'){
-      // Translate FR → EN if known
-      let qEn = q;
-      if(typeof POKE_FR_EN !== 'undefined'){
-        const lower = q.toLowerCase();
-        for(const [fr, en] of Object.entries(POKE_FR_EN)){
-          if(fr.toLowerCase() === lower){ qEn = en; break; }
+      let apiQ;
+      if(isNumber){
+        apiQ = `number:${bizExtractNumber(q)}`;
+      } else {
+        // Translate FR → EN if exact match in table
+        let qEn = q;
+        if(typeof POKE_FR_EN !== 'undefined'){
+          const lower = q.toLowerCase();
+          for(const [fr, en] of Object.entries(POKE_FR_EN)){
+            if(fr.toLowerCase() === lower){ qEn = en; break; }
+          }
         }
+        apiQ = `name:${qEn}*`;
       }
-      const res = await fetch(`https://api.pokemontcg.io/v2/cards?q=name:*${encodeURIComponent(qEn)}*&pageSize=10&orderBy=-set.releaseDate`, {signal});
+      // select= trims payload massively; drop orderBy (slow server-side)
+      const url = `https://api.pokemontcg.io/v2/cards?q=${encodeURIComponent(apiQ)}&pageSize=10&select=id,name,number,images,cardmarket,set`;
+      const res = await fetch(url, {signal});
       if(!res.ok) return [];
       const data = await res.json();
-      return (data.data||[]).map(bizMapPokemonResult);
+      let arr = (data.data||[]).map(bizMapPokemonResult);
+      // Sort client-side by set release date desc (most recent first)
+      arr.sort((a,b) => (b.id||'').localeCompare(a.id||''));
+      bizCacheSet(tcg, q, arr);
+      return arr;
     }
     if(tcg === 'lorcana'){
-      const res = await fetch(`https://api.lorcast.com/v0/cards/search?q=${encodeURIComponent('name:'+q)}`, {signal});
+      let apiQ;
+      if(isNumber){
+        apiQ = `collector_number:${bizExtractNumber(q)}`;
+      } else {
+        apiQ = `name:${q}`;
+      }
+      const res = await fetch(`https://api.lorcast.com/v0/cards/search?q=${encodeURIComponent(apiQ)}`, {signal});
       if(!res.ok) return [];
       const data = await res.json();
-      return (data.results||[]).slice(0,10).map(bizMapLorcanaResult);
+      const arr = (data.results||[]).slice(0,10).map(bizMapLorcanaResult);
+      bizCacheSet(tcg, q, arr);
+      return arr;
     }
     if(tcg === 'magic'){
-      // Try FR first, fall back to default
-      let res = await fetch(`https://api.scryfall.com/cards/search?q=${encodeURIComponent(q+' lang:fr include:multilingual')}&order=released&unique=cards`, {signal, headers:{'Accept':'application/json'}});
-      if(!res.ok){
+      let apiQ;
+      if(isNumber){
+        apiQ = `cn:${bizExtractNumber(q)}`;
+      } else {
+        apiQ = `${q} lang:fr include:multilingual`;
+      }
+      let res = await fetch(`https://api.scryfall.com/cards/search?q=${encodeURIComponent(apiQ)}&order=released&unique=cards`, {signal, headers:{'Accept':'application/json'}});
+      if(!res.ok && !isNumber){
+        // Fallback without French filter
         res = await fetch(`https://api.scryfall.com/cards/search?q=${encodeURIComponent(q)}&order=released&unique=cards`, {signal, headers:{'Accept':'application/json'}});
         if(!res.ok) return [];
+      } else if(!res.ok){
+        return [];
       }
       const data = await res.json();
-      return (data.data||[]).slice(0,10).map(bizMapMagicResult);
+      const arr = (data.data||[]).slice(0,10).map(bizMapMagicResult);
+      bizCacheSet(tcg, q, arr);
+      return arr;
     }
     return [];
   } catch(e){
@@ -7106,14 +7159,16 @@ function bizRenderAutocomplete(results, query){
   const dd = document.getElementById('bizTxAutocomplete');
   if(!dd) return;
   if(results === null){ return; } // aborted
-  if(!query || query.trim().length < 2){
+  const q = (query||'').trim();
+  const isNumber = bizIsCardNumber(q);
+  if(!q || (isNumber ? q.length < 1 : q.length < 2)){
     dd.classList.add('hidden');
     dd.innerHTML = '';
     return;
   }
   if(results.length === 0){
     dd.classList.remove('hidden');
-    dd.innerHTML = '<div class="biz-autocomplete-empty">Aucune carte trouvée pour ce TCG. Vérifie l\'orthographe ou tape en anglais.</div>';
+    dd.innerHTML = `<div class="biz-autocomplete-empty">Aucune carte trouvée. ${isNumber ? 'Essaie un autre numéro ou tape le nom de la carte.' : 'Essaie en anglais (Pokémon : Charizard au lieu de Dracaufeu), ou tape le numéro de la carte (ex : 25, 199/191).'}</div>`;
     return;
   }
   dd.classList.remove('hidden');
@@ -7173,7 +7228,10 @@ function bizHandleCardNameInput(){
     return;
   }
   if(bizSearchTimer) clearTimeout(bizSearchTimer);
-  if(!val || val.trim().length < 2){
+  const trimmed = (val||'').trim();
+  const isNumber = bizIsCardNumber(trimmed);
+  const minLen = isNumber ? 1 : 2;
+  if(trimmed.length < minLen){
     const dd = document.getElementById('bizTxAutocomplete');
     if(dd){ dd.classList.add('hidden'); dd.innerHTML=''; }
     return;
