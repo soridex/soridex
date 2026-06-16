@@ -2885,6 +2885,14 @@ const AUTH_KEY='soridex_user_v1';
 let currentUser = null;
 // Hydrate sync depuis le cache local pour éviter le flash de logged-out au boot
 try { currentUser = JSON.parse(localStorage.getItem(AUTH_KEY)||'null'); } catch(e){ currentUser = null; }
+// Précharge les caches mémoire depuis localStorage pour un premier paint instantané
+// (sera écrasé par les vraies données Supabase une fois hydrateSession terminé)
+let _pfCache = [];
+let _wishCache = [];
+let _bizCache = {folders: []};
+try { _pfCache = JSON.parse(localStorage.getItem('soridex_portfolios_v1')||'[]'); } catch(e){}
+try { _wishCache = JSON.parse(localStorage.getItem('soridex_wishlist_folders_v1')||'[]'); } catch(e){}
+try { _bizCache = JSON.parse(localStorage.getItem('soridex_business_v1')||'{"folders":[]}'); if(!Array.isArray(_bizCache.folders)) _bizCache.folders = []; } catch(e){}
 
 function getUser(){ return currentUser; }
 
@@ -2892,6 +2900,11 @@ async function logout(){
   try { if(sb) await sb.auth.signOut(); } catch(e){ console.warn('signOut error', e); }
   currentUser = null;
   try { localStorage.removeItem(AUTH_KEY); } catch(e){}
+  // Reset caches : pas de fuite entre comptes sur le même navigateur
+  _pfCache = []; _wishCache = []; _bizCache = {folders:[]};
+  try { localStorage.removeItem(PF_KEY); } catch(e){}
+  try { localStorage.removeItem(WISH_FOLDERS_KEY); } catch(e){}
+  try { localStorage.removeItem(BIZ_KEY); } catch(e){}
   showView('home');
   try{ applyLandingState(); }catch(e){}
 }
@@ -2905,19 +2918,22 @@ async function hydrateSession(){
       // Récupère le pseudo depuis le profile (créé par le trigger)
       let pseudo = null;
       try {
-        const { data: profile } = await sb.from('profiles').select('pseudo').eq('id', session.user.id).maybeSingle();
-        if(profile && profile.pseudo) pseudo = profile.pseudo;
+        const { data: profile } = await sb.from('profiles').select('pseudo, username').eq('id', session.user.id).maybeSingle();
+        if(profile) pseudo = profile.pseudo || profile.username || null;
       } catch(e){ console.warn('profile fetch err', e); }
       if(!pseudo){
-        // Fallback : metadata du user puis email
-        pseudo = (session.user.user_metadata && session.user.user_metadata.pseudo)
+        pseudo = (session.user.user_metadata && (session.user.user_metadata.pseudo || session.user.user_metadata.username))
               || (session.user.email ? session.user.email.split('@')[0] : 'user');
       }
       currentUser = { id: session.user.id, email: session.user.email, pseudo };
       try { localStorage.setItem(AUTH_KEY, JSON.stringify(currentUser)); } catch(e){}
+      // Charge toutes les données utilisateur depuis Supabase
+      await loadAllUserDataFromSb();
     } else {
       currentUser = null;
       try { localStorage.removeItem(AUTH_KEY); } catch(e){}
+      // Caches vidés (utilisateur non connecté = aucune donnée perso)
+      _pfCache = []; _wishCache = []; _bizCache = {folders:[]};
     }
   } catch(e){
     console.warn('hydrateSession error', e);
@@ -2929,7 +2945,23 @@ async function hydrateSession(){
     if(homeView && !homeView.hidden && typeof renderDashboard === 'function') renderDashboard();
     const paramView = document.getElementById('view-parametres');
     if(paramView && !paramView.hidden && typeof renderParametres === 'function') renderParametres();
-  } catch(e){}
+    const compteView = document.getElementById('view-compte');
+    if(compteView && !compteView.hidden && typeof renderCompte === 'function') renderCompte();
+    const wishView = document.getElementById('view-wishlist');
+    if(wishView && !wishView.hidden && typeof renderWishFolders === 'function') renderWishFolders();
+    const bizView = document.getElementById('view-business');
+    if(bizView && !bizView.hidden && typeof renderBusiness === 'function') renderBusiness();
+  } catch(e){ console.warn('post-hydrate render', e); }
+}
+
+// Charge en parallèle portfolios + wishlists + business pour l'utilisateur courant
+async function loadAllUserDataFromSb(){
+  if(!sb || !currentUser) return;
+  await Promise.allSettled([
+    typeof loadPortfoliosFromSb === 'function' ? loadPortfoliosFromSb() : Promise.resolve(),
+    typeof loadWishlistsFromSb === 'function' ? loadWishlistsFromSb() : Promise.resolve(),
+    typeof loadBusinessFromSb === 'function' ? loadBusinessFromSb() : Promise.resolve()
+  ]);
 }
 
 // Listener auth state changes (signin depuis un autre onglet, refresh token, etc.)
@@ -2989,7 +3021,7 @@ async function handleAuthSubmit(){
     if(authMode==='signup'){
       const { data, error } = await sb.auth.signUp({
         email, password: pass,
-        options: { data: { pseudo } }
+        options: { data: { pseudo, username: pseudo } }
       });
       if(error){ showAuthMsg(bizTranslateAuthError(error.message), 'err'); return; }
       if(data.user && !data.session){
@@ -3024,9 +3056,71 @@ const lgBtn = document.getElementById('paramLogoutBtn');
 if(lgBtn) lgBtn.addEventListener('click',logout);
 
 /* === PORTFOLIOS === */
-const PF_KEY='soridex_portfolios_v1';
-function getPortfolios(){try{return JSON.parse(localStorage.getItem(PF_KEY)||'[]');}catch(e){return [];}}
-function savePortfolios(a){localStorage.setItem(PF_KEY,JSON.stringify(a));}
+const PF_KEY='soridex_portfolios_v1'; // legacy cache only
+// === Cache mémoire + sync Supabase (portfolios) ===
+// _pfCache déjà déclaré au boot
+let _pfDirty = false;
+let _pfSyncTimer = null;
+const PF_SYNC_DEBOUNCE = 800;
+
+function getPortfolios(){ return _pfCache; }
+function savePortfolios(a){
+  _pfCache = a || [];
+  _pfDirty = true;
+  // Cache local (offline fallback / boot speed)
+  try { localStorage.setItem(PF_KEY, JSON.stringify(_pfCache)); } catch(e){}
+  if(_pfSyncTimer) clearTimeout(_pfSyncTimer);
+  _pfSyncTimer = setTimeout(flushPortfoliosToSb, PF_SYNC_DEBOUNCE);
+}
+async function flushPortfoliosToSb(){
+  if(!sb || !currentUser || !_pfDirty) return;
+  _pfDirty = false;
+  const snapshot = JSON.parse(JSON.stringify(_pfCache));
+  try {
+    const { data: existing } = await sb.from('portfolios').select('id').eq('user_id', currentUser.id);
+    const existingIds = new Set((existing||[]).map(r => r.id));
+    const cacheIds = new Set(snapshot.map(p => p.id));
+    const toDelete = [...existingIds].filter(id => !cacheIds.has(id));
+    if(toDelete.length){
+      await sb.from('portfolios').delete().in('id', toDelete);
+    }
+    if(snapshot.length){
+      const rows = snapshot.map(pf => ({
+        id: pf.id,
+        user_id: currentUser.id,
+        name: pf.name || 'Sans nom',
+        tcg: ['pokemon','lorcana','magic','mixed'].includes(pf.tcg) ? pf.tcg : 'mixed',
+        data: pf
+      }));
+      const { error } = await sb.from('portfolios').upsert(rows);
+      if(error) throw error;
+    }
+  } catch(e){
+    console.error('Portfolio sync failed:', e);
+    _pfDirty = true;
+  }
+}
+async function loadPortfoliosFromSb(){
+  if(!sb || !currentUser){ _pfCache = []; return; }
+  try {
+    const { data, error } = await sb.from('portfolios').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: true });
+    if(error) throw error;
+    _pfCache = (data||[]).map(row => {
+      const obj = row.data && typeof row.data === 'object' && row.data.id ? row.data : {id: row.id, name: row.name, tcg: row.tcg, cards: []};
+      // Garde-fous : si data n'a pas l'id, le prendre de la row
+      if(!obj.id) obj.id = row.id;
+      if(!obj.name) obj.name = row.name;
+      if(!obj.tcg) obj.tcg = row.tcg;
+      if(!Array.isArray(obj.cards)) obj.cards = [];
+      return obj;
+    });
+    try { localStorage.setItem(PF_KEY, JSON.stringify(_pfCache)); } catch(e){}
+  } catch(e){
+    console.error('loadPortfoliosFromSb:', e);
+    // Fallback : cache local
+    try { _pfCache = JSON.parse(localStorage.getItem(PF_KEY) || '[]'); } catch(_){ _pfCache = []; }
+  }
+}
 const PF_ICONS={pokemon:'⚡',lorcana:'✨',magic:'🔥'};
 let currentPfFilter='all';
 function renderCompte(){
@@ -4970,28 +5064,67 @@ let _wishHideFound = false;
 let _pendingPickEntry = null; // entry à ajouter quand on choisit le dossier
 
 /* --- Stockage --- */
-function getWishlistFolders(){
-  let arr;
-  try{ arr = JSON.parse(localStorage.getItem(WISH_FOLDERS_KEY) || '[]'); }catch(e){ arr = []; }
-  // Migration unique depuis l'ancienne wishlist plate
-  if(arr.length === 0){
-    let legacy = [];
-    try{ legacy = JSON.parse(localStorage.getItem(WISH_KEY) || '[]'); }catch(e){}
-    if(legacy.length > 0){
-      const def = {
-        id: 'wf_legacy_' + Date.now(),
-        name: 'Ma wishlist',
-        note: '',
-        createdAt: Date.now(),
-        cards: legacy.map(c => ({...c, found: false, foundAt: null}))
-      };
-      arr = [def];
-      try{ localStorage.setItem(WISH_FOLDERS_KEY, JSON.stringify(arr)); }catch(e){}
-    }
-  }
-  return arr;
+/* --- Stockage : cache mémoire + sync Supabase --- */
+// _wishCache déjà déclaré au boot
+let _wishDirty = false;
+let _wishSyncTimer = null;
+const WISH_SYNC_DEBOUNCE = 800;
+
+function getWishlistFolders(){ return _wishCache; }
+function saveWishlistFolders(arr){
+  _wishCache = arr || [];
+  _wishDirty = true;
+  try { localStorage.setItem(WISH_FOLDERS_KEY, JSON.stringify(_wishCache)); } catch(e){}
+  if(_wishSyncTimer) clearTimeout(_wishSyncTimer);
+  _wishSyncTimer = setTimeout(flushWishlistsToSb, WISH_SYNC_DEBOUNCE);
 }
-function saveWishlistFolders(arr){ localStorage.setItem(WISH_FOLDERS_KEY, JSON.stringify(arr)); }
+async function flushWishlistsToSb(){
+  if(!sb || !currentUser || !_wishDirty) return;
+  _wishDirty = false;
+  const snapshot = JSON.parse(JSON.stringify(_wishCache));
+  try {
+    const { data: existing } = await sb.from('wishlist_folders').select('id').eq('user_id', currentUser.id);
+    const existingIds = new Set((existing||[]).map(r => r.id));
+    const cacheIds = new Set(snapshot.map(f => f.id));
+    const toDelete = [...existingIds].filter(id => !cacheIds.has(id));
+    if(toDelete.length){
+      await sb.from('wishlist_folders').delete().in('id', toDelete);
+    }
+    if(snapshot.length){
+      const rows = snapshot.map(f => ({
+        id: f.id,
+        user_id: currentUser.id,
+        name: f.name || 'Sans nom',
+        tcg: f.tcg || null,
+        context: f.context || null,
+        data: f
+      }));
+      const { error } = await sb.from('wishlist_folders').upsert(rows);
+      if(error) throw error;
+    }
+  } catch(e){
+    console.error('Wishlist sync failed:', e);
+    _wishDirty = true;
+  }
+}
+async function loadWishlistsFromSb(){
+  if(!sb || !currentUser){ _wishCache = []; return; }
+  try {
+    const { data, error } = await sb.from('wishlist_folders').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: true });
+    if(error) throw error;
+    _wishCache = (data||[]).map(row => {
+      const obj = row.data && typeof row.data === 'object' && row.data.id ? row.data : {id: row.id, name: row.name, cards: []};
+      if(!obj.id) obj.id = row.id;
+      if(!obj.name) obj.name = row.name;
+      if(!Array.isArray(obj.cards)) obj.cards = [];
+      return obj;
+    });
+    try { localStorage.setItem(WISH_FOLDERS_KEY, JSON.stringify(_wishCache)); } catch(e){}
+  } catch(e){
+    console.error('loadWishlistsFromSb:', e);
+    try { _wishCache = JSON.parse(localStorage.getItem(WISH_FOLDERS_KEY) || '[]'); } catch(_){ _wishCache = []; }
+  }
+}
 
 /* --- API rétrocompatible pour le ♥ partout ailleurs --- */
 function getWishlist(){
@@ -6620,16 +6753,75 @@ document.addEventListener('click', (e)=>{
 });
 
 /* === BUSINESS (achat-revente) === */
-const BIZ_KEY = 'soridex_business_v1';
+const BIZ_KEY = 'soridex_business_v1'; // cache local
 let bizCurrentFolderId = null;
 let bizEditingTxId = null;
-let bizEditingFolderId = null; // for rename mode
+let bizEditingFolderId = null;
 
-function getBusinessData(){
-  try{ return JSON.parse(localStorage.getItem(BIZ_KEY) || '{"folders":[]}'); }
-  catch(e){ return {folders:[]}; }
+// Cache mémoire + sync Supabase
+// _bizCache déjà déclaré au boot
+let _bizDirty = false;
+let _bizSyncTimer = null;
+const BIZ_SYNC_DEBOUNCE = 800;
+
+function getBusinessData(){ return _bizCache; }
+function saveBusinessData(d){
+  _bizCache = d || {folders:[]};
+  if(!Array.isArray(_bizCache.folders)) _bizCache.folders = [];
+  _bizDirty = true;
+  try { localStorage.setItem(BIZ_KEY, JSON.stringify(_bizCache)); } catch(e){}
+  if(_bizSyncTimer) clearTimeout(_bizSyncTimer);
+  _bizSyncTimer = setTimeout(flushBusinessToSb, BIZ_SYNC_DEBOUNCE);
 }
-function saveBusinessData(d){ localStorage.setItem(BIZ_KEY, JSON.stringify(d)); }
+async function flushBusinessToSb(){
+  if(!sb || !currentUser || !_bizDirty) return;
+  _bizDirty = false;
+  const snapshot = JSON.parse(JSON.stringify(_bizCache));
+  try {
+    const folders = snapshot.folders || [];
+    const { data: existing } = await sb.from('business_folders').select('id').eq('user_id', currentUser.id);
+    const existingIds = new Set((existing||[]).map(r => r.id));
+    const cacheIds = new Set(folders.map(f => f.id));
+    const toDelete = [...existingIds].filter(id => !cacheIds.has(id));
+    if(toDelete.length){
+      await sb.from('business_folders').delete().in('id', toDelete);
+    }
+    if(folders.length){
+      const rows = folders.map(f => ({
+        id: f.id,
+        user_id: currentUser.id,
+        name: f.name || 'Sans nom',
+        tcg: ['pokemon','lorcana','magic','mixed'].includes(f.tcg) ? f.tcg : 'mixed',
+        data: f
+      }));
+      const { error } = await sb.from('business_folders').upsert(rows);
+      if(error) throw error;
+    }
+  } catch(e){
+    console.error('Business sync failed:', e);
+    _bizDirty = true;
+  }
+}
+async function loadBusinessFromSb(){
+  if(!sb || !currentUser){ _bizCache = {folders:[]}; return; }
+  try {
+    const { data, error } = await sb.from('business_folders').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: true });
+    if(error) throw error;
+    const folders = (data||[]).map(row => {
+      const obj = row.data && typeof row.data === 'object' && row.data.id ? row.data : {id: row.id, name: row.name, tcg: row.tcg, transactions: []};
+      if(!obj.id) obj.id = row.id;
+      if(!obj.name) obj.name = row.name;
+      if(!obj.tcg) obj.tcg = row.tcg;
+      if(!Array.isArray(obj.transactions)) obj.transactions = [];
+      return obj;
+    });
+    _bizCache = {folders};
+    try { localStorage.setItem(BIZ_KEY, JSON.stringify(_bizCache)); } catch(e){}
+  } catch(e){
+    console.error('loadBusinessFromSb:', e);
+    try { _bizCache = JSON.parse(localStorage.getItem(BIZ_KEY) || '{"folders":[]}'); } catch(_){ _bizCache = {folders:[]}; }
+  }
+}
 
 function bizFmt(v){
   if(v === null || v === undefined || isNaN(v)) return '—';
