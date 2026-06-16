@@ -1351,6 +1351,76 @@
   .legal-modal-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:4px}
   .footer-link{background:none;border:none;color:inherit;font:inherit;cursor:pointer;padding:0;text-decoration:none;transition:.15s}
   .footer-link:hover{color:var(--gold-2,#f5b942)}
+  /* ============ BUSINESS (achat-revente) ============ */
+  .biz-stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin:20px 0 26px}
+  .biz-stat{background:var(--surf);border:1px solid var(--line2);border-radius:14px;padding:16px 18px;position:relative;overflow:hidden}
+  .biz-stat::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(180deg,var(--gold-2),var(--gold-deep));opacity:.7}
+  .biz-stat-label{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--mut);margin-bottom:6px}
+  .biz-stat-value{font-size:22px;font-weight:700;color:var(--tx);font-family:"Cinzel",serif}
+  .biz-stat-value.pos{color:#10b981}
+  .biz-stat-value.neg{color:#ef4444}
+  .biz-stat-sub{font-size:11px;color:var(--mut);margin-top:4px}
+
+  .biz-folder-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+  .biz-folder-card{background:var(--surf);border:1px solid var(--line2);border-radius:14px;padding:18px;cursor:pointer;transition:transform .2s,border-color .2s,box-shadow .2s;position:relative}
+  .biz-folder-card:hover{transform:translateY(-3px);border-color:var(--gold-deep);box-shadow:0 8px 28px rgba(212,168,90,.15)}
+  .biz-folder-card-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .biz-folder-name{font-size:16px;font-weight:700;color:var(--tx);flex:1}
+  .biz-tcg-badge{font-size:10px;text-transform:uppercase;letter-spacing:.08em;padding:3px 8px;border-radius:6px;font-weight:600}
+  .biz-tcg-badge.pokemon{background:rgba(220,38,38,.15);color:#fca5a5;border:1px solid rgba(220,38,38,.3)}
+  .biz-tcg-badge.lorcana{background:rgba(124,58,237,.15);color:#c4b5fd;border:1px solid rgba(124,58,237,.3)}
+  .biz-tcg-badge.magic{background:rgba(245,158,11,.15);color:#fcd34d;border:1px solid rgba(245,158,11,.3)}
+  .biz-tcg-badge.mixed{background:rgba(100,116,139,.15);color:#cbd5e1;border:1px solid rgba(100,116,139,.3)}
+  .biz-folder-meta{display:flex;gap:14px;font-size:12px;color:var(--mut);margin-bottom:10px;flex-wrap:wrap}
+  .biz-folder-meta strong{color:var(--tx);font-weight:600}
+  .biz-folder-pl{font-size:18px;font-weight:700;font-family:"Cinzel",serif}
+  .biz-folder-pl.pos{color:#10b981}
+  .biz-folder-pl.neg{color:#ef4444}
+  .biz-folder-pl.neutral{color:var(--mut)}
+
+  .biz-empty{text-align:center;padding:60px 20px;color:var(--mut);background:var(--surf);border:1px dashed var(--line2);border-radius:14px}
+  .biz-empty .ico{font-size:42px;margin-bottom:12px;opacity:.5}
+  .biz-empty h3{color:var(--tx);margin:0 0 8px;font-size:18px}
+  .biz-empty p{margin:0;font-size:14px;max-width:480px;margin-left:auto;margin-right:auto}
+
+  .biz-tx-list{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+  .biz-tx-row{background:var(--surf);border:1px solid var(--line2);border-radius:12px;padding:14px 16px;display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr auto;gap:14px;align-items:center;transition:border-color .2s}
+  .biz-tx-row:hover{border-color:var(--gold-deep)}
+  .biz-tx-card{display:flex;flex-direction:column;gap:3px;min-width:0}
+  .biz-tx-cardname{font-weight:600;color:var(--tx);font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .biz-tx-cardmeta{font-size:11px;color:var(--mut)}
+  .biz-tx-col-label{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--mut);margin-bottom:2px}
+  .biz-tx-col-value{font-size:14px;color:var(--tx);font-weight:600}
+  .biz-tx-status{font-size:10px;text-transform:uppercase;letter-spacing:.08em;padding:3px 8px;border-radius:6px;font-weight:600;display:inline-block}
+  .biz-tx-status.stock{background:rgba(59,130,246,.15);color:#93c5fd;border:1px solid rgba(59,130,246,.3)}
+  .biz-tx-status.sold{background:rgba(16,185,129,.15);color:#6ee7b7;border:1px solid rgba(16,185,129,.3)}
+  .biz-tx-pl{font-size:15px;font-weight:700;font-family:"Cinzel",serif}
+  .biz-tx-pl.pos{color:#10b981}
+  .biz-tx-pl.neg{color:#ef4444}
+  .biz-tx-pl.neutral{color:var(--mut)}
+  .biz-tx-actions{display:flex;gap:6px}
+  .biz-tx-btn{background:transparent;border:1px solid var(--line2);color:var(--mut);width:30px;height:30px;border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;transition:.15s}
+  .biz-tx-btn:hover{border-color:var(--gold-deep);color:var(--gold-2)}
+  .biz-tx-btn.delete:hover{border-color:#dc2626;color:#dc2626}
+  @media (max-width:760px){
+    .biz-tx-row{grid-template-columns:1fr;gap:8px}
+    .biz-tx-actions{justify-content:flex-end}
+  }
+
+  .biz-form-section{padding:14px 0;border-bottom:1px solid var(--line2)}
+  .biz-form-section:last-of-type{border-bottom:none}
+  .biz-form-section-title{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--gold-2);font-weight:700;margin-bottom:10px}
+  .biz-form-row{display:flex;gap:12px;flex-wrap:wrap}
+  .biz-status-toggle{display:flex;gap:10px}
+  .biz-status-opt{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;background:var(--bg2);border:1px solid var(--line2);border-radius:10px;cursor:pointer;font-size:14px;color:var(--tx);transition:.15s}
+  .biz-status-opt:has(input:checked){border-color:var(--gold-deep);background:rgba(212,168,90,.08);color:var(--gold-2)}
+  .biz-status-opt input{accent-color:var(--gold-2)}
+  .biz-net-preview{margin:14px 0 4px;padding:12px 14px;background:var(--bg2);border:1px solid var(--line2);border-radius:10px;font-size:13px;color:var(--mut);text-align:center}
+  .biz-net-preview .pl{font-family:"Cinzel",serif;font-size:18px;font-weight:700;margin-left:8px}
+  .biz-net-preview .pl.pos{color:#10b981}
+  .biz-net-preview .pl.neg{color:#ef4444}
+  .biz-net-preview .pl.neutral{color:var(--mut)}
+
 </style>
 </head>
 <body>
@@ -1368,6 +1438,7 @@
       <a class="navlink" href="#" data-view="shop">Boutique</a>
       <a class="navlink" href="#" data-view="guide">Guide</a>
       <a class="navlink" href="#" data-nav="compte">Compte</a>
+      <a class="navlink" href="#" data-nav="business">Business</a>
     </nav>
   </div>
   <div class="search-row">
@@ -1442,6 +1513,11 @@
         <div class="feature-ico" style="background:linear-gradient(135deg,#22d3ee,#0e7490)">📚</div>
         <div class="feature-name">Guide débutant</div>
         <div class="feature-desc">Tout pour bien collectionner : analyser une carte, reconnaître les raretés, le grading, la conservation. Sans bullshit.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-ico" style="background:linear-gradient(135deg,#fbbf24,#059669)">€</div>
+        <div class="feature-name">Achat-Revente</div>
+        <div class="feature-desc">Suis tes flips : prix d'achat, frais, cote actuelle et bénéfice net en temps réel. Idéal pour les collectionneurs qui revendent leurs doublons comme pour les flippers actifs.</div>
       </div>
       <div class="feature-card upcoming">
         <div class="feature-ico" style="background:linear-gradient(135deg,#d4a857,#6b5333)">🔔</div>
@@ -1900,6 +1976,184 @@
     <div class="modal-actions">
       <button class="btn-gold-outline" id="ownAnywhereCancel">Fermer</button>
       <button class="btn-gold" id="ownAnywhereConfirm">Appliquer les changements</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ VIEW: BUSINESS (achat-revente) ============ -->
+<section class="view" id="view-business" hidden>
+  <div class="breadcrumb"><a data-view="home">← Accueil</a><span>/</span><span>Business</span></div>
+  <div class="sets-head">
+    <div>
+      <h2 class="view-title">€ Business — Achat-Revente</h2>
+      <p class="view-sub">Suis tes flips : prix d'achat, frais, cote actuelle et bénéfice net. Crée un dossier par lot, par TCG ou par stratégie.</p>
+    </div>
+    <button class="btn-gold" id="newBusinessFolderBtn">+ Nouveau dossier</button>
+  </div>
+
+  <div class="biz-stats-row" id="bizGlobalStats"></div>
+
+  <div class="biz-folder-grid" id="bizFolderGrid"></div>
+</section>
+
+<!-- ============ VIEW: BUSINESS FOLDER DETAIL ============ -->
+<section class="view" id="view-business-folder" hidden>
+  <div class="breadcrumb"><a data-view="business">← Business</a><span>/</span><span id="bizFolderCrumbName">Dossier</span></div>
+  <div class="sets-head">
+    <div>
+      <h2 class="view-title" id="bizFolderTitle">Dossier</h2>
+      <p class="view-sub" id="bizFolderSub"></p>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn-gold-outline" id="bizFolderRenameBtn">Renommer</button>
+      <button class="btn-gold-outline" id="bizFolderDeleteBtn" style="border-color:#dc2626;color:#dc2626">Supprimer</button>
+      <button class="btn-gold" id="newTransactionBtn">+ Ajouter une transaction</button>
+    </div>
+  </div>
+
+  <div class="biz-stats-row" id="bizFolderStats"></div>
+
+  <div class="biz-tx-list" id="bizTxList"></div>
+</section>
+
+<!-- MODAL: Créer/renommer dossier business -->
+<div class="modal-overlay hidden" id="bizFolderModal">
+  <div class="modal-box">
+    <button class="modal-close" id="bizFolderModalClose">×</button>
+    <h3 class="modal-title" id="bizFolderModalTitle">Nouveau dossier</h3>
+    <div class="form-field">
+      <label>Nom du dossier</label>
+      <input type="text" id="bizFolderName" placeholder="Ex. Flips Surging Sparks" maxlength="60">
+    </div>
+    <div class="form-field">
+      <label>TCG principal</label>
+      <select id="bizFolderTcg">
+        <option value="pokemon">Pokémon TCG</option>
+        <option value="lorcana">Disney Lorcana</option>
+        <option value="magic">Magic: The Gathering</option>
+        <option value="mixed">Mixte / Autre</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-gold-outline" id="bizFolderCancel">Annuler</button>
+      <button class="btn-gold" id="bizFolderConfirm">Créer</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Ajouter / éditer transaction -->
+<div class="modal-overlay hidden" id="bizTxModal">
+  <div class="modal-box" style="max-width:560px">
+    <button class="modal-close" id="bizTxModalClose">×</button>
+    <h3 class="modal-title" id="bizTxModalTitle">Nouvelle transaction</h3>
+
+    <div class="biz-form-section">
+      <div class="biz-form-section-title">Carte</div>
+      <div class="form-field">
+        <label>Nom de la carte</label>
+        <input type="text" id="bizTxCardName" placeholder="Ex. Charizard ex" maxlength="120">
+      </div>
+      <div class="biz-form-row">
+        <div class="form-field" style="flex:1">
+          <label>Numéro <span style="color:var(--mut);font-weight:400">— facultatif</span></label>
+          <input type="text" id="bizTxCardNumber" placeholder="Ex. 199/191" maxlength="40">
+        </div>
+        <div class="form-field" style="flex:1">
+          <label>TCG</label>
+          <select id="bizTxTcg">
+            <option value="pokemon">Pokémon</option>
+            <option value="lorcana">Lorcana</option>
+            <option value="magic">Magic</option>
+            <option value="other">Autre</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="biz-form-section">
+      <div class="biz-form-section-title">Achat</div>
+      <div class="biz-form-row">
+        <div class="form-field" style="flex:1">
+          <label>Date d'achat</label>
+          <input type="date" id="bizTxPurchaseDate">
+        </div>
+        <div class="form-field" style="flex:1">
+          <label>Source</label>
+          <select id="bizTxPurchaseSource">
+            <option value="Cardmarket">Cardmarket</option>
+            <option value="eBay">eBay</option>
+            <option value="Vinted">Vinted</option>
+            <option value="Boutique">Boutique physique</option>
+            <option value="Particulier">Particulier</option>
+            <option value="Convention">Convention / salon</option>
+            <option value="Autre">Autre</option>
+          </select>
+        </div>
+      </div>
+      <div class="biz-form-row">
+        <div class="form-field" style="flex:1">
+          <label>Prix d'achat (€)</label>
+          <input type="number" step="0.01" min="0" id="bizTxPurchasePrice" placeholder="0.00">
+        </div>
+        <div class="form-field" style="flex:1">
+          <label>Frais de port achat (€)</label>
+          <input type="number" step="0.01" min="0" id="bizTxPurchaseShipping" placeholder="0.00" value="0">
+        </div>
+      </div>
+    </div>
+
+    <div class="biz-form-section">
+      <div class="biz-form-section-title">État</div>
+      <div class="biz-status-toggle">
+        <label class="biz-status-opt"><input type="radio" name="bizTxStatus" value="stock" checked> En stock</label>
+        <label class="biz-status-opt"><input type="radio" name="bizTxStatus" value="sold"> Vendue</label>
+      </div>
+    </div>
+
+    <div class="biz-form-section" id="bizTxSaleSection" style="display:none">
+      <div class="biz-form-section-title">Vente</div>
+      <div class="biz-form-row">
+        <div class="form-field" style="flex:1">
+          <label>Date de vente</label>
+          <input type="date" id="bizTxSaleDate">
+        </div>
+        <div class="form-field" style="flex:1">
+          <label>Plateforme</label>
+          <select id="bizTxSalePlatform">
+            <option value="Cardmarket">Cardmarket</option>
+            <option value="eBay">eBay</option>
+            <option value="Vinted">Vinted</option>
+            <option value="Main propre">Main propre</option>
+            <option value="Convention">Convention / salon</option>
+            <option value="Boutique">Boutique</option>
+            <option value="Autre">Autre</option>
+          </select>
+        </div>
+      </div>
+      <div class="biz-form-row">
+        <div class="form-field" style="flex:1">
+          <label>Prix de vente (€)</label>
+          <input type="number" step="0.01" min="0" id="bizTxSalePrice" placeholder="0.00">
+        </div>
+        <div class="form-field" style="flex:1">
+          <label>Frais de port vente (€)</label>
+          <input type="number" step="0.01" min="0" id="bizTxSaleShipping" placeholder="0.00" value="0">
+        </div>
+      </div>
+    </div>
+
+    <div class="biz-form-section">
+      <div class="form-field">
+        <label>Notes <span style="color:var(--mut);font-weight:400">— facultatif</span></label>
+        <input type="text" id="bizTxNotes" placeholder="Ex. État NM, acheté en lot de 3" maxlength="200">
+      </div>
+    </div>
+
+    <div class="biz-net-preview" id="bizTxNetPreview"></div>
+
+    <div class="modal-actions">
+      <button class="btn-gold-outline" id="bizTxCancel">Annuler</button>
+      <button class="btn-gold" id="bizTxConfirm">Enregistrer</button>
     </div>
   </div>
 </div>
@@ -2532,7 +2786,7 @@ new Chart(ctx, {
 })();
 
 /* === ROUTING === */
-const ALL_VIEWS = ['home','login','compte','sets-pokemon','sets-lorcana','sets-magic','era-detail','set-detail','pf-detail','wishlist','wish-detail','global-search','shop','guide','guide-article'];
+const ALL_VIEWS = ['home','login','compte','sets-pokemon','sets-lorcana','sets-magic','era-detail','set-detail','pf-detail','wishlist','wish-detail','global-search','shop','guide','guide-article','business','business-folder'];
 function showView(name){
   if(!ALL_VIEWS.includes(name)) name='home';
   document.querySelectorAll('.view').forEach(v => v.hidden = (v.id !== 'view-'+name));
@@ -6137,6 +6391,7 @@ document.addEventListener('click', (e)=>{
     const n=navItem.dataset.nav;
     if(n==='compte'||n==='portfolios') goToAccount();
     else if(n==='wishlist') showWishlist();
+    else if(n==='business') showBusiness();
     return;
   }
 
@@ -6170,6 +6425,440 @@ document.addEventListener('click', (e)=>{
     if(!document.getElementById('view-era-detail').hidden){e.preventDefault(); showPokemonSetCards(setCard.dataset.setSlug); return;}
     if(!document.getElementById('view-sets-lorcana').hidden){e.preventDefault(); showLorcanaSetCards(setCard.dataset.setSlug); return;}
   }
+});
+
+/* === BUSINESS (achat-revente) === */
+const BIZ_KEY = 'soridex_business_v1';
+let bizCurrentFolderId = null;
+let bizEditingTxId = null;
+let bizEditingFolderId = null; // for rename mode
+
+function getBusinessData(){
+  try{ return JSON.parse(localStorage.getItem(BIZ_KEY) || '{"folders":[]}'); }
+  catch(e){ return {folders:[]}; }
+}
+function saveBusinessData(d){ localStorage.setItem(BIZ_KEY, JSON.stringify(d)); }
+
+function bizFmt(v){
+  if(v === null || v === undefined || isNaN(v)) return '—';
+  const sign = v > 0 ? '+' : '';
+  return sign + Number(v).toFixed(2) + ' €';
+}
+function bizFmtPlain(v){
+  if(v === null || v === undefined || isNaN(v)) return '—';
+  return Number(v).toFixed(2) + ' €';
+}
+function bizPlClass(v){
+  if(v === null || v === undefined || isNaN(v)) return 'neutral';
+  if(v > 0.005) return 'pos';
+  if(v < -0.005) return 'neg';
+  return 'neutral';
+}
+
+function computeTxNet(tx){
+  // Returns realized net if sold, else null (potential P&L needs API price from Step 2)
+  if(tx.status === 'sold'){
+    const pa = Number(tx.purchasePrice||0) + Number(tx.purchaseShipping||0);
+    const pv = Number(tx.salePrice||0) - Number(tx.saleShipping||0);
+    return pv - pa;
+  }
+  return null;
+}
+
+function computeFolderStats(folder){
+  let invested = 0, stockCost = 0, realized = 0, stockCount = 0, soldCount = 0;
+  (folder.transactions||[]).forEach(tx => {
+    const cost = Number(tx.purchasePrice||0) + Number(tx.purchaseShipping||0);
+    invested += cost;
+    if(tx.status === 'sold'){
+      soldCount++;
+      const net = computeTxNet(tx);
+      if(net !== null) realized += net;
+    } else {
+      stockCount++;
+      stockCost += cost;
+    }
+  });
+  return {invested, stockCost, realized, stockCount, soldCount, total:(folder.transactions||[]).length};
+}
+
+function computeGlobalStats(data){
+  let invested = 0, stockCost = 0, realized = 0, stockCount = 0, soldCount = 0;
+  (data.folders||[]).forEach(f => {
+    const s = computeFolderStats(f);
+    invested += s.invested; stockCost += s.stockCost; realized += s.realized;
+    stockCount += s.stockCount; soldCount += s.soldCount;
+  });
+  return {invested, stockCost, realized, stockCount, soldCount};
+}
+
+function tcgLabel(t){
+  return ({pokemon:'Pokémon', lorcana:'Lorcana', magic:'Magic', mixed:'Mixte', other:'Autre'})[t] || t;
+}
+
+function showBusiness(){
+  showView('business');
+  renderBusiness();
+}
+
+function renderBusiness(){
+  const data = getBusinessData();
+  const stats = computeGlobalStats(data);
+  const sRow = document.getElementById('bizGlobalStats');
+  if(sRow){
+    if((data.folders||[]).length === 0){
+      sRow.innerHTML = '';
+    } else {
+      sRow.innerHTML = `
+        <div class="biz-stat"><div class="biz-stat-label">Total investi</div><div class="biz-stat-value">${bizFmtPlain(stats.invested)}</div><div class="biz-stat-sub">${stats.stockCount + stats.soldCount} transactions</div></div>
+        <div class="biz-stat"><div class="biz-stat-label">En stock</div><div class="biz-stat-value">${bizFmtPlain(stats.stockCost)}</div><div class="biz-stat-sub">${stats.stockCount} carte${stats.stockCount>1?'s':''} à revendre</div></div>
+        <div class="biz-stat"><div class="biz-stat-label">Bénéfice réalisé</div><div class="biz-stat-value ${bizPlClass(stats.realized)}">${bizFmt(stats.realized)}</div><div class="biz-stat-sub">sur ${stats.soldCount} vente${stats.soldCount>1?'s':''}</div></div>
+      `;
+    }
+  }
+
+  const grid = document.getElementById('bizFolderGrid');
+  if(!grid) return;
+  if((data.folders||[]).length === 0){
+    grid.innerHTML = `<div class="biz-empty" style="grid-column:1/-1">
+      <div class="ico">€</div>
+      <h3>Aucun dossier pour l'instant</h3>
+      <p>Crée ton premier dossier achat-revente pour commencer à tracker tes flips. Tu pourras y ajouter des transactions une par une avec prix d'achat, frais, et prix de vente.</p>
+      <button class="btn-gold" style="margin-top:18px" onclick="openBizFolderModal()">+ Créer un dossier</button>
+    </div>`;
+    return;
+  }
+
+  grid.innerHTML = data.folders.map(f => {
+    const s = computeFolderStats(f);
+    const plLabel = s.soldCount > 0 ? bizFmt(s.realized) : '—';
+    const plClass = s.soldCount > 0 ? bizPlClass(s.realized) : 'neutral';
+    return `<div class="biz-folder-card" onclick="openBusinessFolder('${f.id}')">
+      <div class="biz-folder-card-head">
+        <div class="biz-folder-name">${escapeHtml(f.name)}</div>
+        <span class="biz-tcg-badge ${f.tcg}">${tcgLabel(f.tcg)}</span>
+      </div>
+      <div class="biz-folder-meta">
+        <span><strong>${s.total}</strong> transaction${s.total>1?'s':''}</span>
+        <span><strong>${s.stockCount}</strong> en stock</span>
+        <span><strong>${s.soldCount}</strong> vendue${s.soldCount>1?'s':''}</span>
+      </div>
+      <div class="biz-folder-meta" style="margin-bottom:0">
+        <span>Bénéfice réalisé :</span>
+        <span class="biz-folder-pl ${plClass}">${plLabel}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// Helper for safe HTML (uses existing escapeHtml defined earlier in the file)
+
+function openBusinessFolder(folderId){
+  bizCurrentFolderId = folderId;
+  showView('business-folder');
+  renderBusinessFolder();
+}
+
+function renderBusinessFolder(){
+  const data = getBusinessData();
+  const f = data.folders.find(x => x.id === bizCurrentFolderId);
+  if(!f){ showBusiness(); return; }
+
+  document.getElementById('bizFolderTitle').textContent = f.name;
+  document.getElementById('bizFolderCrumbName').textContent = f.name;
+  document.getElementById('bizFolderSub').innerHTML = `<span class="biz-tcg-badge ${f.tcg}" style="display:inline-block;vertical-align:middle">${tcgLabel(f.tcg)}</span>`;
+
+  const s = computeFolderStats(f);
+  const sRow = document.getElementById('bizFolderStats');
+  sRow.innerHTML = `
+    <div class="biz-stat"><div class="biz-stat-label">Total investi</div><div class="biz-stat-value">${bizFmtPlain(s.invested)}</div><div class="biz-stat-sub">${s.total} transaction${s.total>1?'s':''}</div></div>
+    <div class="biz-stat"><div class="biz-stat-label">En stock</div><div class="biz-stat-value">${bizFmtPlain(s.stockCost)}</div><div class="biz-stat-sub">${s.stockCount} à revendre</div></div>
+    <div class="biz-stat"><div class="biz-stat-label">Bénéfice réalisé</div><div class="biz-stat-value ${bizPlClass(s.realized)}">${bizFmt(s.realized)}</div><div class="biz-stat-sub">${s.soldCount} vendue${s.soldCount>1?'s':''}</div></div>
+  `;
+
+  const list = document.getElementById('bizTxList');
+  if((f.transactions||[]).length === 0){
+    list.innerHTML = `<div class="biz-empty">
+      <div class="ico">🃏</div>
+      <h3>Aucune transaction</h3>
+      <p>Ajoute ta première transaction (carte achetée) pour commencer à suivre tes bénéfices.</p>
+      <button class="btn-gold" style="margin-top:18px" onclick="openTxModal(null)">+ Ajouter une transaction</button>
+    </div>`;
+    return;
+  }
+
+  // Sort: newest first (by purchaseDate desc)
+  const txs = [...f.transactions].sort((a,b)=>{
+    return (b.purchaseDate||'').localeCompare(a.purchaseDate||'');
+  });
+
+  list.innerHTML = txs.map(tx => {
+    const net = computeTxNet(tx);
+    const netLabel = tx.status === 'sold' ? bizFmt(net) : '<span style="color:var(--mut);font-size:12px">En stock</span>';
+    const netClass = tx.status === 'sold' ? bizPlClass(net) : 'neutral';
+    const cost = Number(tx.purchasePrice||0) + Number(tx.purchaseShipping||0);
+    const saleTotal = tx.status === 'sold' ? (Number(tx.salePrice||0) - Number(tx.saleShipping||0)) : null;
+    return `<div class="biz-tx-row">
+      <div class="biz-tx-card">
+        <div class="biz-tx-cardname">${escapeHtml(tx.cardName||'Sans nom')}</div>
+        <div class="biz-tx-cardmeta">${escapeHtml(tx.cardNumber||'')}${tx.cardNumber && tx.tcg ? ' · ' : ''}${tx.tcg ? tcgLabel(tx.tcg) : ''}${tx.purchaseDate ? ' · '+tx.purchaseDate : ''}</div>
+      </div>
+      <div>
+        <div class="biz-tx-col-label">Achat</div>
+        <div class="biz-tx-col-value">${bizFmtPlain(cost)}</div>
+        <div class="biz-tx-cardmeta">${escapeHtml(tx.purchaseSource||'')}</div>
+      </div>
+      <div>
+        <div class="biz-tx-col-label">État</div>
+        <div><span class="biz-tx-status ${tx.status}">${tx.status === 'sold' ? 'Vendue' : 'En stock'}</span></div>
+        ${tx.status === 'sold' ? `<div class="biz-tx-cardmeta" style="margin-top:3px">${bizFmtPlain(saleTotal)} net · ${escapeHtml(tx.salePlatform||'')}</div>` : ''}
+      </div>
+      <div>
+        <div class="biz-tx-col-label">Bénéfice</div>
+        <div class="biz-tx-pl ${netClass}">${netLabel}</div>
+      </div>
+      <div class="biz-tx-actions">
+        <button class="biz-tx-btn" onclick="openTxModal('${tx.id}')" title="Éditer">✎</button>
+        <button class="biz-tx-btn delete" onclick="deleteTransaction('${tx.id}')" title="Supprimer">×</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ----- Folder modal (create/rename) ----- */
+function openBizFolderModal(folderId){
+  bizEditingFolderId = folderId || null;
+  const m = document.getElementById('bizFolderModal');
+  const title = document.getElementById('bizFolderModalTitle');
+  const confirmBtn = document.getElementById('bizFolderConfirm');
+  const nameInput = document.getElementById('bizFolderName');
+  const tcgSelect = document.getElementById('bizFolderTcg');
+  if(folderId){
+    const data = getBusinessData();
+    const f = data.folders.find(x => x.id === folderId);
+    if(!f) return;
+    title.textContent = 'Renommer le dossier';
+    confirmBtn.textContent = 'Enregistrer';
+    nameInput.value = f.name;
+    tcgSelect.value = f.tcg;
+  } else {
+    title.textContent = 'Nouveau dossier';
+    confirmBtn.textContent = 'Créer';
+    nameInput.value = '';
+    tcgSelect.value = 'pokemon';
+  }
+  m.classList.remove('hidden');
+  setTimeout(()=>nameInput.focus(), 50);
+}
+function closeBizFolderModal(){
+  document.getElementById('bizFolderModal').classList.add('hidden');
+  bizEditingFolderId = null;
+}
+function confirmBizFolder(){
+  const name = (document.getElementById('bizFolderName').value||'').trim();
+  const tcg = document.getElementById('bizFolderTcg').value;
+  if(!name){ alert('Donne un nom au dossier'); return; }
+  const data = getBusinessData();
+  if(bizEditingFolderId){
+    const f = data.folders.find(x => x.id === bizEditingFolderId);
+    if(f){ f.name = name; f.tcg = tcg; }
+  } else {
+    data.folders.push({
+      id: 'bf_' + Date.now().toString(36) + Math.random().toString(36).slice(2,6),
+      name, tcg,
+      createdAt: Date.now(),
+      transactions: []
+    });
+  }
+  saveBusinessData(data);
+  closeBizFolderModal();
+  if(bizCurrentFolderId) renderBusinessFolder();
+  else renderBusiness();
+}
+function deleteBusinessFolder(){
+  if(!bizCurrentFolderId) return;
+  const data = getBusinessData();
+  const f = data.folders.find(x => x.id === bizCurrentFolderId);
+  if(!f) return;
+  if(!confirm(`Supprimer définitivement le dossier "${f.name}" et toutes ses transactions ?`)) return;
+  data.folders = data.folders.filter(x => x.id !== bizCurrentFolderId);
+  saveBusinessData(data);
+  bizCurrentFolderId = null;
+  showBusiness();
+}
+
+/* ----- Transaction modal ----- */
+function openTxModal(txId){
+  bizEditingTxId = txId || null;
+  const m = document.getElementById('bizTxModal');
+  const title = document.getElementById('bizTxModalTitle');
+  const data = getBusinessData();
+  const f = data.folders.find(x => x.id === bizCurrentFolderId);
+  if(!f) return;
+
+  // Reset fields
+  document.getElementById('bizTxCardName').value = '';
+  document.getElementById('bizTxCardNumber').value = '';
+  document.getElementById('bizTxTcg').value = f.tcg === 'mixed' ? 'pokemon' : (f.tcg === 'other' ? 'other' : f.tcg);
+  document.getElementById('bizTxPurchaseDate').value = new Date().toISOString().slice(0,10);
+  document.getElementById('bizTxPurchaseSource').value = 'Cardmarket';
+  document.getElementById('bizTxPurchasePrice').value = '';
+  document.getElementById('bizTxPurchaseShipping').value = '0';
+  document.querySelector('input[name="bizTxStatus"][value="stock"]').checked = true;
+  document.getElementById('bizTxSaleDate').value = '';
+  document.getElementById('bizTxSalePlatform').value = 'Cardmarket';
+  document.getElementById('bizTxSalePrice').value = '';
+  document.getElementById('bizTxSaleShipping').value = '0';
+  document.getElementById('bizTxNotes').value = '';
+
+  if(txId){
+    const tx = (f.transactions||[]).find(t => t.id === txId);
+    if(tx){
+      title.textContent = 'Éditer la transaction';
+      document.getElementById('bizTxCardName').value = tx.cardName||'';
+      document.getElementById('bizTxCardNumber').value = tx.cardNumber||'';
+      document.getElementById('bizTxTcg').value = tx.tcg || 'pokemon';
+      document.getElementById('bizTxPurchaseDate').value = tx.purchaseDate||'';
+      document.getElementById('bizTxPurchaseSource').value = tx.purchaseSource||'Cardmarket';
+      document.getElementById('bizTxPurchasePrice').value = tx.purchasePrice ?? '';
+      document.getElementById('bizTxPurchaseShipping').value = tx.purchaseShipping ?? 0;
+      document.querySelector(`input[name="bizTxStatus"][value="${tx.status||'stock'}"]`).checked = true;
+      document.getElementById('bizTxSaleDate').value = tx.saleDate||'';
+      document.getElementById('bizTxSalePlatform').value = tx.salePlatform||'Cardmarket';
+      document.getElementById('bizTxSalePrice').value = tx.salePrice ?? '';
+      document.getElementById('bizTxSaleShipping').value = tx.saleShipping ?? 0;
+      document.getElementById('bizTxNotes').value = tx.notes||'';
+    }
+  } else {
+    title.textContent = 'Nouvelle transaction';
+  }
+
+  updateBizTxSaleSection();
+  updateBizTxNetPreview();
+  m.classList.remove('hidden');
+  setTimeout(()=>document.getElementById('bizTxCardName').focus(), 50);
+}
+function closeBizTxModal(){
+  document.getElementById('bizTxModal').classList.add('hidden');
+  bizEditingTxId = null;
+}
+function updateBizTxSaleSection(){
+  const sold = document.querySelector('input[name="bizTxStatus"]:checked').value === 'sold';
+  document.getElementById('bizTxSaleSection').style.display = sold ? '' : 'none';
+  if(sold && !document.getElementById('bizTxSaleDate').value){
+    document.getElementById('bizTxSaleDate').value = new Date().toISOString().slice(0,10);
+  }
+  updateBizTxNetPreview();
+}
+function updateBizTxNetPreview(){
+  const status = document.querySelector('input[name="bizTxStatus"]:checked').value;
+  const pa = parseFloat(document.getElementById('bizTxPurchasePrice').value)||0;
+  const fa = parseFloat(document.getElementById('bizTxPurchaseShipping').value)||0;
+  const el = document.getElementById('bizTxNetPreview');
+  if(status === 'sold'){
+    const pv = parseFloat(document.getElementById('bizTxSalePrice').value)||0;
+    const fv = parseFloat(document.getElementById('bizTxSaleShipping').value)||0;
+    const net = (pv - fv) - (pa + fa);
+    const cls = bizPlClass(net);
+    el.innerHTML = `Bénéfice net : <span class="pl ${cls}">${bizFmt(net)}</span>`;
+  } else {
+    const cost = pa + fa;
+    el.innerHTML = `Coût total d'achat : <span class="pl neutral">${bizFmtPlain(cost)}</span> · cote actuelle à venir (étape 2)`;
+  }
+}
+function confirmTransaction(){
+  const data = getBusinessData();
+  const f = data.folders.find(x => x.id === bizCurrentFolderId);
+  if(!f) return;
+
+  const cardName = (document.getElementById('bizTxCardName').value||'').trim();
+  if(!cardName){ alert('Indique au moins le nom de la carte'); return; }
+  const pa = parseFloat(document.getElementById('bizTxPurchasePrice').value);
+  if(isNaN(pa) || pa < 0){ alert('Indique un prix d\'achat valide'); return; }
+
+  const status = document.querySelector('input[name="bizTxStatus"]:checked').value;
+  const tx = {
+    cardName,
+    cardNumber: (document.getElementById('bizTxCardNumber').value||'').trim(),
+    tcg: document.getElementById('bizTxTcg').value,
+    purchaseDate: document.getElementById('bizTxPurchaseDate').value||'',
+    purchaseSource: document.getElementById('bizTxPurchaseSource').value||'',
+    purchasePrice: pa,
+    purchaseShipping: parseFloat(document.getElementById('bizTxPurchaseShipping').value)||0,
+    status,
+    saleDate: null, salePlatform: null, salePrice: null, saleShipping: null,
+    notes: (document.getElementById('bizTxNotes').value||'').trim(),
+    currentTrendPrice: null, currentLowPrice: null, lastPriceUpdate: null
+  };
+  if(status === 'sold'){
+    const pv = parseFloat(document.getElementById('bizTxSalePrice').value);
+    if(isNaN(pv) || pv < 0){ alert('Indique un prix de vente valide'); return; }
+    tx.saleDate = document.getElementById('bizTxSaleDate').value||'';
+    tx.salePlatform = document.getElementById('bizTxSalePlatform').value||'';
+    tx.salePrice = pv;
+    tx.saleShipping = parseFloat(document.getElementById('bizTxSaleShipping').value)||0;
+  }
+
+  if(bizEditingTxId){
+    const old = f.transactions.find(t => t.id === bizEditingTxId);
+    if(old){
+      Object.assign(old, tx);
+    }
+  } else {
+    tx.id = 'tx_' + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+    tx.createdAt = Date.now();
+    if(!f.transactions) f.transactions = [];
+    f.transactions.push(tx);
+  }
+  saveBusinessData(data);
+  closeBizTxModal();
+  renderBusinessFolder();
+}
+function deleteTransaction(txId){
+  const data = getBusinessData();
+  const f = data.folders.find(x => x.id === bizCurrentFolderId);
+  if(!f) return;
+  const tx = (f.transactions||[]).find(t => t.id === txId);
+  if(!tx) return;
+  if(!confirm(`Supprimer la transaction "${tx.cardName}" ?`)) return;
+  f.transactions = f.transactions.filter(t => t.id !== txId);
+  saveBusinessData(data);
+  renderBusinessFolder();
+}
+
+/* ----- Wire Business event handlers ----- */
+document.addEventListener('DOMContentLoaded', function(){
+  // New folder button
+  const newFolderBtn = document.getElementById('newBusinessFolderBtn');
+  if(newFolderBtn) newFolderBtn.addEventListener('click', () => openBizFolderModal());
+  // New tx button
+  const newTxBtn = document.getElementById('newTransactionBtn');
+  if(newTxBtn) newTxBtn.addEventListener('click', () => openTxModal(null));
+  // Rename / delete folder
+  const renameBtn = document.getElementById('bizFolderRenameBtn');
+  if(renameBtn) renameBtn.addEventListener('click', () => openBizFolderModal(bizCurrentFolderId));
+  const delFolderBtn = document.getElementById('bizFolderDeleteBtn');
+  if(delFolderBtn) delFolderBtn.addEventListener('click', deleteBusinessFolder);
+  // Folder modal buttons
+  const fClose = document.getElementById('bizFolderModalClose');
+  if(fClose) fClose.addEventListener('click', closeBizFolderModal);
+  const fCancel = document.getElementById('bizFolderCancel');
+  if(fCancel) fCancel.addEventListener('click', closeBizFolderModal);
+  const fConfirm = document.getElementById('bizFolderConfirm');
+  if(fConfirm) fConfirm.addEventListener('click', confirmBizFolder);
+  // Tx modal buttons
+  const tClose = document.getElementById('bizTxModalClose');
+  if(tClose) tClose.addEventListener('click', closeBizTxModal);
+  const tCancel = document.getElementById('bizTxCancel');
+  if(tCancel) tCancel.addEventListener('click', closeBizTxModal);
+  const tConfirm = document.getElementById('bizTxConfirm');
+  if(tConfirm) tConfirm.addEventListener('click', confirmTransaction);
+  // Live status toggle + net preview
+  document.querySelectorAll('input[name="bizTxStatus"]').forEach(r => r.addEventListener('change', updateBizTxSaleSection));
+  ['bizTxPurchasePrice','bizTxPurchaseShipping','bizTxSalePrice','bizTxSaleShipping'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.addEventListener('input', updateBizTxNetPreview);
+  });
 });
 
 /* === ROUTE INITIALE === */
