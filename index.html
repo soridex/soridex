@@ -1268,6 +1268,25 @@
   .fake-tcg-block ul{margin:6px 0 0;padding-left:18px}
   .fake-tcg-block li{font-size:13px;line-height:1.6;color:var(--tx);margin-bottom:4px}
   .fake-tcg-block li strong{color:#fff}
+
+  /* Tests visuels avec illustrations */
+  .fake-test{
+    display:grid;grid-template-columns:200px 1fr;gap:16px;align-items:center;
+    background:rgba(255,255,255,.03);border:1px solid var(--line2);border-radius:12px;
+    padding:16px;margin:14px 0;
+  }
+  .fake-test-svg{width:100%;height:auto;display:block;border-radius:8px;background:rgba(0,0,0,.25)}
+  .fake-test-body h5{margin:0 0 8px;color:#fff;font-size:15px;font-weight:800;letter-spacing:.01em}
+  .fake-test-body p{margin:0;font-size:13.5px;color:var(--tx);line-height:1.55}
+  .fake-test-body .real-fake{display:flex;gap:10px;margin-top:8px;font-size:12px;flex-wrap:wrap}
+  .fake-test-body .rf-real{color:#86efac}
+  .fake-test-body .rf-fake{color:#fca5a5}
+  .fake-test-body .rf-real strong, .fake-test-body .rf-fake strong{color:#fff;font-weight:700}
+  @media (max-width:780px){
+    .fake-test{grid-template-columns:1fr;text-align:center}
+    .fake-test-svg{max-width:240px;margin:0 auto}
+    .fake-test-body .real-fake{justify-content:center;text-align:left}
+  }
   .guide-grading-table{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin:14px 0}
   .guide-grader{
     background:rgba(255,255,255,.03);border:1px solid var(--line2);border-radius:9px;padding:12px 14px;
@@ -2030,153 +2049,251 @@
 
   <article class="guide-section" id="g-fakes">
     <h3><span class="ico">🕵️</span>3. Repérer les fakes — Le guide anti-arnaque</h3>
-    <p>Le marché TCG est miné par les contrefaçons, surtout depuis le boom 2020. <strong>Pokémon</strong> est de loin le plus copié, mais <strong>Lorcana</strong> commence à apparaître sur Vinted et AliExpress, et les fakes <strong>Magic</strong> traînent depuis 30 ans. Bonne nouvelle : 95 % des fakes se repèrent en 30 secondes une fois que tu sais où regarder.</p>
+    <p>Pokémon et Lorcana sont massivement contrefaits depuis 2020. Voici les <strong>5 tests à faire en moins d'une minute</strong>, illustrés.</p>
 
-    <div class="guide-callout danger"><strong>⚠️ Avant tout</strong> — Aucun test physique destructif n'est nécessaire. Si quelqu'un te dit "déchire la carte pour vérifier le noyau noir", il te demande de détruire ta carte. Les tests qui suivent sont 100 % non-invasifs.</div>
+    <div class="guide-callout danger"><strong>⚠️ Important</strong> — Aucun test destructif. Pas de "déchirer la carte pour voir le noyau noir" : ça détruit la carte, et les tests ci-dessous sont aussi fiables.</div>
 
-    <h4>① Les 4 tests visuels universels (tous TCG)</h4>
-    <p>À faire dans l'ordre, en 1 minute, sur n'importe quelle carte suspecte :</p>
-
-    <div class="fake-tell-grid">
-      <div class="fake-tell real">
-        <div class="fake-tell-label">✓ Vraie carte</div>
-        <div class="fake-tell-text"><strong>Couleurs saturées et profondes</strong>, noirs vraiment noirs, contrastes nets. La carte a une légère <strong>texture grainée</strong> sous le doigt.</div>
-      </div>
-      <div class="fake-tell fake">
-        <div class="fake-tell-label">✗ Fake</div>
-        <div class="fake-tell-text">Couleurs <strong>fades ou au contraire sursaturées</strong> (rose flashy au lieu de rouge profond). Surface trop <strong>lisse, plastique ou cireuse</strong>.</div>
-      </div>
-      <div class="fake-tell real">
-        <div class="fake-tell-label">✓ Vraie carte</div>
-        <div class="fake-tell-text"><strong>Police nette et constante</strong>. L'italique sur le nom de l'attaque, le kerning, les accents — tout est propre même à la loupe.</div>
-      </div>
-      <div class="fake-tell fake">
-        <div class="fake-tell-label">✗ Fake</div>
-        <div class="fake-tell-text"><strong>Lettres floues, mal alignées</strong>, espacement irrégulier, faux italiques (juste penchés), parfois fautes d'orthographe ou caractères chinois cachés.</div>
-      </div>
-      <div class="fake-tell real">
-        <div class="fake-tell-label">✓ Vraie carte</div>
-        <div class="fake-tell-text"><strong>Bordures parfaitement régulières</strong>, coupe nette, épaisseur de carte ≈ 0,3 mm (l'épaisseur de 2 feuilles de papier épais).</div>
-      </div>
-      <div class="fake-tell fake">
-        <div class="fake-tell-label">✗ Fake</div>
-        <div class="fake-tell-text">Bordures <strong>asymétriques</strong>, coupe au cutter visible, carte <strong>trop fine</strong> (papier) <strong>ou trop épaisse</strong> (carton bricolé).</div>
-      </div>
-      <div class="fake-tell real">
-        <div class="fake-tell-label">✓ Vraie carte</div>
-        <div class="fake-tell-text">Holographie avec un <strong>pattern régulier</strong> (cosmos, vagues, étoiles selon le set). Au contre-jour, la carte est <strong>opaque</strong>.</div>
-      </div>
-      <div class="fake-tell fake">
-        <div class="fake-tell-label">✗ Fake</div>
-        <div class="fake-tell-text">Holographie <strong>arc-en-ciel uniforme</strong> type sticker de cahier d'école. Au contre-jour, on voit la <strong>lumière passer à travers</strong> (papier trop fin).</div>
+    <!-- TEST 1 : FLASH TÉLÉPHONE -->
+    <div class="fake-test">
+      <svg class="fake-test-svg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        <!-- Lampe / flash en haut -->
+        <circle cx="100" cy="22" r="10" fill="#fbbf24"/>
+        <circle cx="100" cy="22" r="6" fill="#fef3c7"/>
+        <text x="100" y="14" font-size="9" fill="#fbbf24" text-anchor="middle" font-family="sans-serif">📱</text>
+        <!-- Carte gauche : VRAIE (opaque) -->
+        <rect x="20" y="55" width="60" height="100" rx="6" fill="#1e3a8a" stroke="#fbbf24" stroke-width="1.5"/>
+        <rect x="26" y="65" width="48" height="40" rx="3" fill="#3b82f6"/>
+        <circle cx="50" cy="125" r="10" fill="#dc2626"/>
+        <rect x="40" y="125" width="20" height="2" fill="#000"/>
+        <circle cx="50" cy="125" r="4" fill="#fff"/>
+        <text x="50" y="170" font-size="8" fill="#86efac" text-anchor="middle" font-weight="bold" font-family="sans-serif">VRAIE</text>
+        <text x="50" y="182" font-size="7" fill="#86efac" text-anchor="middle" font-family="sans-serif">opaque</text>
+        <!-- Carte droite : FAKE (lumière traverse) -->
+        <defs>
+          <linearGradient id="fakeGlow" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#fef08a" stop-opacity="0.9"/>
+            <stop offset="100%" stop-color="#1e3a8a" stop-opacity="0.4"/>
+          </linearGradient>
+        </defs>
+        <rect x="120" y="55" width="60" height="100" rx="6" fill="url(#fakeGlow)" stroke="#ef4444" stroke-width="1.5"/>
+        <rect x="126" y="65" width="48" height="40" rx="3" fill="#3b82f6" opacity="0.5"/>
+        <circle cx="150" cy="125" r="10" fill="#dc2626" opacity="0.5"/>
+        <rect x="140" y="125" width="20" height="2" fill="#000" opacity="0.5"/>
+        <circle cx="150" cy="125" r="4" fill="#fff" opacity="0.7"/>
+        <!-- Rayons de lumière qui traversent -->
+        <line x1="100" y1="32" x2="130" y2="50" stroke="#fef08a" stroke-width="1" opacity="0.7"/>
+        <line x1="100" y1="32" x2="170" y2="50" stroke="#fef08a" stroke-width="1" opacity="0.7"/>
+        <line x1="125" y1="160" x2="135" y2="175" stroke="#fef08a" stroke-width="1.5" opacity="0.8"/>
+        <line x1="175" y1="160" x2="165" y2="175" stroke="#fef08a" stroke-width="1.5" opacity="0.8"/>
+        <text x="150" y="170" font-size="8" fill="#fca5a5" text-anchor="middle" font-weight="bold" font-family="sans-serif">FAKE</text>
+        <text x="150" y="182" font-size="7" fill="#fca5a5" text-anchor="middle" font-family="sans-serif">la lumière passe</text>
+      </svg>
+      <div class="fake-test-body">
+        <h5>① Le test du flash téléphone</h5>
+        <p>Allume le flash de ton tel et colle-le derrière la carte, dans le noir. Une vraie carte a un <strong>noyau noir opaque</strong> entre deux couches cartonnées — la lumière ne passe pas.</p>
+        <div class="real-fake">
+          <span class="rf-real">✓ <strong>Vraie</strong> : zéro lumière qui traverse</span>
+          <span class="rf-fake">✗ <strong>Fake</strong> : la carte s'illumine en jaune</span>
+        </div>
       </div>
     </div>
 
-    <div class="guide-callout">💡 <strong>Le test du contre-jour (le plus fiable)</strong> — Place la carte devant une lampe ou la lumière du jour. Une vraie carte Pokémon/Lorcana/Magic possède un <strong>noyau opaque</strong> (couche noire intercalée entre deux cartonnages). Tu ne dois <strong>rien voir</strong> en transparence. Si la lumière traverse, c'est un fake imprimé sur papier glacé. 100 % fiable.</div>
-
-    <h4>② Le verso — Le détail que les contrefacteurs ratent toujours</h4>
-    <p>C'est <strong>LE test à faire en premier</strong>. Les contrefacteurs concentrent leurs efforts sur le recto (le visuel). Le verso est souvent baclé : bordure trop épaisse, couleur off, pokéball/logo mal positionné.</p>
-
-    <div class="fake-tcg-block pokemon">
-      <div class="fake-tcg-head">⚡ Pokémon — Au verso</div>
-      <ul>
-        <li><strong>Pokéball centrée verticalement</strong>, bleu uniforme et profond (#3B5BA7). Pas de violet, pas de turquoise.</li>
-        <li><strong>"Pokémon" en haut</strong>, lettrage jaune avec contour noir parfaitement net.</li>
-        <li>Le motif autour de la pokéball doit être <strong>parfaitement symétrique</strong>. Les fakes ont souvent un côté légèrement décalé.</li>
-        <li><strong>Aucun éclat holographique au dos</strong> sur une carte standard (sauf très rares promos officielles type World Championship).</li>
-      </ul>
+    <!-- TEST 2 : REFLET HOLO -->
+    <div class="fake-test">
+      <svg class="fake-test-svg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        <!-- Carte gauche : holo cosmos (vraie) -->
+        <defs>
+          <radialGradient id="cosmos" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#a78bfa"/>
+            <stop offset="50%" stop-color="#1e1b4b"/>
+            <stop offset="100%" stop-color="#0c0a1f"/>
+          </radialGradient>
+        </defs>
+        <rect x="20" y="20" width="70" height="140" rx="6" fill="url(#cosmos)" stroke="#fbbf24" stroke-width="1.5"/>
+        <!-- Étoiles cosmos -->
+        <circle cx="32" cy="40" r="1" fill="#fff"/>
+        <circle cx="50" cy="55" r="1.5" fill="#fef3c7"/>
+        <circle cx="75" cy="38" r="1" fill="#fff"/>
+        <circle cx="40" cy="80" r="1.2" fill="#bae6fd"/>
+        <circle cx="68" cy="95" r="1" fill="#fff"/>
+        <circle cx="55" cy="120" r="1.8" fill="#fef3c7"/>
+        <circle cx="35" cy="135" r="1" fill="#fff"/>
+        <circle cx="78" cy="148" r="1.2" fill="#a78bfa"/>
+        <circle cx="60" cy="70" r="0.8" fill="#fff"/>
+        <circle cx="28" cy="110" r="1" fill="#fde047"/>
+        <text x="55" y="178" font-size="8" fill="#86efac" text-anchor="middle" font-weight="bold" font-family="sans-serif">VRAIE</text>
+        <text x="55" y="190" font-size="7" fill="#86efac" text-anchor="middle" font-family="sans-serif">cosmos / étoiles</text>
+        <!-- Carte droite : holo arc-en-ciel (fake) -->
+        <defs>
+          <linearGradient id="rainbow" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="#ef4444"/>
+            <stop offset="20%" stop-color="#f97316"/>
+            <stop offset="40%" stop-color="#fde047"/>
+            <stop offset="60%" stop-color="#22c55e"/>
+            <stop offset="80%" stop-color="#3b82f6"/>
+            <stop offset="100%" stop-color="#a855f7"/>
+          </linearGradient>
+        </defs>
+        <rect x="110" y="20" width="70" height="140" rx="6" fill="url(#rainbow)" stroke="#ef4444" stroke-width="1.5"/>
+        <!-- Bandes pour effet sticker -->
+        <rect x="110" y="50" width="70" height="3" fill="#fff" opacity="0.3"/>
+        <rect x="110" y="90" width="70" height="3" fill="#fff" opacity="0.3"/>
+        <rect x="110" y="130" width="70" height="3" fill="#fff" opacity="0.3"/>
+        <text x="145" y="178" font-size="8" fill="#fca5a5" text-anchor="middle" font-weight="bold" font-family="sans-serif">FAKE</text>
+        <text x="145" y="190" font-size="7" fill="#fca5a5" text-anchor="middle" font-family="sans-serif">rainbow uniforme</text>
+      </svg>
+      <div class="fake-test-body">
+        <h5>② Le reflet holographique</h5>
+        <p>Penche la carte sous la lumière. Les vraies brillances Pokémon/Lorcana ont des <strong>motifs précis</strong> : cosmos étoilé, vagues, sparkles. Pas un arc-en-ciel uniforme type sticker de cahier.</p>
+        <div class="real-fake">
+          <span class="rf-real">✓ <strong>Vraie</strong> : pattern régulier (étoiles, vagues)</span>
+          <span class="rf-fake">✗ <strong>Fake</strong> : rainbow franc et uniforme</span>
+        </div>
+      </div>
     </div>
 
-    <div class="fake-tcg-block lorcana">
-      <div class="fake-tcg-head">✨ Lorcana — Au verso</div>
-      <ul>
-        <li>Logo <strong>"Disney Lorcana"</strong> centré, dégradé violet/turquoise profond. Les fakes ont souvent un violet "barbie" trop clair.</li>
-        <li><strong>Texture matte</strong> au dos, même sur les cartes Foil (le foil est uniquement au recto chez Ravensburger).</li>
-        <li>Bordure du dos identique à celle du recto (pas plus épaisse).</li>
-        <li>Mention <strong>"© Disney"</strong> en bas, microscopique mais lisible à la loupe — absente sur la plupart des fakes.</li>
-      </ul>
+    <!-- TEST 3 : LE VERSO POKÉMON -->
+    <div class="fake-test">
+      <svg class="fake-test-svg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        <!-- Verso vrai -->
+        <rect x="20" y="20" width="70" height="140" rx="6" fill="#3B5BA7" stroke="#fbbf24" stroke-width="1.5"/>
+        <rect x="22" y="22" width="66" height="136" rx="5" fill="none" stroke="#fef3c7" stroke-width="0.5"/>
+        <text x="55" y="42" font-size="9" fill="#fde047" text-anchor="middle" font-weight="bold" font-family="sans-serif" stroke="#000" stroke-width="0.4">Pokémon</text>
+        <!-- Pokéball centrée -->
+        <circle cx="55" cy="90" r="22" fill="#fff" stroke="#000" stroke-width="1.5"/>
+        <path d="M 33 90 A 22 22 0 0 1 77 90 Z" fill="#dc2626" stroke="#000" stroke-width="1.5"/>
+        <rect x="33" y="89" width="44" height="2.5" fill="#000"/>
+        <circle cx="55" cy="90" r="5" fill="#fff" stroke="#000" stroke-width="1.5"/>
+        <circle cx="55" cy="90" r="2" fill="#000"/>
+        <text x="55" y="178" font-size="8" fill="#86efac" text-anchor="middle" font-weight="bold" font-family="sans-serif">VRAIE</text>
+        <text x="55" y="190" font-size="7" fill="#86efac" text-anchor="middle" font-family="sans-serif">centrée, bleu profond</text>
+        <!-- Verso fake -->
+        <rect x="110" y="20" width="70" height="140" rx="6" fill="#7c3aed" stroke="#ef4444" stroke-width="1.5"/>
+        <rect x="112" y="22" width="66" height="136" rx="5" fill="none" stroke="#fef3c7" stroke-width="0.5"/>
+        <text x="145" y="42" font-size="9" fill="#fde047" text-anchor="middle" font-weight="bold" font-family="sans-serif" opacity="0.7">Pokemon</text>
+        <!-- Pokéball décalée + couleurs ratées -->
+        <circle cx="148" cy="92" r="22" fill="#f3f4f6" stroke="#1f2937" stroke-width="1.5"/>
+        <path d="M 126 92 A 22 22 0 0 1 170 92 Z" fill="#fb7185" stroke="#1f2937" stroke-width="1.5"/>
+        <rect x="126" y="91" width="44" height="2.5" fill="#1f2937"/>
+        <circle cx="148" cy="92" r="5" fill="#f3f4f6" stroke="#1f2937" stroke-width="1.5"/>
+        <circle cx="148" cy="92" r="2" fill="#1f2937"/>
+        <!-- Flèche montrant décentrage -->
+        <line x1="180" y1="92" x2="172" y2="92" stroke="#ef4444" stroke-width="1.5" marker-end="url(#arrow)"/>
+        <defs><marker id="arrow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><polygon points="0 0, 6 3, 0 6" fill="#ef4444"/></marker></defs>
+        <text x="145" y="178" font-size="8" fill="#fca5a5" text-anchor="middle" font-weight="bold" font-family="sans-serif">FAKE</text>
+        <text x="145" y="190" font-size="7" fill="#fca5a5" text-anchor="middle" font-family="sans-serif">violette, décalée</text>
+      </svg>
+      <div class="fake-test-body">
+        <h5>③ Le verso — La pokéball trahit toujours</h5>
+        <p>Les contrefacteurs ratent presque tous le dos. La pokéball doit être <strong>parfaitement centrée</strong>, dans un <strong>bleu profond</strong> (proche du bleu marine), et le rouge doit être franc — pas rose ni violet.</p>
+        <div class="real-fake">
+          <span class="rf-real">✓ <strong>Vraie</strong> : centrée, bleu marine, rouge franc</span>
+          <span class="rf-fake">✗ <strong>Fake</strong> : décalée, fond violet/rose</span>
+        </div>
+      </div>
     </div>
 
-    <div class="fake-tcg-block magic">
-      <div class="fake-tcg-head">🔥 Magic: The Gathering — Au verso</div>
-      <ul>
-        <li>Le célèbre <strong>"dos brun" Magic</strong>, avec la rosette centrale et le slogan "Deckmaster" en haut.</li>
-        <li>Couleur du dos : <strong>brun chaud uniforme</strong>, pas rougeâtre ni grisâtre.</li>
-        <li>Les <strong>4 ovales jaune-blanc</strong> autour de la rosette doivent être nets, pas baveux.</li>
-        <li>Pour les cartes vintage (Beta, Unlimited, Revised), le dos peut légèrement varier — toujours croiser avec Scryfall.</li>
-      </ul>
+    <!-- TEST 4 : LE COPYRIGHT EN BAS -->
+    <div class="fake-test">
+      <svg class="fake-test-svg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        <!-- Zoom carte vraie -->
+        <rect x="15" y="40" width="80" height="120" rx="4" fill="#fef3c7" stroke="#fbbf24" stroke-width="1.5"/>
+        <rect x="20" y="48" width="70" height="42" rx="2" fill="#7dd3fc"/>
+        <rect x="20" y="95" width="70" height="40" fill="#fbbf24" opacity="0.3"/>
+        <!-- Loupe sur le copyright -->
+        <circle cx="55" cy="150" r="15" fill="none" stroke="#86efac" stroke-width="1.5"/>
+        <text x="55" y="148" font-size="3.5" fill="#000" text-anchor="middle" font-family="sans-serif">©2024 Pokémon</text>
+        <text x="55" y="153" font-size="3.5" fill="#000" text-anchor="middle" font-family="sans-serif">/Nintendo/Creatures</text>
+        <text x="55" y="157" font-size="3.5" fill="#000" text-anchor="middle" font-family="sans-serif">/GAME FREAK • TM</text>
+        <text x="55" y="178" font-size="8" fill="#86efac" text-anchor="middle" font-weight="bold" font-family="sans-serif">VRAIE</text>
+        <text x="55" y="190" font-size="7" fill="#86efac" text-anchor="middle" font-family="sans-serif">© et TM nets</text>
+        <!-- Zoom carte fake -->
+        <rect x="105" y="40" width="80" height="120" rx="4" fill="#fef3c7" stroke="#ef4444" stroke-width="1.5"/>
+        <rect x="110" y="48" width="70" height="42" rx="2" fill="#7dd3fc" opacity="0.7"/>
+        <rect x="110" y="95" width="70" height="40" fill="#fbbf24" opacity="0.3"/>
+        <!-- Loupe avec copyright effacé -->
+        <circle cx="145" cy="150" r="15" fill="none" stroke="#fca5a5" stroke-width="1.5"/>
+        <text x="145" y="148" font-size="3.5" fill="#9ca3af" text-anchor="middle" font-family="sans-serif" opacity="0.6">©2024 Pok...</text>
+        <text x="145" y="153" font-size="3.5" fill="#9ca3af" text-anchor="middle" font-family="sans-serif" opacity="0.4">/...nten../Cr...</text>
+        <text x="145" y="157" font-size="3.5" fill="#9ca3af" text-anchor="middle" font-family="sans-serif" opacity="0.3">/...FREAK</text>
+        <text x="145" y="178" font-size="8" fill="#fca5a5" text-anchor="middle" font-weight="bold" font-family="sans-serif">FAKE</text>
+        <text x="145" y="190" font-size="7" fill="#fca5a5" text-anchor="middle" font-family="sans-serif">© effacé, pas de TM</text>
+      </svg>
+      <div class="fake-test-body">
+        <h5>④ Le copyright et le "TM" en bas</h5>
+        <p>Au verso ou en bas du recto, regarde la mention légale. Une vraie Pokémon affiche <code>©Pokémon/Nintendo/Creatures/GAME FREAK</code> + <strong>"TM"</strong>, parfaitement lisible à la loupe. Sur les fakes c'est <strong>flou, baveux, partiel</strong> — voire absent.</p>
+        <div class="real-fake">
+          <span class="rf-real">✓ <strong>Vraie</strong> : © + TM nets, année cohérente</span>
+          <span class="rf-fake">✗ <strong>Fake</strong> : flou, partiel, TM manquant</span>
+        </div>
+      </div>
     </div>
 
-    <h4>③ Les détails spécifiques au recto</h4>
-
-    <div class="fake-tcg-block pokemon">
-      <div class="fake-tcg-head">⚡ Pokémon — Au recto</div>
-      <ul>
-        <li><strong>Symboles d'énergie</strong> en bas (éclair, feu, eau...) : doivent être <strong>parfaitement ronds, contours nets</strong>. Les fakes ont des éclairs aux bords bavés.</li>
-        <li><strong>Symbole du set</strong> en bas à droite (à côté du numéro) : doit être présent, net, et correspondre au set affiché. Croise sur <strong>Bulbapedia</strong> ou <strong>pokumon.com</strong>.</li>
-        <li>Le <strong>"PV" / "HP"</strong> en haut : police rouge spécifique, jamais en italique penché.</li>
-        <li>La mention <strong>©Nintendo/Creatures/GAME FREAK</strong> en bas — absente sur 90 % des fakes. Date du copyright cohérente avec le set.</li>
-        <li><strong>Numéro de carte</strong> au format <code>X/Y</code> ou <code>XXX/XXX</code>. Vérifie que Y correspond au nombre total de cartes du set.</li>
-      </ul>
+    <!-- TEST 5 : TEXTURE & ÉPAISSEUR -->
+    <div class="fake-test">
+      <svg class="fake-test-svg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        <!-- Coupe transversale carte vraie -->
+        <text x="55" y="22" font-size="8" fill="#86efac" text-anchor="middle" font-weight="bold" font-family="sans-serif">VRAIE</text>
+        <text x="55" y="34" font-size="7" fill="#86efac" text-anchor="middle" font-family="sans-serif">(coupe transversale)</text>
+        <rect x="15" y="60" width="80" height="6" fill="#f3f4f6"/>
+        <rect x="15" y="66" width="80" height="10" fill="#0a0a0a"/>
+        <rect x="15" y="76" width="80" height="6" fill="#f3f4f6"/>
+        <text x="100" y="65" font-size="7" fill="#f3f4f6" font-family="sans-serif">papier blanc</text>
+        <text x="100" y="74" font-size="7" fill="#fbbf24" font-weight="bold" font-family="sans-serif">noyau noir</text>
+        <text x="100" y="82" font-size="7" fill="#f3f4f6" font-family="sans-serif">papier blanc</text>
+        <!-- Texture grainée -->
+        <text x="55" y="105" font-size="7" fill="#86efac" text-anchor="middle" font-family="sans-serif">texture grainée</text>
+        <g opacity="0.7">
+          <circle cx="25" cy="115" r="0.8" fill="#86efac"/>
+          <circle cx="35" cy="118" r="0.6" fill="#86efac"/>
+          <circle cx="45" cy="113" r="0.7" fill="#86efac"/>
+          <circle cx="55" cy="119" r="0.8" fill="#86efac"/>
+          <circle cx="65" cy="115" r="0.6" fill="#86efac"/>
+          <circle cx="75" cy="117" r="0.7" fill="#86efac"/>
+          <circle cx="85" cy="114" r="0.8" fill="#86efac"/>
+        </g>
+        <!-- Coupe transversale fake -->
+        <text x="145" y="22" font-size="8" fill="#fca5a5" text-anchor="middle" font-weight="bold" font-family="sans-serif">FAKE</text>
+        <text x="145" y="34" font-size="7" fill="#fca5a5" text-anchor="middle" font-family="sans-serif">(coupe transversale)</text>
+        <rect x="105" y="68" width="80" height="8" fill="#f3f4f6"/>
+        <text x="190" y="74" font-size="7" fill="#fca5a5" font-family="sans-serif" text-anchor="end">papier seul</text>
+        <text x="145" y="105" font-size="7" fill="#fca5a5" text-anchor="middle" font-family="sans-serif">surface plastique lisse</text>
+        <line x1="115" y1="118" x2="175" y2="118" stroke="#fca5a5" stroke-width="0.8" opacity="0.6"/>
+        <line x1="115" y1="121" x2="175" y2="121" stroke="#fca5a5" stroke-width="0.8" opacity="0.4"/>
+        <!-- Comparaison épaisseur -->
+        <text x="100" y="155" font-size="7" fill="#fbbf24" text-anchor="middle" font-weight="bold" font-family="sans-serif">≈ 0,3 mm pour une vraie carte</text>
+        <text x="100" y="170" font-size="6.5" fill="var(--mut)" fill="#9ca3af" text-anchor="middle" font-family="sans-serif">trop fine = papier · trop épaisse = bricolée</text>
+      </svg>
+      <div class="fake-test-body">
+        <h5>⑤ Texture &amp; épaisseur</h5>
+        <p>Frotte ton ongle sur le bord. Une vraie carte a une <strong>légère granulosité</strong> qu'on sent au doigt. Une carte de tarot ou de jeu officiel européen pèse environ <strong>0,3 mm</strong>. Si elle est <strong>trop fine</strong> (papier) ou <strong>trop épaisse</strong> et rigide (carton bricolé), c'est mort.</p>
+        <div class="real-fake">
+          <span class="rf-real">✓ <strong>Vraie</strong> : grainée, ferme, 0,3 mm</span>
+          <span class="rf-fake">✗ <strong>Fake</strong> : lisse/cireuse ou rigide carton</span>
+        </div>
+      </div>
     </div>
 
-    <div class="fake-tcg-block lorcana">
-      <div class="fake-tcg-head">✨ Lorcana — Au recto</div>
-      <ul>
-        <li><strong>Logo encre</strong> en haut à gauche (la goutte colorée selon le type — ambre, améthyste, émeraude, rubis, saphir, acier) : doit être <strong>net et profond</strong>, pas délavé.</li>
-        <li><strong>Foil Lorcana</strong> : effet "sable scintillant" très fin et homogène. Les fakes utilisent un foil type Pokémon avec arc-en-ciel franc — pas le bon rendu.</li>
-        <li>L'<strong>inkwell</strong> (cercle autour du coût en haut à gauche) : présent ou absent selon que la carte est jouable comme encre. Cohérent avec la base de données officielle <code>lorcana-api.com</code>.</li>
-        <li><strong>Numéro de collection</strong> en bas à gauche au format <code>X/204</code> (ou autre selon le set). Croise avec Cardmarket pour confirmer l'existence.</li>
-        <li>Mention <strong>"©Disney"</strong> et <strong>"Ravensburger"</strong> en bas — toujours présentes sur les officielles.</li>
-      </ul>
-    </div>
-
-    <div class="fake-tcg-block magic">
-      <div class="fake-tcg-head">🔥 Magic — Au recto</div>
-      <ul>
-        <li><strong>Symboles de mana</strong> (rond avec chiffre, gouttes colorées) : circulaires parfaits, dégradés propres.</li>
-        <li><strong>Symbole de l'extension</strong> en milieu à droite, à côté du type. Couleur indique la rareté (noir = common, argent = uncommon, or = rare, doré-rouge = mythic).</li>
-        <li>Le <strong>copyright Wizards of the Coast</strong> en bas, avec année cohérente.</li>
-        <li><strong>Cartes Reserved List</strong> (Black Lotus, Power 9, duals...) : <strong>extrême prudence</strong>. Quasi systématiquement fakes en dehors de boutiques spécialisées ou de gradés PSA/BGS authentifiés.</li>
-      </ul>
-    </div>
-
-    <h4>④ Les 6 red flags du vendeur</h4>
+    <h4>⑥ Spécificités Lorcana</h4>
     <ul>
-      <li><strong>Refus d'envoyer des photos supplémentaires</strong> (recto + verso + tranche + zoom holo). Un vendeur honnête le fait en 2 min.</li>
-      <li><strong>Photos qui sont en réalité des scans Cardmarket</strong> (mêmes photos que les autres vendeurs). Demande une photo avec un papier daté à côté.</li>
-      <li><strong>Prix &lt; 50 % du trend Cardmarket</strong> sur une carte chase. Personne ne brade un vrai Charizard alt art.</li>
-      <li><strong>Compte récent, 0 avis</strong>, ou avis tous d'un coup à la même date.</li>
-      <li><strong>Refuse Cardmarket</strong> et veut un paiement direct PayPal "entre amis", virement, ou crypto. Pas de protection acheteur = pas d'achat.</li>
-      <li><strong>Justification émotionnelle</strong> : "collection de mon fils", "héritage", "j'y connais rien". Souvent légitime sur des cartes basiques, presque toujours bidon sur des chase à &gt; 100 €.</li>
+      <li><strong>Foil "sable scintillant"</strong> très fin et homogène — pas un arc-en-ciel franc.</li>
+      <li>Dos en <strong>dégradé violet/turquoise profond</strong>, jamais violet pâle "barbie".</li>
+      <li>Mentions <strong>"©Disney"</strong> et <strong>"Ravensburger"</strong> en bas — toujours présentes.</li>
+      <li>Croise toujours le numéro de collection avec <code>lorcana-api.com</code> ou Cardmarket.</li>
     </ul>
 
-    <h4>⑤ Plateformes — Le classement risque/sécurité</h4>
-    <div class="fake-tell-grid">
-      <div class="fake-tell real">
-        <div class="fake-tell-label">✓ Faible risque</div>
-        <div class="fake-tell-text"><strong>Cardmarket</strong> (vendeurs notés, protection acheteur), <strong>boutiques physiques spécialisées</strong>, <strong>cartes gradées PCA/PSA/BGS</strong> (l'organisme a authentifié pour toi).</div>
-      </div>
-      <div class="fake-tell fake">
-        <div class="fake-tell-label">✗ Risque élevé</div>
-        <div class="fake-tell-text"><strong>Vinted, Leboncoin, Wallapop</strong> sur chase cards. <strong>TikTok Lives / Whatnot</strong> (impossible de vérifier en direct). <strong>AliExpress, Wish, Temu</strong> (100 % fakes).</div>
-      </div>
-    </div>
-
-    <div class="guide-callout success"><strong>✓ Le réflexe Soridex</strong> — Quand tu repères une carte sur Vinted ou eBay, vérifie d'abord son existence officielle (Bulbapedia pour Pokémon, lorcana-api pour Lorcana, Scryfall pour Magic). Puis croise le prix avec le trend Cardmarket via Soridex. Si la carte n'existe pas dans la base officielle, c'est un fake (ou une carte custom assumée). Si le prix est &lt; 50 % du trend, soit fake, soit état caché.</div>
-
-    <h4>⑥ Que faire si tu t'es fait avoir ?</h4>
+    <h4>⑦ Red flags du vendeur (Vinted, Leboncoin, TikTok Live)</h4>
     <ul>
-      <li><strong>Sur Cardmarket</strong> : ouvre une réclamation sous 7 jours avec photos, le service est très réactif et rembourse dans 90 % des cas.</li>
-      <li><strong>Sur Vinted</strong> : "Signaler un problème" sous 2 jours après réception. Joins photos comparatives (vraie vs reçue) — le service support tranche souvent en faveur de l'acheteur.</li>
-      <li><strong>PayPal "biens et services"</strong> : 180 jours pour ouvrir un litige, remboursement très souvent obtenu sur preuve.</li>
-      <li><strong>Vendeur sur réseaux sociaux</strong> : si paiement "amis et famille", c'est quasi perdu. Signale le compte et préviens la communauté (Discord, groupes Facebook TCG France).</li>
-      <li><strong>Garde le fake</strong> — utile pour la pédagogie sur tes lives, ou pour comparer si tu reçois une autre carte douteuse.</li>
+      <li>Refuse d'envoyer une photo supplémentaire avec un papier daté à côté.</li>
+      <li>Prix &lt; 50 % du trend Cardmarket sur une chase card.</li>
+      <li>Compte récent, 0 avis ou avis tous publiés à la même date.</li>
+      <li>Veut un paiement direct PayPal "amis", virement, crypto — pas de protection acheteur.</li>
+      <li>"Collection de mon fils, j'y connais rien" sur une carte &gt; 100 €.</li>
     </ul>
 
-    <div class="guide-callout danger"><strong>🚫 À ne jamais faire</strong> — Revendre un fake en le présentant comme authentique (même par "erreur"). C'est de l'escroquerie. Si tu détectes un fake dans ton stock, marque-le clairement ou détruis-le.</div>
+    <div class="guide-callout success"><strong>✓ Le réflexe Soridex</strong> — Vérifie que la carte existe officiellement (Bulbapedia / lorcana-api / Scryfall), croise le prix avec le trend Cardmarket dans Soridex. Si la carte n'existe pas dans la base ou si le prix est &lt; 50 % du trend, c'est suspect.</div>
 
-    <div class="guide-callout">🎯 <strong>TL;DR — Le réflexe en 30 secondes</strong> — 1) Contre-jour (opacité ?) · 2) Verso (couleurs et symétrie) · 3) Texture sous le doigt · 4) Croiser le numéro/set sur Bulbapedia, lorcana-api ou Scryfall. Si les 4 passent, à 95 % c'est authentique.</div>
+    <div class="guide-callout">🎯 <strong>TL;DR en 30 secondes</strong> — 1) Flash téléphone derrière la carte · 2) Reflet holo (cosmos vs rainbow) · 3) Pokéball au dos · 4) © et TM nets · 5) Texture et épaisseur. Si les 5 passent, à 95 % c'est authentique.</div>
   </article>
 
   <article class="guide-section" id="g-grading">
