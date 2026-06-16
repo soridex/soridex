@@ -7009,7 +7009,13 @@ function bizCacheSet(tcg, q, results){
 
 // Detect if query looks like a card number ("25", "199/191", "025/091")
 function bizIsCardNumber(q){ return /^\d+(\/\d+)?$/.test(q.trim()); }
-function bizExtractNumber(q){ return q.trim().split('/')[0].replace(/^0+/, '') || '0'; }
+function bizExtractNumberParts(q){
+  const parts = q.trim().split('/');
+  return {
+    num: parts[0].replace(/^0+/, '') || '0',
+    total: parts[1] ? parts[1].replace(/^0+/, '') : null
+  };
+}
 
 function bizMapPokemonResult(c){
   const cm = (c.cardmarket && c.cardmarket.prices) || {};
@@ -7089,8 +7095,14 @@ async function bizSearchCards(tcg, query){
   try {
     if(tcg === 'pokemon'){
       let apiQ;
+      let orderBy = '';
+      let pageSize = 10;
       if(isNumber){
-        apiQ = `number:${bizExtractNumber(q)}`;
+        const {num, total} = bizExtractNumberParts(q);
+        // If "199/191" → filter on both number AND set.printedTotal for precision
+        apiQ = total ? `number:${num} set.printedTotal:${total}` : `number:${num}`;
+        orderBy = '&orderBy=-set.releaseDate';
+        pageSize = total ? 10 : 20; // wider net for bare number
       } else {
         // Translate FR → EN if exact match in table
         let qEn = q;
@@ -7102,35 +7114,37 @@ async function bizSearchCards(tcg, query){
         }
         apiQ = `name:${qEn}*`;
       }
-      // select= trims payload massively; drop orderBy (slow server-side)
-      const url = `https://api.pokemontcg.io/v2/cards?q=${encodeURIComponent(apiQ)}&pageSize=10&select=id,name,number,images,cardmarket,set`;
+      // select= trims payload massively
+      const url = `https://api.pokemontcg.io/v2/cards?q=${encodeURIComponent(apiQ)}&pageSize=${pageSize}&select=id,name,number,images,cardmarket,set${orderBy}`;
       const res = await fetch(url, {signal});
       if(!res.ok) return [];
       const data = await res.json();
       let arr = (data.data||[]).map(bizMapPokemonResult);
-      // Sort client-side by set release date desc (most recent first)
-      arr.sort((a,b) => (b.id||'').localeCompare(a.id||''));
+      // Client-side sort only if no orderBy was applied
+      if(!orderBy) arr.sort((a,b) => (b.id||'').localeCompare(a.id||''));
       bizCacheSet(tcg, q, arr);
       return arr;
     }
     if(tcg === 'lorcana'){
       let apiQ;
       if(isNumber){
-        apiQ = `collector_number:${bizExtractNumber(q)}`;
+        const {num} = bizExtractNumberParts(q);
+        apiQ = `collector_number:${num}`;
       } else {
         apiQ = `name:${q}`;
       }
       const res = await fetch(`https://api.lorcast.com/v0/cards/search?q=${encodeURIComponent(apiQ)}`, {signal});
       if(!res.ok) return [];
       const data = await res.json();
-      const arr = (data.results||[]).slice(0,10).map(bizMapLorcanaResult);
+      const arr = (data.results||[]).slice(0,15).map(bizMapLorcanaResult);
       bizCacheSet(tcg, q, arr);
       return arr;
     }
     if(tcg === 'magic'){
       let apiQ;
       if(isNumber){
-        apiQ = `cn:${bizExtractNumber(q)}`;
+        const {num} = bizExtractNumberParts(q);
+        apiQ = `cn:${num}`;
       } else {
         apiQ = `${q} lang:fr include:multilingual`;
       }
@@ -7143,7 +7157,7 @@ async function bizSearchCards(tcg, query){
         return [];
       }
       const data = await res.json();
-      const arr = (data.data||[]).slice(0,10).map(bizMapMagicResult);
+      const arr = (data.data||[]).slice(0,15).map(bizMapMagicResult);
       bizCacheSet(tcg, q, arr);
       return arr;
     }
