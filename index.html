@@ -1384,6 +1384,102 @@
   .card-detail-price-cell .val.dim{color:var(--mut);font-size:14px}
   .card-detail-updated{font-size:11px;color:var(--mut);text-align:right;margin:6px 0 14px;font-style:italic}
 
+  /* eBay comparison block */
+  .card-detail-ebay-compare{
+    margin:6px 0 14px;
+    padding:14px;
+    background:rgba(229,108,21,.06);
+    border:1px solid rgba(229,108,21,.25);
+    border-radius:10px;
+  }
+  .ebay-compare-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:10px;
+    flex-wrap:wrap;
+    gap:6px;
+  }
+  .ebay-compare-title{
+    font-size:12px;
+    font-weight:600;
+    color:#fdba74;
+    letter-spacing:.04em;
+  }
+  .ebay-compare-sub{
+    font-size:10px;
+    color:var(--mut);
+    text-transform:uppercase;
+    letter-spacing:.06em;
+  }
+  .ebay-compare-grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:8px;
+    margin-bottom:10px;
+  }
+  .ebay-compare-cell{
+    background:rgba(0,0,0,.2);
+    border:1px solid rgba(255,255,255,.05);
+    border-radius:8px;
+    padding:8px;
+    text-align:center;
+  }
+  .ebay-compare-cell .label{
+    font-size:9px;
+    text-transform:uppercase;
+    letter-spacing:.1em;
+    color:var(--mut);
+    margin-bottom:4px;
+  }
+  .ebay-compare-cell .val{
+    font-family:"Cinzel",serif;
+    font-size:15px;
+    font-weight:700;
+    color:#fcd34d;
+  }
+  .ebay-compare-cell .sub{
+    font-size:9px;
+    color:var(--mut);
+    margin-top:2px;
+  }
+  .ebay-compare-verdict{
+    text-align:center;
+    font-size:12px;
+    padding:8px 10px;
+    border-radius:6px;
+    font-weight:500;
+  }
+  .ebay-compare-verdict.up{
+    background:rgba(16,185,129,.12);
+    border:1px solid rgba(16,185,129,.3);
+    color:#6ee7b7;
+  }
+  .ebay-compare-verdict.down{
+    background:rgba(239,68,68,.12);
+    border:1px solid rgba(239,68,68,.3);
+    color:#fca5a5;
+  }
+  .ebay-compare-verdict.flat{
+    background:rgba(148,163,184,.1);
+    border:1px solid rgba(148,163,184,.2);
+    color:#cbd5e1;
+  }
+  .card-detail-ebay-loading{
+    text-align:center;
+    font-size:12px;
+    color:var(--mut);
+    padding:14px;
+    background:rgba(0,0,0,.15);
+    border-radius:8px;
+    margin:6px 0 14px;
+  }
+  @media (max-width:680px){
+    .ebay-compare-grid{grid-template-columns:repeat(3,1fr);gap:6px}
+    .ebay-compare-cell{padding:6px}
+    .ebay-compare-cell .val{font-size:13px}
+  }
+
   .card-detail-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
   .card-detail-btn{flex:1;min-width:130px;display:flex;align-items:center;justify-content:center;gap:6px;padding:11px 14px;border-radius:10px;font-size:13px;font-weight:600;text-decoration:none;transition:.18s;border:1px solid}
   .card-detail-btn.cm{background:rgba(0,160,200,.1);border-color:rgba(0,160,200,.4);color:#7dd3fc}
@@ -1969,6 +2065,33 @@
 
           <div class="card-detail-prices" id="cardDetailPrices"></div>
           <div class="card-detail-updated" id="cardDetailUpdated"></div>
+
+          <!-- eBay comparison block -->
+          <div class="card-detail-ebay-compare" id="cardDetailEbayCompare" hidden>
+            <div class="ebay-compare-header">
+              <span class="ebay-compare-title">🔎 Ventes réelles sur eBay</span>
+              <span class="ebay-compare-sub" id="cardDetailEbayCount">—</span>
+            </div>
+            <div class="ebay-compare-grid">
+              <div class="ebay-compare-cell">
+                <div class="label">Médiane</div>
+                <div class="val" id="cardDetailEbayMedian">—</div>
+              </div>
+              <div class="ebay-compare-cell">
+                <div class="label">Dernière vente</div>
+                <div class="val" id="cardDetailEbayLast">—</div>
+                <div class="sub" id="cardDetailEbayLastDate"></div>
+              </div>
+              <div class="ebay-compare-cell">
+                <div class="label">Fourchette</div>
+                <div class="val" id="cardDetailEbayRange">—</div>
+              </div>
+            </div>
+            <div class="ebay-compare-verdict" id="cardDetailEbayVerdict"></div>
+          </div>
+          <div class="card-detail-ebay-loading" id="cardDetailEbayLoading" hidden>
+            ⏳ Recherche des ventes eBay récentes…
+          </div>
 
           <div class="card-detail-actions">
             <a class="card-detail-btn cm" id="cardDetailCm" href="#" target="_blank" rel="noopener noreferrer">
@@ -4292,6 +4415,9 @@ async function loadCardDetail(tcg, id, fallback){
   document.getElementById('cardDetailCm').href = cardmarketUrl || '#';
   document.getElementById('cardDetailEbay').href = `https://www.ebay.fr/sch/i.html?_nkw=${encodeURIComponent(ebayQuery.trim())}&LH_Sold=1&LH_Complete=1`;
 
+  // === Fetch eBay sold listings + comparaison vs Cardmarket Trend ===
+  fetchEbayComparison(ebayQuery, prices);
+
   // Action buttons : populate _visibleCards et rendre les boutons ♥ / ✓
   // existants pour qu'ils marchent via la délégation
   try {
@@ -4331,6 +4457,68 @@ async function loadCardDetail(tcg, id, fallback){
       }
     }
   } catch(e){ console.warn('Modal action buttons wire err:', e); }
+}
+
+// === Fetch eBay sold listings + compare with Cardmarket Trend ===
+async function fetchEbayComparison(ebayQuery, prices){
+  const compareEl = document.getElementById('cardDetailEbayCompare');
+  const loadingEl = document.getElementById('cardDetailEbayLoading');
+  if(!compareEl || !loadingEl) return;
+  compareEl.hidden = true;
+  loadingEl.hidden = false;
+
+  // Trouve le prix Cardmarket Trend dans le tableau de prix de la modale (s'il existe)
+  let cmTrend = null;
+  if(Array.isArray(prices)){
+    const trendPrice = prices.find(p => p.featured && typeof p.value === 'number');
+    if(trendPrice) cmTrend = trendPrice.value;
+  }
+
+  try {
+    const res = await fetch('/api/ebay-sold?q=' + encodeURIComponent(ebayQuery.trim()));
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+
+    loadingEl.hidden = true;
+
+    if(!data || !data.count || data.count === 0){
+      // Aucune vente trouvée — on cache le bloc
+      compareEl.hidden = true;
+      return;
+    }
+
+    compareEl.hidden = false;
+    document.getElementById('cardDetailEbayCount').textContent = data.count + ' vente' + (data.count > 1 ? 's' : '') + ' analysée' + (data.count > 1 ? 's' : '');
+    document.getElementById('cardDetailEbayMedian').textContent = data.median != null ? '€' + data.median.toFixed(2) : '—';
+    document.getElementById('cardDetailEbayLast').textContent = (data.last && data.last.price) ? '€' + data.last.price.toFixed(2) : '—';
+    document.getElementById('cardDetailEbayLastDate').textContent = (data.last && data.last.date) ? data.last.date : '';
+    document.getElementById('cardDetailEbayRange').textContent = (data.min != null && data.max != null)
+      ? '€' + data.min.toFixed(2) + ' → €' + data.max.toFixed(2) : '—';
+
+    // Verdict : compare la médiane eBay avec Cardmarket Trend
+    const verdictEl = document.getElementById('cardDetailEbayVerdict');
+    if(cmTrend != null && data.median != null){
+      const delta = data.median - cmTrend;
+      const pct = (delta / cmTrend) * 100;
+      if(Math.abs(pct) < 8){
+        verdictEl.className = 'ebay-compare-verdict flat';
+        verdictEl.textContent = `≈ Cohérent avec Cardmarket (écart ${pct >= 0 ? '+' : ''}${pct.toFixed(0)}%)`;
+      } else if(pct > 0){
+        verdictEl.className = 'ebay-compare-verdict up';
+        verdictEl.textContent = `↑ eBay vend ${pct.toFixed(0)}% au-dessus de Cardmarket Trend (€${cmTrend.toFixed(2)} → €${data.median.toFixed(2)})`;
+      } else {
+        verdictEl.className = 'ebay-compare-verdict down';
+        verdictEl.textContent = `↓ eBay vend ${Math.abs(pct).toFixed(0)}% en-dessous de Cardmarket Trend (€${cmTrend.toFixed(2)} → €${data.median.toFixed(2)})`;
+      }
+    } else {
+      verdictEl.className = 'ebay-compare-verdict flat';
+      verdictEl.textContent = 'Pas de Cardmarket Trend pour comparer';
+    }
+  } catch(e){
+    console.warn('eBay fetch err:', e);
+    loadingEl.hidden = true;
+    compareEl.hidden = true;
+  }
 }
 
 // Wire close
