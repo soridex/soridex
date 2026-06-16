@@ -255,6 +255,8 @@
   .card-btn.cm:hover{background:rgba(96,165,250,.3);color:#fff;border-color:#60a5fa}
   .card-btn.eb{background:rgba(248,191,113,.12);color:#fcd34d;border:1px solid rgba(252,211,77,.3)}
   .card-btn.eb:hover{background:rgba(252,211,77,.25);color:#fff;border-color:#fcd34d}
+  .card-btn.cd{background:rgba(212,168,90,.15);color:var(--gold-2);border:1px solid var(--gold-deep);cursor:pointer;font-family:inherit}
+  .card-btn.cd:hover{background:rgba(212,168,90,.3);color:#fff}
 
 
   /* Pill du set affiché sur les cartes en mode "toute l'ère" */
@@ -1354,7 +1356,55 @@
   .legal-modal-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:4px}
   .footer-link{background:none;border:none;color:inherit;font:inherit;cursor:pointer;padding:0;text-decoration:none;transition:.15s}
   .footer-link:hover{color:var(--gold-2,#f5b942)}
-  /* ============ ACCOUNT SUB-NAV ============ */
+  /* ============ CARD DETAIL MODAL ============ */
+  .card-detail-box{max-width:780px;width:92%;padding:0;overflow:hidden}
+  .card-detail-inner{display:grid;grid-template-columns:280px 1fr;gap:0;align-items:stretch}
+  .card-detail-img{background:linear-gradient(180deg,#0c0a1f,#1a1530);display:flex;align-items:center;justify-content:center;padding:24px;min-height:380px}
+  .card-detail-img img{max-width:100%;max-height:380px;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.5);object-fit:contain}
+  .card-detail-img-skeleton{width:200px;height:280px;background:linear-gradient(110deg,rgba(255,255,255,.04) 25%,rgba(255,255,255,.08) 50%,rgba(255,255,255,.04) 75%);background-size:200% 100%;animation:skelShimmer 1.4s infinite;border-radius:10px}
+  @keyframes skelShimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+  .card-detail-info{padding:26px 24px 22px;display:flex;flex-direction:column;min-width:0}
+  .card-detail-loading{color:var(--mut);font-size:13px;text-align:center;padding:40px 0}
+  .card-detail-tcg-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+  .card-detail-tcg-badge{font-size:10px;text-transform:uppercase;letter-spacing:.08em;padding:3px 8px;border-radius:6px;font-weight:600}
+  .card-detail-tcg-badge.pokemon{background:rgba(220,38,38,.15);color:#fca5a5;border:1px solid rgba(220,38,38,.3)}
+  .card-detail-tcg-badge.lorcana{background:rgba(124,58,237,.15);color:#c4b5fd;border:1px solid rgba(124,58,237,.3)}
+  .card-detail-tcg-badge.magic{background:rgba(245,158,11,.15);color:#fcd34d;border:1px solid rgba(245,158,11,.3)}
+  .card-detail-rarity{font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:.06em}
+  .card-detail-name{font-family:"Cinzel",serif;font-size:20px;color:var(--tx);margin:0 0 6px;line-height:1.2}
+  .card-detail-meta{color:var(--mut);font-size:13px;margin-bottom:14px}
+
+  .card-detail-prices{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0 4px}
+  .card-detail-price-cell{background:var(--bg2);border:1px solid var(--line2);border-radius:8px;padding:10px;text-align:center}
+  .card-detail-price-cell.featured{border-color:var(--gold-deep);background:rgba(212,168,90,.06)}
+  .card-detail-price-cell .label{font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--mut);margin-bottom:4px}
+  .card-detail-price-cell.featured .label{color:var(--gold-2)}
+  .card-detail-price-cell .val{font-family:"Cinzel",serif;font-size:18px;font-weight:700;color:var(--tx)}
+  .card-detail-price-cell.featured .val{color:var(--gold-2)}
+  .card-detail-price-cell .val.dim{color:var(--mut);font-size:14px}
+  .card-detail-updated{font-size:11px;color:var(--mut);text-align:right;margin:6px 0 14px;font-style:italic}
+
+  .card-detail-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+  .card-detail-btn{flex:1;min-width:130px;display:flex;align-items:center;justify-content:center;gap:6px;padding:11px 14px;border-radius:10px;font-size:13px;font-weight:600;text-decoration:none;transition:.18s;border:1px solid}
+  .card-detail-btn.cm{background:rgba(0,160,200,.1);border-color:rgba(0,160,200,.4);color:#7dd3fc}
+  .card-detail-btn.cm:hover{background:rgba(0,160,200,.2);border-color:rgba(0,160,200,.7)}
+  .card-detail-btn.eb{background:rgba(229,108,21,.1);border-color:rgba(229,108,21,.4);color:#fdba74}
+  .card-detail-btn.eb:hover{background:rgba(229,108,21,.2);border-color:rgba(229,108,21,.7)}
+
+  .card-detail-divider{border-top:1px solid var(--line2);margin:6px 0 14px}
+  .card-detail-actions-row{display:flex;gap:8px;flex-wrap:wrap}
+  .card-detail-actions-row button{flex:1;min-width:140px}
+  .card-detail-error{color:#fca5a5;font-size:13px;text-align:center;padding:20px}
+
+  @media (max-width:680px){
+    .card-detail-inner{grid-template-columns:1fr}
+    .card-detail-img{min-height:260px;padding:18px}
+    .card-detail-img img{max-height:260px}
+    .card-detail-info{padding:18px}
+    .card-detail-prices{grid-template-columns:repeat(2,1fr)}
+  }
+
+
   .account-subnav{display:flex;gap:6px;flex-wrap:wrap;padding:8px;background:var(--bg2);border:1px solid var(--line2);border-radius:14px;margin-bottom:22px}
   .acc-tab{flex:1;min-width:130px;display:flex;align-items:center;justify-content:center;gap:8px;padding:11px 14px;border-radius:10px;font-size:13px;font-weight:600;letter-spacing:.05em;color:var(--mut);text-decoration:none;transition:.18s;cursor:pointer;border:1px solid transparent;text-transform:uppercase}
   .acc-tab:hover{color:var(--tx);background:rgba(212,168,90,.06);border-color:var(--line2)}
@@ -1865,6 +1915,42 @@
     </details>
   </div>
 </section>
+
+<!-- MODAL: DETAIL CARTE (vue unifiée carte avec multi-prix + liens) -->
+<div class="modal-overlay hidden" id="cardDetailModal">
+  <div class="modal-box card-detail-box">
+    <button class="modal-close" id="cardDetailClose">×</button>
+    <div class="card-detail-inner">
+      <div class="card-detail-img" id="cardDetailImg">
+        <div class="card-detail-img-skeleton"></div>
+      </div>
+      <div class="card-detail-info">
+        <div class="card-detail-loading" id="cardDetailLoading">Chargement…</div>
+        <div class="card-detail-content" id="cardDetailContent" hidden>
+          <div class="card-detail-tcg-row">
+            <span class="card-detail-tcg-badge" id="cardDetailTcgBadge"></span>
+            <span class="card-detail-rarity" id="cardDetailRarity"></span>
+          </div>
+          <h2 class="card-detail-name" id="cardDetailName">—</h2>
+          <div class="card-detail-meta" id="cardDetailMeta">—</div>
+
+          <div class="card-detail-prices" id="cardDetailPrices"></div>
+          <div class="card-detail-updated" id="cardDetailUpdated"></div>
+
+          <div class="card-detail-actions">
+            <a class="card-detail-btn cm" id="cardDetailCm" href="#" target="_blank" rel="noopener noreferrer">
+              <span>🛒</span> Voir sur Cardmarket
+            </a>
+            <a class="card-detail-btn eb" id="cardDetailEbay" href="#" target="_blank" rel="noopener noreferrer">
+              <span>🔎</span> Ventes eBay
+            </a>
+          </div>
+        </div>
+        <div class="card-detail-error" id="cardDetailError" hidden></div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- MODAL: Waitlist Pro -->
 <div class="modal-overlay hidden" id="proWaitlistModal">
@@ -4007,6 +4093,180 @@ function deletePortfolio(pfId){
 }
 function escapeHtml(s){return String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 
+/* ============ CARD DETAIL MODAL ============ */
+function openCardDetailModal(opts){
+  // opts: {tcg, id?, name?, setName?, number?, imageUrl?, rarity?}
+  const m = document.getElementById('cardDetailModal');
+  if(!m) return;
+  m.classList.remove('hidden');
+  // Reset state
+  document.getElementById('cardDetailContent').hidden = true;
+  document.getElementById('cardDetailError').hidden = true;
+  document.getElementById('cardDetailLoading').hidden = false;
+  document.getElementById('cardDetailLoading').textContent = 'Chargement…';
+  const imgEl = document.getElementById('cardDetailImg');
+  imgEl.innerHTML = opts.imageUrl ? `<img src="${escapeHtml(opts.imageUrl)}" alt="" loading="eager">` : '<div class="card-detail-img-skeleton"></div>';
+  // Fetch fresh data
+  loadCardDetail(opts.tcg, opts.id, opts).catch(e => {
+    document.getElementById('cardDetailLoading').hidden = true;
+    const err = document.getElementById('cardDetailError');
+    err.hidden = false;
+    err.textContent = 'Impossible de charger les détails : ' + (e.message || e);
+  });
+}
+function closeCardDetailModal(){
+  const m = document.getElementById('cardDetailModal');
+  if(m) m.classList.add('hidden');
+}
+
+async function loadCardDetail(tcg, id, fallback){
+  let card = null;
+  let cardmarketUrl = null;
+  let ebayQuery = '';
+  let prices = []; // [{label, value, featured?}]
+  let updatedAt = null;
+  const TCG_LABEL = {pokemon:'Pokémon', lorcana:'Lorcana', magic:'Magic'};
+
+  try {
+    if(tcg === 'pokemon' && id){
+      const res = await fetch(`https://api.pokemontcg.io/v2/cards/${encodeURIComponent(id)}`);
+      if(res.ok){
+        const data = await res.json();
+        card = data.data || {};
+        const cm = (card.cardmarket && card.cardmarket.prices) || {};
+        cardmarketUrl = (card.cardmarket && card.cardmarket.url) || null;
+        updatedAt = card.cardmarket && card.cardmarket.updatedAt;
+        if(cm.trendPrice != null) prices.push({label:'Cardmarket Trend', value:cm.trendPrice, featured:true});
+        if(cm.lowPrice != null) prices.push({label:'Prix bas', value:cm.lowPrice});
+        if(cm.averageSellPrice != null) prices.push({label:'Avg 30j', value:cm.averageSellPrice});
+      }
+    } else if(tcg === 'magic' && id){
+      const res = await fetch(`https://api.scryfall.com/cards/${encodeURIComponent(id)}`);
+      if(res.ok){
+        card = await res.json();
+        cardmarketUrl = (card.purchase_uris && card.purchase_uris.cardmarket) || null;
+        const eur = card.prices && card.prices.eur ? parseFloat(card.prices.eur) : null;
+        const usd = card.prices && card.prices.usd ? parseFloat(card.prices.usd) : null;
+        if(eur != null) prices.push({label:'Cardmarket', value:eur, featured:true});
+        if(usd != null) prices.push({label:'TCGPlayer ($)', value:usd, dim:true});
+      }
+    } else if(tcg === 'lorcana' && id){
+      const res = await fetch(`https://api.lorcast.com/v0/cards/${encodeURIComponent(id)}`);
+      if(res.ok){
+        card = await res.json();
+        const usd = card.prices && card.prices.usd ? parseFloat(card.prices.usd) : null;
+        const usdFoil = card.prices && card.prices.usd_foil ? parseFloat(card.prices.usd_foil) : null;
+        const rate = (typeof USD_TO_EUR === 'number') ? USD_TO_EUR : 0.92;
+        if(usd != null) prices.push({label:'Standard (~€)', value:+(usd*rate).toFixed(2), featured:true});
+        if(usdFoil != null) prices.push({label:'Foil (~€)', value:+(usdFoil*rate).toFixed(2)});
+      }
+    }
+  } catch(e){ console.warn('Detail fetch err', e); }
+
+  // Always derive display values from card object (or fallback)
+  const tcgKey = tcg;
+  let displayName = '';
+  let setName = '';
+  let num = '';
+  let rarity = '';
+  let imgUrl = '';
+
+  if(tcg === 'pokemon' && card){
+    displayName = (typeof translateCardNameToFr === 'function') ? translateCardNameToFr(card.name||'') : (card.name||'');
+    setName = card.set ? card.set.name : '';
+    num = card.number ? (card.number + (card.set ? '/'+(card.set.printedTotal||card.set.total||'?') : '')) : '';
+    rarity = card.rarity || '';
+    imgUrl = (card.images && (card.images.large || card.images.small)) || '';
+    ebayQuery = `${card.name||''} ${setName} ${card.number||''}`;
+    if(!cardmarketUrl) cardmarketUrl = `https://www.cardmarket.com/fr/Pokemon/Products/Search?searchString=${encodeURIComponent(card.name||fallback.name||'')}`;
+  } else if(tcg === 'magic' && card){
+    displayName = card.printed_name || card.name || '';
+    setName = card.set_name || '';
+    num = card.collector_number || '';
+    rarity = card.rarity || '';
+    if(card.image_uris && card.image_uris.normal) imgUrl = card.image_uris.normal;
+    else if(card.card_faces && card.card_faces[0] && card.card_faces[0].image_uris) imgUrl = card.card_faces[0].image_uris.normal;
+    ebayQuery = `${card.name||''} ${setName} ${num}`;
+    if(!cardmarketUrl) cardmarketUrl = `https://www.cardmarket.com/fr/Magic/Products/Search?searchString=${encodeURIComponent(card.name||fallback.name||'')}`;
+  } else if(tcg === 'lorcana' && card){
+    displayName = card.version ? `${card.name} — ${card.version}` : (card.name||'');
+    setName = card.set ? (card.set.name||card.set.code||'') : '';
+    num = card.collector_number || '';
+    rarity = card.rarity || '';
+    if(card.image_uris){
+      imgUrl = (card.image_uris.digital && (card.image_uris.digital.large || card.image_uris.digital.normal || card.image_uris.digital.small))
+            || card.image_uris.large || card.image_uris.normal || card.image_uris.small || '';
+    }
+    ebayQuery = `${card.name||''} ${card.version||''} Lorcana`;
+    cardmarketUrl = `https://www.cardmarket.com/fr/Lorcana/Products/Search?searchString=${encodeURIComponent((card.version?card.name+' '+card.version:card.name)||fallback.name||'')}`;
+  } else {
+    // Pas de card chargé : fallback sur les hints
+    displayName = (fallback && fallback.name) || 'Carte';
+    setName = (fallback && fallback.setName) || '';
+    num = (fallback && fallback.number) || '';
+    rarity = (fallback && fallback.rarity) || '';
+    imgUrl = (fallback && fallback.imageUrl) || '';
+    ebayQuery = displayName + ' ' + setName + ' ' + num;
+    cardmarketUrl = `https://www.cardmarket.com/fr/${tcg==='pokemon'?'Pokemon':(tcg==='magic'?'Magic':'Lorcana')}/Products/Search?searchString=${encodeURIComponent(displayName)}`;
+  }
+
+  // Render
+  document.getElementById('cardDetailLoading').hidden = true;
+  document.getElementById('cardDetailContent').hidden = false;
+  const imgEl = document.getElementById('cardDetailImg');
+  imgEl.innerHTML = imgUrl ? `<img src="${escapeHtml(imgUrl)}" alt="" loading="eager">` : '<div class="card-detail-img-skeleton"></div>';
+  const badge = document.getElementById('cardDetailTcgBadge');
+  badge.className = 'card-detail-tcg-badge ' + tcgKey;
+  badge.textContent = TCG_LABEL[tcgKey] || tcgKey;
+  document.getElementById('cardDetailRarity').textContent = rarity || '';
+  document.getElementById('cardDetailName').textContent = displayName;
+  document.getElementById('cardDetailMeta').textContent = [setName, num].filter(Boolean).join(' · ');
+  const pricesEl = document.getElementById('cardDetailPrices');
+  if(prices.length === 0){
+    pricesEl.innerHTML = '<div class="card-detail-price-cell" style="grid-column:1/-1"><div class="label">Cote</div><div class="val dim">non disponible pour cette carte</div></div>';
+  } else {
+    pricesEl.innerHTML = prices.map(p => `
+      <div class="card-detail-price-cell ${p.featured?'featured':''}">
+        <div class="label">${escapeHtml(p.label)}</div>
+        <div class="val ${p.dim?'dim':''}">${(typeof p.value === 'number') ? p.value.toFixed(2)+(p.label.includes('$')?' $':' €') : p.value}</div>
+      </div>
+    `).join('');
+  }
+  const updEl = document.getElementById('cardDetailUpdated');
+  updEl.textContent = updatedAt ? `Dernière maj cote : ${updatedAt}` : '';
+  document.getElementById('cardDetailCm').href = cardmarketUrl || '#';
+  document.getElementById('cardDetailEbay').href = `https://www.ebay.fr/sch/i.html?_nkw=${encodeURIComponent(ebayQuery.trim())}&LH_Sold=1&LH_Complete=1`;
+}
+
+// Wire close
+document.addEventListener('click', (e) => {
+  const closeBtn = e.target.closest('#cardDetailClose');
+  if(closeBtn){ closeCardDetailModal(); return; }
+  // Click outside the modal-box closes it
+  if(e.target && e.target.id === 'cardDetailModal') closeCardDetailModal();
+  // Delegation : bouton "🔍 Détails" sur n'importe quelle carte rendue
+  const detailBtn = e.target.closest('[data-detail-id]');
+  if(detailBtn){
+    e.preventDefault();
+    e.stopPropagation();
+    openCardDetailModal({
+      tcg: detailBtn.dataset.detailTcg,
+      id: detailBtn.dataset.detailId,
+      name: detailBtn.dataset.detailName,
+      setName: detailBtn.dataset.detailSet,
+      number: detailBtn.dataset.detailNum,
+      imageUrl: detailBtn.dataset.detailImg,
+      rarity: detailBtn.dataset.detailRarity
+    });
+  }
+});
+document.addEventListener('keydown', (e) => {
+  if(e.key === 'Escape'){
+    const m = document.getElementById('cardDetailModal');
+    if(m && !m.classList.contains('hidden')) closeCardDetailModal();
+  }
+});
+
 /* === DATA POKEMON ERAS === */
 const POKEMON_ERAS = [
   {slug:"mega-evolution", name:"Méga-Évolution", year:2025, series:["Mega Evolution"], cote:"$$$$", img:"data:image/png;base64,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"},
@@ -4359,6 +4619,7 @@ async function showPokemonSetCards(setId){
           <div class="card-variants">${variants.map(v=>`<span class="var-pill ${v.key}">${v.label}${v.price!=null?' €'+v.price.toFixed(2):''}</span>`).join('')}</div>
           ${priceStr}
           <div class="card-actions">
+            <button class="card-btn cd" data-detail-tcg="pokemon" data-detail-id="${escapeHtml(c.id)}" data-detail-name="${escapeHtml(displayName)}" data-detail-set="${escapeHtml(setInfo?setInfo.name:'')}" data-detail-num="${escapeHtml(num)}" data-detail-img="${escapeHtml(large)}" data-detail-rarity="${escapeHtml(c.rarity||'')}" title="Voir détails + cote">🔍 Détails</button>
             <a class="card-btn cm" href="${cmUrl}" target="_blank" rel="noopener noreferrer" title="Voir sur Cardmarket">Cardmarket</a>
             <a class="card-btn eb" href="${ebayUrl(ebQuery)}" target="_blank" rel="noopener noreferrer" title="Ventes eBay récentes">eBay</a>
           </div>
@@ -4450,6 +4711,7 @@ async function showLorcanaSetCards(slug){
           <div class="card-variants">${variants.map(v=>`<span class="var-pill ${v.key}">${v.label}${v.price!=null?' €'+v.price.toFixed(2):''}</span>`).join('')}</div>
           ${priceStr}
           <div class="card-actions">
+            <button class="card-btn cd" data-detail-tcg="lorcana" data-detail-id="${escapeHtml(c.id)}" data-detail-name="${escapeHtml(full)}" data-detail-set="${escapeHtml(setInfo.name||'')}" data-detail-num="${escapeHtml(num)}" data-detail-img="${escapeHtml(large||img||'')}" data-detail-rarity="${escapeHtml((c.rarity||'').replace('_',' '))}" title="Voir détails + cote">🔍 Détails</button>
             <a class="card-btn cm" href="${cmUrl}" target="_blank" rel="noopener noreferrer">Cardmarket</a>
             <a class="card-btn eb" href="${ebayUrl(ebQuery)}" target="_blank" rel="noopener noreferrer">eBay</a>
           </div>
@@ -4604,6 +4866,7 @@ async function showMagicSetCards(setCode){
           <div class="card-variants">${variants.map(v=>`<span class="var-pill ${v.key}">${v.label}${v.price!=null&&!isNaN(v.price)?' €'+v.price.toFixed(2):''}</span>`).join('')}</div>
           ${priceStr}
           <div class="card-actions">
+            <button class="card-btn cd" data-detail-tcg="magic" data-detail-id="${escapeHtml(c.id)}" data-detail-name="${escapeHtml(c.name)}" data-detail-set="${escapeHtml(c.set_name||'')}" data-detail-num="${escapeHtml(num)}" data-detail-img="${escapeHtml((c.image_uris&&c.image_uris.normal)||(c.image_uris&&c.image_uris.small)||(c.card_faces&&c.card_faces[0]&&c.card_faces[0].image_uris&&c.card_faces[0].image_uris.normal)||'')}" data-detail-rarity="${escapeHtml(LBL[c.rarity]||c.rarity||'')}" title="Voir détails + cote">🔍 Détails</button>
             <a class="card-btn cm" href="${cmUrl}" target="_blank" rel="noopener noreferrer">Cardmarket</a>
             <a class="card-btn eb" href="${ebayUrl(ebQuery)}" target="_blank" rel="noopener noreferrer">eBay</a>
           </div>
@@ -4770,7 +5033,7 @@ function translateCardNameToFr(name){
           set: c.set ? c.set.name : '',
           num: c.number + (c.set ? '/' + (c.set.printedTotal || c.set.total || '?') : ''),
           img: (c.images && c.images.small) || '',
-          action: () => { if(c.set){ showPokemonSetCards(c.set.id); scrollToCardWhenReady(c.id); } }
+          action: () => openCardDetailModal({tcg:'pokemon', id:c.id, name:displayName, setName:c.set?c.set.name:'', number:c.number, imageUrl:(c.images&&c.images.large)||(c.images&&c.images.small)||'', rarity:c.rarity})
         });
       });
     }
@@ -4780,13 +5043,16 @@ function translateCardNameToFr(name){
         let img = '';
         if(c.image_uris && c.image_uris.small) img = c.image_uris.small;
         else if(c.card_faces && c.card_faces[0] && c.card_faces[0].image_uris) img = c.card_faces[0].image_uris.small;
+        let large = '';
+        if(c.image_uris && c.image_uris.normal) large = c.image_uris.normal;
+        else if(c.card_faces && c.card_faces[0] && c.card_faces[0].image_uris) large = c.card_faces[0].image_uris.normal;
         out.push({
           tcg: 'magic',
           name: c.printed_name || c.name,
           set: c.set_name || '',
           num: c.collector_number || '',
           img,
-          action: () => c.set && (async()=>{ await loadMagicSets(); showMagicSetCards(c.set); scrollToCardWhenReady(c.id); })()
+          action: () => openCardDetailModal({tcg:'magic', id:c.id, name:c.printed_name||c.name, setName:c.set_name||'', number:c.collector_number||'', imageUrl:large||img, rarity:c.rarity})
         });
       });
     }
@@ -4795,17 +5061,14 @@ function translateCardNameToFr(name){
       const lcResults = tasks[2].value.results || tasks[2].value || [];
       const lcArr = Array.isArray(lcResults) ? lcResults : (lcResults.results || []);
       lcArr.slice(0, 5).forEach(c => {
+        const lcImg = (c.image_uris && c.image_uris.digital && (c.image_uris.digital.normal || c.image_uris.digital.small)) || '';
         out.push({
           tcg: 'lorcana',
           name: c.version ? `${c.name} — ${c.version}` : c.name,
           set: c.set ? c.set.name : '',
           num: c.collector_number || '',
-          img: (c.image_uris && c.image_uris.digital && (c.image_uris.digital.normal || c.image_uris.digital.small)) || '',
-          action: () => {
-            const setCode = c.set ? (c.set.code || '') : '';
-            const lcSet = LORCANA_SETS.find(s => s.lorcastCode === setCode);
-            if(lcSet){ showLorcanaSetCards(lcSet.slug); scrollToCardWhenReady(c.id); }
-          }
+          img: lcImg,
+          action: () => openCardDetailModal({tcg:'lorcana', id:c.id, name:c.version?`${c.name} — ${c.version}`:c.name, setName:c.set?c.set.name:'', number:c.collector_number||'', imageUrl:lcImg, rarity:c.rarity})
         });
       });
     }
