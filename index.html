@@ -5061,7 +5061,7 @@ function translateCardNameToFr(name){
     if(timer) clearTimeout(timer);
     if(abort) abort.abort();
     if(q.length < 2){ results.classList.add('hidden'); return; }
-    timer = setTimeout(() => doSearch(q), 400);
+    timer = setTimeout(() => doSearch(q), 250);
   });
 
   input.addEventListener('focus', () => {
@@ -5072,126 +5072,35 @@ function translateCardNameToFr(name){
     if(!box.contains(e.target)) results.classList.add('hidden');
   });
 
-  async function doSearch(q){
-    results.classList.remove('hidden');
-    results.innerHTML = '<div class="search-empty">Recherche…</div>';
-
-    abort = new AbortController();
-    const signal = abort.signal;
-    const qEnc = encodeURIComponent(q);
-
-    // Traduction FR -> EN pour la recherche Pokémon (le dico est en bas du fichier)
-    // On essaie chaque mot du query : si c'est un nom FR, on prend l'EN
-    function translateQueryToEn(query){
-      const words = query.split(/\s+/);
-      const translated = words.map(w => {
-        const en = findPokemonEn(w);
-        return en || w;
-      });
-      const result = translated.join(' ');
-      return result === query ? null : result;
+  // Cache mémoire des recherches récentes (clé = query)
+  const _searchCache = new Map();
+  const SEARCH_CACHE_MAX = 50;
+  function cacheGet(q){ return _searchCache.get(q.toLowerCase()); }
+  function cacheSet(q, v){
+    if(_searchCache.size >= SEARCH_CACHE_MAX){
+      _searchCache.delete(_searchCache.keys().next().value);
     }
-    const qEn = translateQueryToEn(q);
-    const qPokemon = qEn || q;
-    const qPokemonEnc = encodeURIComponent(qPokemon);
+    _searchCache.set(q.toLowerCase(), v);
+  }
 
-    // Détection : si la query ressemble à un numéro de carte (ex: "147" ou "147/086"),
-    // on bascule en recherche par numéro côté API
-    const isCardNumber = /^\d+(\/\d+)?$/.test(q.trim());
-    let pokemonQ, magicQ, lorcanaQ;
-    if(isCardNumber){
-      const parts = q.trim().split('/');
-      const num = parts[0].replace(/^0+/,'') || '0';
-      const total = parts[1] ? parts[1].replace(/^0+/,'') : null;
-      pokemonQ = total ? `number:${num} set.printedTotal:${total}` : `number:${num}`;
-      magicQ = `cn:${num}`;
-      lorcanaQ = `collector_number:${num}`;
-    } else {
-      pokemonQ = `name:*${qPokemon}*`;
-      magicQ = `${q} lang:fr include:multilingual`;
-      lorcanaQ = `name:${q}`;
-    }
+  const TCG_BADGE = {pokemon:'PKMN', magic:'MTG', lorcana:'LCA'};
 
-    const tasks = await Promise.allSettled([
-      // Pokémon
-      fetch(`https://api.pokemontcg.io/v2/cards?q=${encodeURIComponent(pokemonQ)}&pageSize=8&orderBy=-set.releaseDate&select=id,name,number,images,cardmarket,set,rarity`, {signal})
-        .then(r => r.json()).catch(() => ({data: []})),
-      // Magic
-      fetch(`https://api.scryfall.com/cards/search?q=${encodeURIComponent(magicQ)}&order=released&unique=cards`, {signal, headers:{'Accept':'application/json'}})
-        .then(r => r.ok ? r.json() : Promise.resolve({data: []})).catch(() => ({data: []})),
-      // Lorcana
-      fetch(`https://api.lorcast.com/v0/cards/search?q=${encodeURIComponent(lorcanaQ)}`, {signal})
-        .then(r => r.ok ? r.json() : Promise.resolve({results: []})).catch(() => ({results: []})),
-    ]);
+  // Rendu progressif : peut être appelé plusieurs fois avec accumulator
+  function renderProgressive(q, accumulator){
+    const items = [];
+    ['pokemon','magic','lorcana'].forEach(t => { if(accumulator[t]) items.push(...accumulator[t]); });
+    const pending = ['pokemon','magic','lorcana'].filter(t => accumulator[t] === undefined);
 
-    if(signal.aborted) return;
-
-    const out = [];
-    // Pokémon
-    if(tasks[0].status === 'fulfilled'){
-      (tasks[0].value.data || []).slice(0, 5).forEach(c => {
-        // Tenter d'afficher le nom FR si on connaît la traduction inverse
-        let displayName = c.name;
-        for(const [fr, en] of Object.entries(POKE_FR_EN)){
-          // Si le nom EN du Pokémon est dans le nom de la carte, on remplace
-          if(c.name.includes(en) && en.length >= 4){
-            displayName = c.name.replace(en, fr);
-            break;
-          }
-        }
-        out.push({
-          tcg: 'pokemon',
-          name: displayName,
-          set: c.set ? c.set.name : '',
-          num: c.number + (c.set ? '/' + (c.set.printedTotal || c.set.total || '?') : ''),
-          img: (c.images && c.images.small) || '',
-          action: () => openCardDetailModal({tcg:'pokemon', id:c.id, name:displayName, setName:c.set?c.set.name:'', number:c.number, imageUrl:(c.images&&c.images.large)||(c.images&&c.images.small)||'', rarity:c.rarity})
-        });
-      });
-    }
-    // Magic
-    if(tasks[1].status === 'fulfilled'){
-      (tasks[1].value.data || []).slice(0, 5).forEach(c => {
-        let img = '';
-        if(c.image_uris && c.image_uris.small) img = c.image_uris.small;
-        else if(c.card_faces && c.card_faces[0] && c.card_faces[0].image_uris) img = c.card_faces[0].image_uris.small;
-        let large = '';
-        if(c.image_uris && c.image_uris.normal) large = c.image_uris.normal;
-        else if(c.card_faces && c.card_faces[0] && c.card_faces[0].image_uris) large = c.card_faces[0].image_uris.normal;
-        out.push({
-          tcg: 'magic',
-          name: c.printed_name || c.name,
-          set: c.set_name || '',
-          num: c.collector_number || '',
-          img,
-          action: () => openCardDetailModal({tcg:'magic', id:c.id, name:c.printed_name||c.name, setName:c.set_name||'', number:c.collector_number||'', imageUrl:large||img, rarity:c.rarity})
-        });
-      });
-    }
-    // Lorcana
-    if(tasks[2].status === 'fulfilled'){
-      const lcResults = tasks[2].value.results || tasks[2].value || [];
-      const lcArr = Array.isArray(lcResults) ? lcResults : (lcResults.results || []);
-      lcArr.slice(0, 5).forEach(c => {
-        const lcImg = (c.image_uris && c.image_uris.digital && (c.image_uris.digital.normal || c.image_uris.digital.small)) || '';
-        out.push({
-          tcg: 'lorcana',
-          name: c.version ? `${c.name} — ${c.version}` : c.name,
-          set: c.set ? c.set.name : '',
-          num: c.collector_number || '',
-          img: lcImg,
-          action: () => openCardDetailModal({tcg:'lorcana', id:c.id, name:c.version?`${c.name} — ${c.version}`:c.name, setName:c.set?c.set.name:'', number:c.collector_number||'', imageUrl:lcImg, rarity:c.rarity})
-        });
-      });
-    }
-
-    if(out.length === 0){
+    if(items.length === 0 && pending.length === 0){
       results.innerHTML = '<div class="search-empty">Aucun résultat pour « ' + escapeHtml(q) + ' »</div>';
       return;
     }
+    if(items.length === 0){
+      results.innerHTML = '<div class="search-empty">Recherche en cours… <span style="opacity:.5">(' + pending.map(t=>TCG_BADGE[t]).join(', ') + ')</span></div>';
+      return;
+    }
 
-    const TCG_BADGE = {pokemon:'PKMN', magic:'MTG', lorcana:'LCA'};
-    results.innerHTML = out.map((r, i) => `
+    const html = items.map((r, i) => `
       <div class="search-result" data-idx="${i}">
         ${r.img ? `<img src="${r.img}" alt="" loading="lazy">` : `<div style="width:36px;height:50px;background:#0c0a1f;border-radius:4px;flex-shrink:0"></div>`}
         <div class="search-result-info">
@@ -5200,9 +5109,14 @@ function translateCardNameToFr(name){
         </div>
         <span class="search-tcg-badge ${r.tcg}">${TCG_BADGE[r.tcg]}</span>
       </div>
-    `).join('') + `<div class="search-see-all" data-see-all>⌕ Voir tous les résultats pour « ${escapeHtml(q)} » →</div>`;
+    `).join('');
+    const pendingHtml = pending.length > 0
+      ? `<div class="search-empty" style="font-size:11px;opacity:.6;padding:6px 12px">Chargement ${pending.map(t=>TCG_BADGE[t]).join(', ')}…</div>`
+      : '';
+    const seeAllHtml = `<div class="search-see-all" data-see-all>⌕ Voir tous les résultats pour « ${escapeHtml(q)} » →</div>`;
+    results.innerHTML = html + pendingHtml + seeAllHtml;
 
-    // Click sur "Voir tous"
+    // Wire "Voir tous"
     const seeAll = results.querySelector('[data-see-all]');
     if(seeAll){
       const seeAllHandler = (e) => {
@@ -5214,19 +5128,144 @@ function translateCardNameToFr(name){
       seeAll.addEventListener('mousedown', seeAllHandler);
       seeAll.addEventListener('touchstart', seeAllHandler, {passive:false});
     }
-
+    // Wire clicks
     results.querySelectorAll('.search-result').forEach((el, i) => {
-      // On utilise mousedown/touchstart pour fire AVANT le blur du clavier mobile
-      // (sinon iOS Safari annule le click quand le viewport remue)
       const handler = (e) => {
         e.preventDefault();
         results.classList.add('hidden');
         input.value = '';
         input.blur();
-        try{ out[i].action(); }catch(err){ console.error('Search action error:', err); }
+        try{ items[i].action(); }catch(err){ console.error('Search action error:', err); }
       };
       el.addEventListener('mousedown', handler);
       el.addEventListener('touchstart', handler, {passive:false});
+    });
+  }
+
+  async function doSearch(q){
+    // Cache hit ?
+    const cached = cacheGet(q);
+    if(cached){
+      results.classList.remove('hidden');
+      renderProgressive(q, cached);
+      return;
+    }
+
+    results.classList.remove('hidden');
+    results.innerHTML = '<div class="search-empty">Recherche…</div>';
+
+    abort = new AbortController();
+    const signal = abort.signal;
+
+    // Traduction FR -> EN pour Pokémon
+    function translateQueryToEn(query){
+      const words = query.split(/\s+/);
+      const translated = words.map(w => findPokemonEn(w) || w);
+      const result = translated.join(' ');
+      return result === query ? null : result;
+    }
+    const qEn = translateQueryToEn(q);
+    const qPokemon = qEn || q;
+
+    // Détection numéro vs nom
+    const isCardNumber = /^\d+(\/\d+)?$/.test(q.trim());
+    let pokemonQ, magicQ, lorcanaQ;
+    if(isCardNumber){
+      const parts = q.trim().split('/');
+      const num = parts[0].replace(/^0+/,'') || '0';
+      const total = parts[1] ? parts[1].replace(/^0+/,'') : null;
+      pokemonQ = total ? `number:${num} set.printedTotal:${total}` : `number:${num}`;
+      magicQ = `cn:${num}`;
+      lorcanaQ = `collector_number:${num}`;
+    } else {
+      // OPTIMISATION : prefix match (rapide côté serveur) au lieu de contains
+      pokemonQ = `name:${qPokemon}*`;
+      magicQ = `${q} lang:fr include:multilingual`;
+      lorcanaQ = `name:${q}`;
+    }
+
+    const accumulator = {}; // {pokemon: [...], magic: [...], lorcana: [...]}
+
+    // Lance les 3 fetches en parallèle, render après chaque arrivée
+    const fetchPokemon = (async () => {
+      try {
+        const url = isCardNumber
+          ? `https://api.pokemontcg.io/v2/cards?q=${encodeURIComponent(pokemonQ)}&pageSize=8&orderBy=-set.releaseDate&select=id,name,number,images,cardmarket,set,rarity`
+          : `https://api.pokemontcg.io/v2/cards?q=${encodeURIComponent(pokemonQ)}&pageSize=8&select=id,name,number,images,cardmarket,set,rarity`;
+        const res = await fetch(url, {signal});
+        if(!res.ok){ accumulator.pokemon = []; return; }
+        const data = await res.json();
+        const items = (data.data || []).slice(0, 5).map(c => {
+          let displayName = c.name;
+          for(const [fr, en] of Object.entries(POKE_FR_EN)){
+            if(en.length >= 4 && c.name.includes(en)){ displayName = c.name.replace(en, fr); break; }
+          }
+          return {
+            tcg: 'pokemon',
+            name: displayName,
+            set: c.set ? c.set.name : '',
+            num: c.number + (c.set ? '/' + (c.set.printedTotal || c.set.total || '?') : ''),
+            img: (c.images && c.images.small) || '',
+            action: () => openCardDetailModal({tcg:'pokemon', id:c.id, name:displayName, setName:c.set?c.set.name:'', number:c.number, imageUrl:(c.images&&c.images.large)||(c.images&&c.images.small)||'', rarity:c.rarity})
+          };
+        });
+        accumulator.pokemon = items;
+      } catch(e){ if(e.name !== 'AbortError') console.warn('Pokemon search err:', e); accumulator.pokemon = []; }
+      if(!signal.aborted) renderProgressive(q, accumulator);
+    })();
+
+    const fetchMagic = (async () => {
+      try {
+        const url = `https://api.scryfall.com/cards/search?q=${encodeURIComponent(magicQ)}&order=released&unique=cards`;
+        const res = await fetch(url, {signal, headers:{'Accept':'application/json'}});
+        if(!res.ok){ accumulator.magic = []; return; }
+        const data = await res.json();
+        const items = (data.data || []).slice(0, 5).map(c => {
+          let img = '';
+          if(c.image_uris && c.image_uris.small) img = c.image_uris.small;
+          else if(c.card_faces && c.card_faces[0] && c.card_faces[0].image_uris) img = c.card_faces[0].image_uris.small;
+          let large = '';
+          if(c.image_uris && c.image_uris.normal) large = c.image_uris.normal;
+          else if(c.card_faces && c.card_faces[0] && c.card_faces[0].image_uris) large = c.card_faces[0].image_uris.normal;
+          return {
+            tcg: 'magic',
+            name: c.printed_name || c.name,
+            set: c.set_name || '',
+            num: c.collector_number || '',
+            img,
+            action: () => openCardDetailModal({tcg:'magic', id:c.id, name:c.printed_name||c.name, setName:c.set_name||'', number:c.collector_number||'', imageUrl:large||img, rarity:c.rarity})
+          };
+        });
+        accumulator.magic = items;
+      } catch(e){ if(e.name !== 'AbortError') console.warn('Magic search err:', e); accumulator.magic = []; }
+      if(!signal.aborted) renderProgressive(q, accumulator);
+    })();
+
+    const fetchLorcana = (async () => {
+      try {
+        const res = await fetch(`https://api.lorcast.com/v0/cards/search?q=${encodeURIComponent(lorcanaQ)}`, {signal});
+        if(!res.ok){ accumulator.lorcana = []; return; }
+        const data = await res.json();
+        const lcArr = data.results || data || [];
+        const items = (Array.isArray(lcArr) ? lcArr : (lcArr.results || [])).slice(0, 5).map(c => {
+          const lcImg = (c.image_uris && c.image_uris.digital && (c.image_uris.digital.normal || c.image_uris.digital.small)) || '';
+          return {
+            tcg: 'lorcana',
+            name: c.version ? `${c.name} — ${c.version}` : c.name,
+            set: c.set ? c.set.name : '',
+            num: c.collector_number || '',
+            img: lcImg,
+            action: () => openCardDetailModal({tcg:'lorcana', id:c.id, name:c.version?`${c.name} — ${c.version}`:c.name, setName:c.set?c.set.name:'', number:c.collector_number||'', imageUrl:lcImg, rarity:c.rarity})
+          };
+        });
+        accumulator.lorcana = items;
+      } catch(e){ if(e.name !== 'AbortError') console.warn('Lorcana search err:', e); accumulator.lorcana = []; }
+      if(!signal.aborted) renderProgressive(q, accumulator);
+    })();
+
+    // Quand les 3 sont terminés, on sauve en cache
+    Promise.all([fetchPokemon, fetchMagic, fetchLorcana]).then(() => {
+      if(!signal.aborted) cacheSet(q, accumulator);
     });
   }
 })();
