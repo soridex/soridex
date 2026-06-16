@@ -199,7 +199,7 @@
   .set-card{background:var(--surf);border:1px solid var(--line2);border-radius:14px;overflow:hidden;cursor:pointer;transition:.2s;display:flex;flex-direction:column}
   .set-card:hover{transform:translateY(-4px);border-color:var(--gold-deep);box-shadow:0 10px 28px rgba(212,168,90,.12)}
   .set-img{width:100%;aspect-ratio:16/9;background:radial-gradient(circle at 50% 50%, rgba(212,168,90,.1), transparent 65%),linear-gradient(135deg,#221d44,#0f0d24);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;border-bottom:1px solid var(--line2)}
-  .set-img img{width:100%;height:100%;object-fit:contain;padding:14px}
+  .set-img img{width:100%;height:100%;object-fit:contain;padding:14px;mix-blend-mode:screen;filter:contrast(1.1) saturate(1.15)}
   .set-img .ph{color:var(--gold-2);font-size:14px;font-weight:700;letter-spacing:.04em;text-align:center;padding:0 16px}
   .set-body{padding:14px 16px 16px}
   .set-name{font-weight:700;color:#fff;font-size:15px;margin-bottom:4px;line-height:1.3}
@@ -3294,6 +3294,7 @@ async function logout(){
   // Reset caches : pas de fuite entre comptes sur le même navigateur
   _pfCache = []; _wishCache = []; _bizCache = {folders:[]};
   try { localStorage.removeItem(PF_KEY); } catch(e){}
+  try { localStorage.removeItem(PF_SYNCED_KEY); } catch(e){}
   try { localStorage.removeItem(WISH_FOLDERS_KEY); } catch(e){}
   try { localStorage.removeItem(BIZ_KEY); } catch(e){}
   showView('home');
@@ -3470,11 +3471,20 @@ if(lgBtn) lgBtn.addEventListener('click',logout);
 
 /* === PORTFOLIOS === */
 const PF_KEY='soridex_portfolios_v1'; // legacy cache only
+const PF_SYNCED_KEY='soridex_portfolios_synced_ids_v1'; // IDs ayant déjà été confirmés en DB (pour distinguer "unsynced" vs "supprimé ailleurs")
 // === Cache mémoire + sync Supabase (portfolios) ===
 // _pfCache déjà déclaré au boot
 let _pfDirty = false;
 let _pfSyncTimer = null;
 const PF_SYNC_DEBOUNCE = 400;
+
+function _getSyncedIds(){
+  try { return new Set(JSON.parse(localStorage.getItem(PF_SYNCED_KEY) || '[]')); }
+  catch(_){ return new Set(); }
+}
+function _setSyncedIds(set){
+  try { localStorage.setItem(PF_SYNCED_KEY, JSON.stringify([...set])); } catch(_){}
+}
 
 function getPortfolios(){ return _pfCache; }
 function savePortfolios(a, opts){
@@ -3512,6 +3522,11 @@ async function flushPortfoliosToSb(){
       const { error } = await sb.from('portfolios').upsert(rows);
       if(error) throw error;
     }
+    // Mémoriser les IDs maintenant confirmés en DB, et retirer les supprimés
+    const syncedIds = _getSyncedIds();
+    snapshot.forEach(p => syncedIds.add(p.id));
+    toDelete.forEach(id => syncedIds.delete(id));
+    _setSyncedIds(syncedIds);
     // Succès : on reset le flag d'erreur si on en avait un
     if(window._pfSyncErrorShown){ window._pfSyncErrorShown = false; }
   } catch(e){
@@ -3541,22 +3556,33 @@ async function loadPortfoliosFromSb(){
       if(!Array.isArray(obj.cards)) obj.cards = [];
       return obj;
     });
-    // MERGE : récupère le cache local et garde les portfolios présents en local
-    // mais absents de Supabase (= jamais syncés à cause d'un refresh trop rapide
-    // ou d'un network kill au beforeunload). On les réinjecte et on relance un flush.
+    // MERGE intelligent : on distingue
+    //   - "vraiment unsynced" : présent en local, jamais arrivé sur Supabase → on le réinjecte + flush
+    //   - "supprimé ailleurs" : présent en local, déjà été sur Supabase, mais plus là → on l'efface en local
     let localCache = [];
     try { localCache = JSON.parse(localStorage.getItem(PF_KEY) || '[]'); } catch(_){}
     const remoteIds = new Set(remote.map(p => p.id));
-    const unsynced = (Array.isArray(localCache) ? localCache : []).filter(p => p && p.id && !remoteIds.has(p.id));
+    const syncedIds = _getSyncedIds();
+    const localOnly = (Array.isArray(localCache) ? localCache : []).filter(p => p && p.id && !remoteIds.has(p.id));
+    const unsynced = localOnly.filter(p => !syncedIds.has(p.id));
+    const remotelyDeleted = localOnly.filter(p => syncedIds.has(p.id));
+    if(remotelyDeleted.length){
+      console.log('[soridex] suppression locale de', remotelyDeleted.length, 'portfolio(s) supprimé(s) sur un autre appareil');
+      // Nettoyer aussi du set "synced" (puisqu'ils ne sont plus en DB)
+      remotelyDeleted.forEach(p => syncedIds.delete(p.id));
+      _setSyncedIds(syncedIds);
+    }
     if(unsynced.length){
       console.warn('[soridex] récupération de', unsynced.length, 'portfolio(s) non syncé(s) depuis le cache local');
       _pfCache = remote.concat(unsynced);
       _pfDirty = true;
-      // Re-push vers Supabase (sans bloquer le boot)
       setTimeout(() => { try { flushPortfoliosToSb(); } catch(e){ console.error(e); } }, 0);
     } else {
       _pfCache = remote;
     }
+    // Initialise le set "synced" avec les IDs remote (utile au tout premier load)
+    remote.forEach(p => syncedIds.add(p.id));
+    _setSyncedIds(syncedIds);
     try { localStorage.setItem(PF_KEY, JSON.stringify(_pfCache)); } catch(e){}
   } catch(e){
     console.error('loadPortfoliosFromSb:', e);
