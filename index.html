@@ -5829,7 +5829,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if(typeof resetAuthForm === 'function') resetAuthForm('signup');
   });
   if(discover) discover.addEventListener('click', () => {
-    showView('sets-pokemon');
+    // S'assurer qu'on est bien sur la home, puis scroller vers les vignettes TCG
+    showView('home');
+    setTimeout(() => {
+      const target = document.querySelector('.tcg-carousel-wrap');
+      if(target) target.scrollIntoView({behavior:'smooth', block:'start'});
+    }, 50);
   });
 });
 
