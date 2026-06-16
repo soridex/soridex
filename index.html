@@ -3507,8 +3507,6 @@ async function flushPortfoliosToSb(){
       const rows = snapshot.map(pf => ({
         id: pf.id,
         user_id: currentUser.id,
-        name: pf.name || 'Sans nom',
-        tcg: ['pokemon','lorcana','magic','mixed'].includes(pf.tcg) ? pf.tcg : 'mixed',
         data: pf
       }));
       const { error } = await sb.from('portfolios').upsert(rows);
