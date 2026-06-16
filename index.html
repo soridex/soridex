@@ -1366,6 +1366,39 @@
     .acc-tab .ico{font-size:14px}
   }
 
+  /* ============ SUBSCRIPTION / PRO ============ */
+  .sub-pricing-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:22px;margin:30px 0}
+  .sub-card{background:var(--surf);border:1px solid var(--line2);border-radius:18px;padding:28px;position:relative;display:flex;flex-direction:column;gap:18px}
+  .sub-card-pro{border:2px solid var(--gold-deep);background:linear-gradient(180deg,rgba(212,168,90,.06),var(--surf) 40%);box-shadow:0 12px 40px rgba(212,168,90,.12)}
+  .sub-pro-ribbon{position:absolute;top:-12px;right:20px;background:linear-gradient(135deg,var(--gold-2),var(--gold-deep));color:#1a1208;font-size:10px;font-weight:700;letter-spacing:.12em;padding:6px 12px;border-radius:6px}
+  .sub-card-head{padding-bottom:18px;border-bottom:1px solid var(--line2)}
+  .sub-card-name{font-size:22px;font-weight:700;color:var(--tx);font-family:"Cinzel",serif;margin-bottom:8px}
+  .sub-pro-diamond{font-size:18px;margin-left:4px}
+  .sub-card-price{font-family:"Cinzel",serif;margin-bottom:8px}
+  .sub-card-price .amount{font-size:36px;font-weight:700;color:var(--gold-2)}
+  .sub-card-price .period{font-size:13px;color:var(--mut);margin-left:6px}
+  .sub-card-tagline{font-size:13px;color:var(--mut);line-height:1.5}
+  .sub-features{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:10px;flex:1}
+  .sub-features li{font-size:13px;color:var(--tx);line-height:1.5;padding-left:2px}
+  .sub-features strong{color:var(--gold-2);font-weight:700}
+  .sub-card-cta{margin-top:18px;display:flex;flex-direction:column;gap:10px}
+  .sub-card-cta .btn-gold{width:100%;justify-content:center}
+  .sub-waitlist-note{font-size:11px;color:var(--mut);text-align:center;font-style:italic;margin-top:4px}
+  .badge-current{background:rgba(16,185,129,.15);color:#6ee7b7;border:1px solid rgba(16,185,129,.4);padding:8px 12px;border-radius:8px;font-size:12px;font-weight:600;text-align:center}
+
+  .sub-faq{margin-top:32px;background:var(--surf);border:1px solid var(--line2);border-radius:14px;padding:22px}
+  .sub-faq h3{margin:0 0 16px;font-size:18px;color:var(--tx);font-family:"Cinzel",serif}
+  .sub-faq details{border-bottom:1px solid var(--line2);padding:12px 0}
+  .sub-faq details:last-child{border-bottom:none}
+  .sub-faq summary{font-size:14px;color:var(--tx);cursor:pointer;font-weight:600;padding:6px 0;list-style:none;position:relative;padding-right:24px}
+  .sub-faq summary::-webkit-details-marker{display:none}
+  .sub-faq summary::after{content:"+";position:absolute;right:6px;top:50%;transform:translateY(-50%);color:var(--gold-2);font-size:18px;transition:transform .2s}
+  .sub-faq details[open] summary::after{transform:translateY(-50%) rotate(45deg)}
+  .sub-faq p{margin:8px 0 4px;font-size:13px;color:var(--mut);line-height:1.6}
+
+  .pro-badge{display:inline-block;background:linear-gradient(135deg,var(--gold-2),var(--gold-deep));color:#1a1208;font-size:10px;font-weight:700;letter-spacing:.08em;padding:2px 6px;border-radius:4px;margin-left:6px;vertical-align:middle}
+
+
   /* ============ BUSINESS (achat-revente) ============ */
   .biz-autocomplete-wrap{position:relative}
   .biz-autocomplete-dropdown{position:absolute;top:100%;left:0;right:0;background:var(--surf);border:1px solid var(--gold-deep);border-radius:10px;margin-top:4px;max-height:320px;overflow-y:auto;z-index:1000;box-shadow:0 12px 32px rgba(0,0,0,.6)}
@@ -1755,6 +1788,108 @@
 </section>
 
 <!-- VIEW: COMPTE -->
+<!-- VIEW: SUBSCRIPTION (Pro/Free) -->
+<section class="view" id="view-subscription" hidden>
+  <div class="account-subnav">
+    <a class="acc-tab" href="#" data-nav="parametres"><span class="ico">⚙</span>Paramètres</a>
+    <a class="acc-tab" href="#" data-nav="compte"><span class="ico">📁</span>Portfolios</a>
+    <a class="acc-tab" href="#" data-nav="wishlist"><span class="ico">♥</span>Wishlists</a>
+    <a class="acc-tab" href="#" data-nav="business"><span class="ico">€</span>Business</a>
+    <a class="acc-tab active" href="#" data-nav="subscription"><span class="ico">⭐</span>Abonnement</a>
+  </div>
+  <div class="sets-head">
+    <div>
+      <h2 class="view-title">Soridex Pro</h2>
+      <p class="view-sub">Passe ta collection au niveau supérieur. Pour les flippers sérieux et les collectionneurs avancés.</p>
+    </div>
+    <div id="subCurrentBadge"></div>
+  </div>
+
+  <div class="sub-pricing-grid">
+    <!-- Free card -->
+    <div class="sub-card sub-card-free">
+      <div class="sub-card-head">
+        <div class="sub-card-name">Gratuit</div>
+        <div class="sub-card-price"><span class="amount">0€</span><span class="period">/ pour toujours</span></div>
+        <div class="sub-card-tagline">Tout ce qu'il faut pour gérer sa collection</div>
+      </div>
+      <ul class="sub-features">
+        <li>✓ Portfolios thématiques <strong>illimités</strong></li>
+        <li>✓ Wishlists <strong>illimitées</strong></li>
+        <li>✓ Marquage 1-clic des cartes possédées</li>
+        <li>✓ Partage public de tes portfolios</li>
+        <li>✓ Cotes Cardmarket (refresh manuel)</li>
+        <li>✓ <strong>1 dossier</strong> Business avec <strong>5 transactions max</strong></li>
+        <li>✓ Sync multi-device</li>
+      </ul>
+      <div class="sub-card-cta"><span class="badge-current" id="freeBadge" hidden>✓ Plan actuel</span></div>
+    </div>
+
+    <!-- Pro card -->
+    <div class="sub-card sub-card-pro">
+      <div class="sub-pro-ribbon">RECOMMANDÉ</div>
+      <div class="sub-card-head">
+        <div class="sub-card-name">Pro <span class="sub-pro-diamond">⭐</span></div>
+        <div class="sub-card-price"><span class="amount">4,99€</span><span class="period">/ mois</span></div>
+        <div class="sub-card-tagline">Pour les flippers et collectionneurs sérieux · Early bird : <strong>29€/an</strong> pour les 200 premiers</div>
+      </div>
+      <ul class="sub-features">
+        <li>✓ <strong>Tout du plan gratuit, sans limite</strong></li>
+        <li>⭐ Dossiers Business <strong>illimités</strong> + transactions illimitées</li>
+        <li>⭐ <strong>Alertes prix</strong> (notif quand une carte dépasse ton seuil)</li>
+        <li>⭐ Refresh <strong>automatique</strong> des cotes (1× par jour)</li>
+        <li>⭐ <strong>Statistiques avancées</strong> : évolution collection, ROI par TCG, top performers</li>
+        <li>⭐ <strong>Export CSV / PDF</strong> (pour la compta des revendeurs)</li>
+        <li>⭐ Pas de badge "made with Soridex" sur les portfolios partagés</li>
+        <li>⭐ Thème UI doré exclusif + badge Pro</li>
+      </ul>
+      <div class="sub-card-cta">
+        <span class="badge-current" id="proBadge" hidden>✓ Plan actuel</span>
+        <button class="btn-gold" id="joinWaitlistBtn">Rejoindre la liste d'attente</button>
+        <div class="sub-waitlist-note">Le paiement Stripe arrive bientôt. Inscris-toi pour être prévenue dès le lancement (+ tarif early-bird garanti).</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sub-faq">
+    <h3>Questions fréquentes</h3>
+    <details>
+      <summary>Quand est-ce que le Pro sera dispo ?</summary>
+      <p>D'ici quelques semaines. On finit de poser les briques de paiement (Stripe + webhook Supabase) pour que tout soit propre et fiable dès le jour 1.</p>
+    </details>
+    <details>
+      <summary>Est-ce que je peux annuler à tout moment ?</summary>
+      <p>Oui, le Pro sera mensuel sans engagement. Tu peux annuler en 1 clic depuis ton compte. Si tu prends l'annuel, tu peux annuler la reconduction quand tu veux.</p>
+    </details>
+    <details>
+      <summary>Que devient mes données si je passe Pro puis annule ?</summary>
+      <p>Toutes tes données restent sauvegardées sur ton compte. Tu reviens simplement au plan gratuit avec les limites associées (le contenu au-delà des limites reste lisible mais en lecture seule).</p>
+    </details>
+    <details>
+      <summary>Pourquoi pas d'essai gratuit ?</summary>
+      <p>Tu peux déjà utiliser tout le cœur du produit gratuitement (portfolios + wishlists + sync). Le Pro c'est pour ceux qui veulent débloquer les fonctionnalités avancées dédiées au flip et aux stats. Pas besoin d'essai pour ça.</p>
+    </details>
+  </div>
+</section>
+
+<!-- MODAL: Waitlist Pro -->
+<div class="modal-overlay hidden" id="proWaitlistModal">
+  <div class="modal-box">
+    <button class="modal-close" id="proWaitlistClose">×</button>
+    <h3 class="modal-title">⭐ Rejoindre la liste d'attente Pro</h3>
+    <p class="view-sub" style="margin:0 0 14px">On te prévient par email dès que le Pro est dispo, avec ton tarif early-bird garanti à <strong>29€/an</strong>.</p>
+    <div class="form-field">
+      <label>Email</label>
+      <input type="email" id="proWaitlistEmail" placeholder="ton@email.com" maxlength="120">
+    </div>
+    <div id="proWaitlistMsg" style="min-height:20px;margin:8px 0;font-size:13px"></div>
+    <div class="modal-actions">
+      <button class="btn-gold-outline" id="proWaitlistCancel">Plus tard</button>
+      <button class="btn-gold" id="proWaitlistConfirm">M'inscrire</button>
+    </div>
+  </div>
+</div>
+
 <!-- VIEW: PARAMETRES (compte settings) -->
 <section class="view" id="view-parametres" hidden>
   <div class="account-subnav">
@@ -1762,6 +1897,7 @@
     <a class="acc-tab" href="#" data-nav="compte"><span class="ico">📁</span>Portfolios</a>
     <a class="acc-tab" href="#" data-nav="wishlist"><span class="ico">♥</span>Wishlists</a>
     <a class="acc-tab" href="#" data-nav="business"><span class="ico">€</span>Business</a>
+    <a class="acc-tab" href="#" data-nav="subscription"><span class="ico">⭐</span>Abonnement</a>
   </div>
   <div class="sets-head">
     <div>
@@ -1786,6 +1922,7 @@
     <a class="acc-tab active" href="#" data-nav="compte"><span class="ico">📁</span>Portfolios</a>
     <a class="acc-tab" href="#" data-nav="wishlist"><span class="ico">♥</span>Wishlists</a>
     <a class="acc-tab" href="#" data-nav="business"><span class="ico">€</span>Business</a>
+    <a class="acc-tab" href="#" data-nav="subscription"><span class="ico">⭐</span>Abonnement</a>
   </div>
   <div class="sets-head">
     <div>
@@ -1939,6 +2076,7 @@
     <a class="acc-tab" href="#" data-nav="compte"><span class="ico">📁</span>Portfolios</a>
     <a class="acc-tab active" href="#" data-nav="wishlist"><span class="ico">♥</span>Wishlists</a>
     <a class="acc-tab" href="#" data-nav="business"><span class="ico">€</span>Business</a>
+    <a class="acc-tab" href="#" data-nav="subscription"><span class="ico">⭐</span>Abonnement</a>
   </div>
   <div class="sets-head">
     <div>
@@ -2049,6 +2187,7 @@
     <a class="acc-tab" href="#" data-nav="compte"><span class="ico">📁</span>Portfolios</a>
     <a class="acc-tab" href="#" data-nav="wishlist"><span class="ico">♥</span>Wishlists</a>
     <a class="acc-tab active" href="#" data-nav="business"><span class="ico">€</span>Business</a>
+    <a class="acc-tab" href="#" data-nav="subscription"><span class="ico">⭐</span>Abonnement</a>
   </div>
   <div class="sets-head">
     <div>
@@ -2856,7 +2995,7 @@ new Chart(ctx, {
 })();
 
 /* === ROUTING === */
-const ALL_VIEWS = ['home','login','compte','sets-pokemon','sets-lorcana','sets-magic','era-detail','set-detail','pf-detail','wishlist','wish-detail','global-search','shop','guide','guide-article','business','business-folder','parametres'];
+const ALL_VIEWS = ['home','login','compte','sets-pokemon','sets-lorcana','sets-magic','era-detail','set-detail','pf-detail','wishlist','wish-detail','global-search','shop','guide','guide-article','business','business-folder','parametres','subscription'];
 function showView(name){
   if(!ALL_VIEWS.includes(name)) name='home';
   document.querySelectorAll('.view').forEach(v => v.hidden = (v.id !== 'view-'+name));
@@ -2895,6 +3034,13 @@ try { _wishCache = JSON.parse(localStorage.getItem('soridex_wishlist_folders_v1'
 try { _bizCache = JSON.parse(localStorage.getItem('soridex_business_v1')||'{"folders":[]}'); if(!Array.isArray(_bizCache.folders)) _bizCache.folders = []; } catch(e){}
 
 function getUser(){ return currentUser; }
+function isProUser(){ return !!(currentUser && currentUser.isPro); }
+
+// Constantes des limites du plan gratuit
+const FREE_LIMITS = {
+  bizFolders: 1,
+  bizTxPerFolder: 5
+};
 
 async function logout(){
   try { if(sb) await sb.auth.signOut(); } catch(e){ console.warn('signOut error', e); }
@@ -2915,17 +3061,21 @@ async function hydrateSession(){
   try {
     const { data: { session } } = await sb.auth.getSession();
     if(session && session.user){
-      // Récupère le pseudo depuis le profile (créé par le trigger)
+      // Récupère le pseudo + statut Pro depuis le profile
       let pseudo = null;
+      let isPro = false;
       try {
-        const { data: profile } = await sb.from('profiles').select('pseudo, username').eq('id', session.user.id).maybeSingle();
-        if(profile) pseudo = profile.pseudo || profile.username || null;
+        const { data: profile } = await sb.from('profiles').select('pseudo, username, is_pro, pro_until').eq('id', session.user.id).maybeSingle();
+        if(profile){
+          pseudo = profile.pseudo || profile.username || null;
+          isPro = !!profile.is_pro || (profile.pro_until && new Date(profile.pro_until) > new Date());
+        }
       } catch(e){ console.warn('profile fetch err', e); }
       if(!pseudo){
         pseudo = (session.user.user_metadata && (session.user.user_metadata.pseudo || session.user.user_metadata.username))
               || (session.user.email ? session.user.email.split('@')[0] : 'user');
       }
-      currentUser = { id: session.user.id, email: session.user.email, pseudo };
+      currentUser = { id: session.user.id, email: session.user.email, pseudo, isPro };
       try { localStorage.setItem(AUTH_KEY, JSON.stringify(currentUser)); } catch(e){}
       // Charge toutes les données utilisateur depuis Supabase
       await loadAllUserDataFromSb();
@@ -6717,6 +6867,7 @@ document.addEventListener('click', (e)=>{
     else if(n==='wishlist') showWishlist();
     else if(n==='business') showBusiness();
     else if(n==='parametres') showParametres();
+    else if(n==='subscription') showSubscription();
     return;
   }
 
@@ -6909,6 +7060,69 @@ function showParametres(){
   renderParametres();
 }
 
+function showSubscription(){
+  showView('subscription');
+  renderSubscription();
+}
+function renderSubscription(){
+  const pro = isProUser();
+  const freeBadge = document.getElementById('freeBadge');
+  const proBadge = document.getElementById('proBadge');
+  const currentBadge = document.getElementById('subCurrentBadge');
+  if(freeBadge) freeBadge.hidden = pro;
+  if(proBadge) proBadge.hidden = !pro;
+  if(currentBadge){
+    if(pro){
+      currentBadge.innerHTML = '<span class="pro-badge" style="font-size:13px;padding:6px 12px">⭐ Compte Pro actif</span>';
+    } else {
+      currentBadge.innerHTML = '<span style="font-size:13px;color:var(--mut)">Plan actuel : Gratuit</span>';
+    }
+  }
+  // Hide the join-waitlist button if user is already Pro
+  const joinBtn = document.getElementById('joinWaitlistBtn');
+  if(joinBtn) joinBtn.style.display = pro ? 'none' : '';
+}
+
+// ----- Waitlist Pro -----
+function openProWaitlistModal(){
+  const m = document.getElementById('proWaitlistModal');
+  if(!m) return;
+  const emailEl = document.getElementById('proWaitlistEmail');
+  const msgEl = document.getElementById('proWaitlistMsg');
+  if(emailEl) emailEl.value = (currentUser && currentUser.email) || '';
+  if(msgEl) msgEl.innerHTML = '';
+  m.classList.remove('hidden');
+  setTimeout(()=>emailEl && emailEl.focus(), 50);
+}
+function closeProWaitlistModal(){
+  const m = document.getElementById('proWaitlistModal');
+  if(m) m.classList.add('hidden');
+}
+async function confirmProWaitlist(){
+  const email = (document.getElementById('proWaitlistEmail').value||'').trim();
+  const msgEl = document.getElementById('proWaitlistMsg');
+  if(!email || !/.+@.+\..+/.test(email)){
+    msgEl.innerHTML = '<span style="color:#ef4444">Email invalide.</span>';
+    return;
+  }
+  msgEl.innerHTML = '<span style="color:var(--mut)">Inscription en cours…</span>';
+  if(!sb){ msgEl.innerHTML = '<span style="color:#ef4444">Service indisponible, réessaie plus tard.</span>'; return; }
+  try {
+    const row = {
+      email,
+      user_id: currentUser ? currentUser.id : null,
+      source: 'webapp'
+    };
+    const { error } = await sb.from('pro_waitlist').upsert(row, { onConflict: 'email' });
+    if(error) throw error;
+    msgEl.innerHTML = '<span style="color:#10b981">🎉 Tu es inscrite ! On te prévient dès le lancement Pro.</span>';
+    setTimeout(closeProWaitlistModal, 1800);
+  } catch(e){
+    console.warn('waitlist err', e);
+    msgEl.innerHTML = '<span style="color:#ef4444">Erreur, réessaie : '+(e.message||'').slice(0,80)+'</span>';
+  }
+}
+
 function renderParametres(){
   const user = getUser();
   if(!user) return;
@@ -7099,6 +7313,14 @@ function confirmBizFolder(){
   const tcg = document.getElementById('bizFolderTcg').value;
   if(!name){ alert('Donne un nom au dossier'); return; }
   const data = getBusinessData();
+  // Gate Free : 1 dossier max
+  if(!bizEditingFolderId && !isProUser() && (data.folders||[]).length >= FREE_LIMITS.bizFolders){
+    if(confirm(`Le plan gratuit est limité à ${FREE_LIMITS.bizFolders} dossier Business.\n\nPasse en Pro pour des dossiers illimités + alertes prix + stats avancées.\n\nVoir les avantages Pro ?`)){
+      closeBizFolderModal();
+      showSubscription();
+    }
+    return;
+  }
   if(bizEditingFolderId){
     const f = data.folders.find(x => x.id === bizEditingFolderId);
     if(f){ f.name = name; f.tcg = tcg; }
@@ -7247,6 +7469,15 @@ function confirmTransaction(){
   if(!cardName){ alert('Indique au moins le nom de la carte'); return; }
   const pa = parseFloat(document.getElementById('bizTxPurchasePrice').value);
   if(isNaN(pa) || pa < 0){ alert('Indique un prix d\'achat valide'); return; }
+
+  // Gate Free : max 5 transactions par dossier (en création, pas en édition)
+  if(!bizEditingTxId && !isProUser() && (f.transactions||[]).length >= FREE_LIMITS.bizTxPerFolder){
+    if(confirm(`Le plan gratuit limite à ${FREE_LIMITS.bizTxPerFolder} transactions par dossier.\n\nPasse en Pro pour des transactions illimitées + dossiers illimités + alertes prix.\n\nVoir les avantages Pro ?`)){
+      closeBizTxModal();
+      showSubscription();
+    }
+    return;
+  }
 
   const status = document.querySelector('input[name="bizTxStatus"]:checked').value;
   const tx = {
@@ -7702,6 +7933,16 @@ document.addEventListener('DOMContentLoaded', function(){
   });
   const refreshBtn = document.getElementById('bizRefreshPricesBtn');
   if(refreshBtn) refreshBtn.addEventListener('click', bizRefreshFolderPrices);
+
+  // Subscription waitlist
+  const joinBtn = document.getElementById('joinWaitlistBtn');
+  if(joinBtn) joinBtn.addEventListener('click', openProWaitlistModal);
+  const wlClose = document.getElementById('proWaitlistClose');
+  if(wlClose) wlClose.addEventListener('click', closeProWaitlistModal);
+  const wlCancel = document.getElementById('proWaitlistCancel');
+  if(wlCancel) wlCancel.addEventListener('click', closeProWaitlistModal);
+  const wlConfirm = document.getElementById('proWaitlistConfirm');
+  if(wlConfirm) wlConfirm.addEventListener('click', confirmProWaitlist);
 });
 
 /* === ROUTE INITIALE === */
@@ -7711,6 +7952,7 @@ document.addEventListener('DOMContentLoaded', function(){
   else if(hash==='wishlist') showWishlist();
   else if(hash==='business' || hash==='business-folder') showBusiness();
   else if(hash==='parametres') showParametres();
+  else if(hash==='subscription') showSubscription();
   else if(ALL_VIEWS.includes(hash)) showView(hash);
   else showView('home');
 })();
