@@ -164,6 +164,8 @@
   .auth-field input{width:100%;background:rgba(255,255,255,.04);border:1px solid var(--line2);border-radius:9px;color:var(--tx);font-family:"Outfit";font-size:14px;padding:11px 14px;outline:none;transition:.18s}
   .auth-field input:focus{border-color:var(--gold);background:rgba(212,168,90,.06);box-shadow:0 0 0 3px rgba(212,168,90,.12)}
   .auth-submit{width:100%;margin-top:6px}
+  .auth-forgot-row{text-align:center;margin-top:14px}
+  .auth-forgot-row a:hover{color:var(--gold-2)}
   .auth-msg{font-size:13px;padding:10px 12px;border-radius:8px;margin-bottom:14px}
   .auth-msg.err{background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);color:#fca5a5}
   .auth-msg.ok{background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.3);color:#86efac}
@@ -1967,7 +1969,17 @@
       <label for="authPass">Mot de passe</label>
       <input type="password" id="authPass" placeholder="••••••••">
     </div>
+    <div class="auth-field" id="fieldPassConfirm" hidden>
+      <label for="authPassConfirm">Confirmer le nouveau mot de passe</label>
+      <input type="password" id="authPassConfirm" placeholder="••••••••">
+    </div>
     <button class="btn-gold auth-submit" id="authSubmit">Se connecter</button>
+    <div class="auth-forgot-row" id="forgotRow">
+      <a href="#" id="forgotLink" style="color:var(--mut);font-size:12px;text-decoration:underline;cursor:pointer">Mot de passe oublié ?</a>
+    </div>
+    <div class="auth-forgot-row" id="backToLoginRow" hidden>
+      <a href="#" id="backToLoginLink" style="color:var(--mut);font-size:12px;text-decoration:underline;cursor:pointer">← Retour à la connexion</a>
+    </div>
   </div>
 </section>
 
@@ -3419,11 +3431,39 @@ function goToAccount(){const u=getUser(); if(u){showView('compte'); renderCompte
 let authMode='login';
 function resetAuthForm(mode){
   authMode=mode;
+  // Tabs : visibles uniquement pour login/signup
+  const tabsBox = document.querySelector('.auth-tabs');
+  if(tabsBox) tabsBox.style.display = (mode==='login'||mode==='signup') ? '' : 'none';
   document.querySelectorAll('.auth-tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===mode));
-  document.getElementById('fieldPseudo').hidden = (mode!=='signup');
-  document.getElementById('authTitle').textContent = mode==='signup'?'Créer un compte':'Se connecter';
-  document.getElementById('authSub').textContent = mode==='signup'?'Crée ton compte pour commencer ta collection.':'Accède à tes portfolios et à ta wishlist.';
-  document.getElementById('authSubmit').textContent = mode==='signup'?'Créer le compte':'Se connecter';
+  // Champs visibles selon mode
+  document.getElementById('fieldPseudo').hidden       = (mode!=='signup');
+  document.getElementById('authEmail').parentElement.hidden = (mode==='reset');
+  document.getElementById('authPass').parentElement.hidden  = (mode==='forgot');
+  document.getElementById('fieldPassConfirm').hidden  = (mode!=='reset');
+  // Liens
+  document.getElementById('forgotRow').hidden      = (mode!=='login');
+  document.getElementById('backToLoginRow').hidden = (mode==='login'||mode==='signup');
+  // Placeholders / Labels
+  if(mode==='reset'){
+    document.getElementById('authPass').placeholder = 'Nouveau mot de passe';
+    const lbl = document.querySelector('label[for="authPass"]');
+    if(lbl) lbl.textContent = 'Nouveau mot de passe';
+  } else {
+    document.getElementById('authPass').placeholder = '••••••••';
+    const lbl = document.querySelector('label[for="authPass"]');
+    if(lbl) lbl.textContent = 'Mot de passe';
+  }
+  // Titre / Sous-titre / Bouton
+  const titles = {
+    login:  {t:'Se connecter',         s:'Accède à tes portfolios et à ta wishlist.', btn:'Se connecter'},
+    signup: {t:'Créer un compte',      s:'Crée ton compte pour commencer ta collection.', btn:'Créer le compte'},
+    forgot: {t:'Mot de passe oublié',  s:'Entre ton email, on t\'envoie un lien pour réinitialiser ton mot de passe.', btn:'Envoyer le lien'},
+    reset:  {t:'Nouveau mot de passe', s:'Choisis ton nouveau mot de passe.', btn:'Modifier le mot de passe'}
+  };
+  const cfg = titles[mode] || titles.login;
+  document.getElementById('authTitle').textContent  = cfg.t;
+  document.getElementById('authSub').textContent    = cfg.s;
+  document.getElementById('authSubmit').textContent = cfg.btn;
   document.getElementById('authMsg').innerHTML = '';
 }
 function showAuthMsg(t,k){document.getElementById('authMsg').innerHTML=`<div class="auth-msg ${k}">${t}</div>`;}
@@ -3464,12 +3504,62 @@ async function handleAuthSubmit(){
   const email=document.getElementById('authEmail').value.trim();
   const pass=document.getElementById('authPass').value;
   const pseudo=document.getElementById('authPseudo').value.trim();
+
+  const btn = document.getElementById('authSubmit');
+  const origTxt = btn.textContent;
+
+  // ─── Mode "Mot de passe oublié" ───
+  if(authMode==='forgot'){
+    if(!email){ showAuthMsg('Email requis.','err'); return; }
+    btn.disabled = true;
+    btn.textContent = 'Envoi en cours…';
+    try{
+      const { error } = await sb.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + '/'
+      });
+      if(error){ showAuthMsg(bizTranslateAuthError(error), 'err'); return; }
+      showAuthMsg('Si un compte existe avec cet email, un lien de réinitialisation vient d\'être envoyé. Vérifie ta boîte mail (et les spams).','ok');
+    } catch(e){
+      showAuthMsg('Erreur : '+(e.message||e),'err');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = origTxt;
+    }
+    return;
+  }
+
+  // ─── Mode "Reset password" (après clic sur lien email) ───
+  if(authMode==='reset'){
+    const passConfirm = document.getElementById('authPassConfirm').value;
+    if(!pass || !passConfirm){ showAuthMsg('Renseigne les deux champs.','err'); return; }
+    if(pass.length < 6){ showAuthMsg('Mot de passe trop court (6 caractères minimum).','err'); return; }
+    if(pass !== passConfirm){ showAuthMsg('Les deux mots de passe ne correspondent pas.','err'); return; }
+    btn.disabled = true;
+    btn.textContent = 'Mise à jour…';
+    try{
+      const { error } = await sb.auth.updateUser({ password: pass });
+      if(error){ showAuthMsg(bizTranslateAuthError(error), 'err'); return; }
+      showAuthMsg('Mot de passe modifié ! Tu es maintenant connecté.','ok');
+      // Nettoyer le hash de l'URL
+      try{ history.replaceState(null, '', window.location.pathname); }catch(_){}
+      setTimeout(async () => {
+        await hydrateSession();
+        goToAccount();
+      }, 800);
+    } catch(e){
+      showAuthMsg('Erreur : '+(e.message||e),'err');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = origTxt;
+    }
+    return;
+  }
+
+  // ─── Login / Signup (logique existante) ───
   if(!email||!pass){showAuthMsg('Email et mot de passe requis.','err'); return;}
   if(pass.length < 6){showAuthMsg('Mot de passe trop court (6 caractères minimum).','err'); return;}
   if(authMode==='signup' && !pseudo){showAuthMsg('Choisis un pseudo.','err'); return;}
 
-  const btn = document.getElementById('authSubmit');
-  const origTxt = btn.textContent;
   btn.disabled = true;
   btn.textContent = authMode==='signup' ? 'Création en cours…' : 'Connexion en cours…';
 
@@ -3507,7 +3597,39 @@ async function handleAuthSubmit(){
 
 document.querySelectorAll('.auth-tab').forEach(t=>t.addEventListener('click',()=>resetAuthForm(t.dataset.tab)));
 document.getElementById('authSubmit').addEventListener('click',handleAuthSubmit);
-['authEmail','authPass','authPseudo'].forEach(id=>document.getElementById(id).addEventListener('keypress',e=>{if(e.key==='Enter') handleAuthSubmit();}));
+['authEmail','authPass','authPseudo','authPassConfirm'].forEach(id=>{
+  const el = document.getElementById(id);
+  if(el) el.addEventListener('keypress',e=>{if(e.key==='Enter') handleAuthSubmit();});
+});
+// Liens "Mot de passe oublié" / "Retour à la connexion"
+const fLink = document.getElementById('forgotLink');
+if(fLink) fLink.addEventListener('click', e=>{e.preventDefault(); showView('login'); resetAuthForm('forgot');});
+const bLink = document.getElementById('backToLoginLink');
+if(bLink) bLink.addEventListener('click', e=>{e.preventDefault(); resetAuthForm('login');});
+
+// Détection du retour depuis l'email Supabase : #access_token=...&type=recovery
+(function detectPasswordRecovery(){
+  try{
+    const hash = window.location.hash || '';
+    if(/type=recovery/.test(hash) && /access_token=/.test(hash)){
+      // Supabase parse automatiquement le hash et déclenche un event PASSWORD_RECOVERY
+      // mais on force aussi l'affichage du form reset
+      setTimeout(()=>{
+        showView('login');
+        resetAuthForm('reset');
+      }, 100);
+    }
+  }catch(_){}
+})();
+// Hook Supabase auth state pour le mode recovery (méthode officielle)
+if(typeof sb !== 'undefined' && sb && sb.auth && sb.auth.onAuthStateChange){
+  sb.auth.onAuthStateChange((event) => {
+    if(event === 'PASSWORD_RECOVERY'){
+      showView('login');
+      resetAuthForm('reset');
+    }
+  });
+}
 const lgBtn = document.getElementById('paramLogoutBtn');
 if(lgBtn) lgBtn.addEventListener('click',logout);
 
