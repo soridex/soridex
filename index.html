@@ -225,6 +225,23 @@
   .card-price{margin-top:6px;font-size:12px;font-weight:700;color:var(--green)}
   .card-price.empty{color:var(--dim);font-weight:500}
   .rarity-filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+  /* Set mode toggle (Cartes / Scellés) */
+  .set-mode-toggle{display:inline-flex;gap:4px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:4px;margin:14px 0 16px}
+  .set-mode-tab{background:transparent;border:none;color:var(--mut);padding:8px 18px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;letter-spacing:.2px}
+  .set-mode-tab:hover{color:#fff}
+  .set-mode-tab.active{background:linear-gradient(135deg,#d4a64a,#b08938);color:#1a1408;box-shadow:0 2px 8px rgba(212,166,74,0.25)}
+  .sealed-type-filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+  /* Sealed product card variant */
+  .card-item.sealed{padding-bottom:8px}
+  .sealed-type-pill{display:inline-block;background:rgba(212,166,74,0.15);border:1px solid rgba(212,166,74,0.3);color:#d4a64a;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:600;letter-spacing:.3px;text-transform:uppercase;margin-bottom:6px}
+  .sealed-price-block{display:flex;flex-direction:column;gap:2px;font-size:11px;color:var(--mut);margin:6px 0}
+  .sealed-price-main{font-size:14px;font-weight:700;color:#fff}
+  .sealed-price-tag{color:var(--mut);font-size:10px}
+  .sealed-price-empty{color:var(--mut);font-size:11px;font-style:italic}
+  .btn-add-biz{background:linear-gradient(135deg,#3a7a3a,#2a5e2a);color:#fff;border:none;padding:7px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;width:100%;margin-top:6px;transition:filter .15s}
+  .btn-add-biz:hover{filter:brightness(1.15)}
+  .btn-tcgplayer{background:rgba(255,255,255,0.06);color:#9bb;border:1px solid rgba(255,255,255,0.1);padding:5px 10px;border-radius:6px;font-size:10px;cursor:pointer;width:100%;margin-top:4px;text-decoration:none;text-align:center;display:block}
+  .btn-tcgplayer:hover{background:rgba(255,255,255,0.1)}
   .rar-tab{background:rgba(255,255,255,.04);border:1px solid var(--line2);color:var(--mut);border-radius:8px;padding:7px 13px;font-family:"Outfit";font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;transition:.15s}
   .rar-tab:hover{color:var(--gold-2);border-color:var(--gold-deep)}
   .rar-tab.active{background:rgba(212,168,90,.12);color:var(--gold-2);border-color:var(--gold)}
@@ -2244,13 +2261,38 @@
     </div>
     <button class="btn-gold" id="setDetailCreatePfBtn" hidden style="white-space:nowrap">+ Créer un portfolio de ce set</button>
   </div>
-  <div class="page-search">
+  <div class="set-mode-toggle" id="setModeToggle">
+    <button class="set-mode-tab active" data-set-mode="cards">🃏 Cartes</button>
+    <button class="set-mode-tab" data-set-mode="sealed">📦 Scellés</button>
+  </div>
+  <div class="page-search" id="setSearchWrap">
     <input type="search" id="setSearchInput" placeholder="Filtrer les cartes par nom…">
     <button class="clear" id="setSearchClear" aria-label="Effacer">×</button>
   </div>
   <div class="rarity-filters" id="rarityFilters"></div>
   <div class="card-grid" id="setCardGrid"></div>
+  <!-- Vue Scellés (cachée par défaut) -->
+  <div class="sealed-type-filters" id="sealedTypeFilters" hidden></div>
+  <div class="card-grid" id="setSealedGrid" hidden></div>
 </section>
+
+<!-- MODAL : choisir un dossier Business pour y ajouter le scellé -->
+<div class="modal-overlay hidden" id="sealedBizPickerModal">
+  <div class="modal-box" style="max-width:480px">
+    <button class="modal-close" id="sealedBizPickerClose">×</button>
+    <h3 class="modal-title">Ajouter au Business</h3>
+    <p style="color:var(--mut);font-size:13px;margin:0 0 14px">Choisis un dossier (ou crée-en un nouveau) pour y enregistrer cet achat.</p>
+    <div id="sealedBizPickerProductInfo" style="display:flex;gap:10px;align-items:center;padding:10px;background:rgba(255,255,255,0.03);border-radius:8px;margin-bottom:14px"></div>
+    <div class="form-field">
+      <label>Dossier</label>
+      <select id="sealedBizPickerFolder"></select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-gold-outline" id="sealedBizPickerNewFolder">+ Nouveau dossier</button>
+      <button class="btn-gold" id="sealedBizPickerConfirm">Continuer →</button>
+    </div>
+  </div>
+</div>
 
 <!-- VIEW: PORTFOLIO DETAIL -->
 <section class="view" id="view-pf-detail" hidden>
@@ -4915,11 +4957,15 @@ const USD_TO_EUR = 0.92;
 function fmtEur(n){ return n != null && !isNaN(n) ? '€'+n.toFixed(2) : null; }
 async function showPokemonSetCards(setId){
   showView('set-detail');
+  setupSetModeUI('pokemon');
   const grid=document.getElementById('setCardGrid'), filtersBox=document.getElementById('rarityFilters');
   grid.innerHTML='<div class="empty-state"><div class="ico">…</div><h3>Chargement…</h3></div>';
   filtersBox.innerHTML='';
   let setInfo=null, eraInfo=null;
   try{const all=await getAllPokemonSetsFromApi(); setInfo=all.find(s=>s.id===setId); if(setInfo) eraInfo=POKEMON_ERAS.find(e=>e.series.includes(setInfo.series));}catch(e){}
+  // Mémoriser le nom du set pour le mode "Scellés"
+  _currentSealedSetName = setInfo ? setInfo.name : null;
+  _currentSealedSetId = setId;
   document.getElementById('setDetailTitle').textContent=setInfo?setInfo.name:'—';
   document.getElementById('setDetailSub').textContent=setInfo?`${(setInfo.releaseDate||'').slice(0,4)} · ${setInfo.printedTotal||setInfo.total} cartes · ${setInfo.series}`:'';
   document.getElementById('setDetailBreadcrumb').textContent=setInfo?setInfo.name:'—';
@@ -5008,11 +5054,216 @@ async function showPokemonSetCards(setId){
   filtersBox.querySelectorAll('.rar-tab').forEach(btn=>btn.addEventListener('click',()=>{filtersBox.querySelectorAll('.rar-tab').forEach(b=>b.classList.toggle('active',b===btn)); render(btn.dataset.rar);}));
 }
 
+/* ════════════════════════════════════════════════════════════════
+   SCELLÉS (Sealed products) — TCGCSV via /api/tcgcsv
+   ════════════════════════════════════════════════════════════════ */
+const _setSealedCache = {}; // setName → {ts, products}
+const SEALED_TTL_MS = 30 * 60 * 1000;
+let _currentSealedSetName = null;
+let _currentSealedSetId = null;
+let _currentSealedTypeFilter = 'all';
+
+// Affiche/cache le toggle Cartes/Scellés selon le TCG.
+// Seul Pokémon a des sealed pour l'instant.
+function setupSetModeUI(tcg){
+  const toggle = document.getElementById('setModeToggle');
+  if(!toggle) return;
+  if(tcg === 'pokemon'){
+    toggle.style.display = '';
+    // Reset au mode cartes à chaque ouverture
+    toggle.querySelectorAll('.set-mode-tab').forEach(b=>b.classList.toggle('active', b.dataset.setMode==='cards'));
+    document.getElementById('setCardGrid').hidden = false;
+    document.getElementById('rarityFilters').hidden = false;
+    document.getElementById('setSearchWrap').hidden = false;
+    document.getElementById('setSealedGrid').hidden = true;
+    document.getElementById('sealedTypeFilters').hidden = true;
+  } else {
+    toggle.style.display = 'none';
+    document.getElementById('setCardGrid').hidden = false;
+    document.getElementById('rarityFilters').hidden = false;
+    document.getElementById('setSearchWrap').hidden = false;
+    document.getElementById('setSealedGrid').hidden = true;
+    document.getElementById('sealedTypeFilters').hidden = true;
+  }
+}
+
+function switchSetMode(mode){
+  document.querySelectorAll('#setModeToggle .set-mode-tab').forEach(b=>{
+    b.classList.toggle('active', b.dataset.setMode === mode);
+  });
+  const isSealed = (mode === 'sealed');
+  document.getElementById('setCardGrid').hidden       = isSealed;
+  document.getElementById('rarityFilters').hidden     = isSealed;
+  document.getElementById('setSearchWrap').hidden     = isSealed;
+  document.getElementById('setSealedGrid').hidden     = !isSealed;
+  document.getElementById('sealedTypeFilters').hidden = !isSealed;
+  if(isSealed && _currentSealedSetName){
+    showPokemonSetSealed(_currentSealedSetName, _currentSealedSetId);
+  }
+}
+
+async function showPokemonSetSealed(setName, setId){
+  _currentSealedSetName = setName;
+  _currentSealedSetId = setId;
+  const grid = document.getElementById('setSealedGrid');
+  const filtersBox = document.getElementById('sealedTypeFilters');
+  if(!grid) return;
+
+  // Cache
+  const cached = _setSealedCache[setName];
+  let products = null;
+  if(cached && (Date.now() - cached.ts) < SEALED_TTL_MS){
+    products = cached.products;
+  }
+
+  if(!products){
+    grid.innerHTML = '<div class="empty-state"><div class="ico">📦</div><h3>Chargement des scellés…</h3><p>Données TCGplayer (USD)</p></div>';
+    filtersBox.innerHTML = '';
+    try{
+      const res = await fetch(`/api/tcgcsv?action=sealed&setName=${encodeURIComponent(setName)}`);
+      if(!res.ok){
+        if(res.status === 404){
+          grid.innerHTML = `<div class="empty-state"><div class="ico">🤷</div><h3>Set introuvable côté TCGplayer</h3><p>Le nom du set n'a pas pu être matché. Réessaie plus tard ou contacte le support.</p></div>`;
+          return;
+        }
+        throw new Error('HTTP ' + res.status);
+      }
+      const data = await res.json();
+      products = data.products || [];
+      _setSealedCache[setName] = { ts: Date.now(), products };
+    } catch(e){
+      console.error('sealed fetch error:', e);
+      grid.innerHTML = `<div class="empty-state"><div class="ico">⚠️</div><h3>Erreur</h3><p>${escapeHtml(e.message || 'Impossible de charger les scellés')}</p></div>`;
+      return;
+    }
+  }
+
+  if(!products.length){
+    grid.innerHTML = '<div class="empty-state"><div class="ico">📭</div><h3>Aucun produit scellé pour ce set</h3></div>';
+    filtersBox.innerHTML = '';
+    return;
+  }
+
+  // Filtres par type
+  const types = [...new Set(products.map(p => p.type))];
+  _currentSealedTypeFilter = 'all';
+  filtersBox.innerHTML = `<button class="rar-tab active" data-stype="all">Tous (${products.length})</button>` +
+    types.map(t => `<button class="rar-tab" data-stype="${escapeHtml(t)}">${escapeHtml(t)} (${products.filter(p=>p.type===t).length})</button>`).join('');
+
+  function renderSealed(filter){
+    _currentSealedTypeFilter = filter;
+    const list = filter === 'all' ? products : products.filter(p => p.type === filter);
+    grid.innerHTML = list.map(p => {
+      const prices = p.prices || {};
+      const market = prices.market;
+      const low = prices.low;
+      const priceBlock = (market != null)
+        ? `<div class="sealed-price-block">
+             <div class="sealed-price-main">$${market.toFixed(2)} <span class="sealed-price-tag">market</span></div>
+             ${low != null ? `<div class="sealed-price-tag">low $${low.toFixed(2)}</div>` : ''}
+             <div class="sealed-price-tag" style="font-size:9px">via TCGplayer (USD)</div>
+           </div>`
+        : `<div class="sealed-price-block"><div class="sealed-price-empty">— prix non dispo —</div></div>`;
+      const img = p.imageUrl ? `<img src="${escapeHtml(p.imageUrl)}" alt="${escapeHtml(p.name)}" loading="lazy" style="object-fit:contain;background:#fff">` : '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--mut);font-size:32px">📦</div>';
+      // Encode product data pour le bouton Business
+      const productData = JSON.stringify({
+        productId: p.productId,
+        name: p.name,
+        type: p.type,
+        imageUrl: p.imageUrl || '',
+        market: market,
+        setName: setName
+      }).replace(/"/g,'&quot;');
+      return `<div class="card-item sealed" data-sealed-id="${p.productId}">
+        <div class="card-img">${img}</div>
+        <div class="card-info">
+          <span class="sealed-type-pill">${escapeHtml(p.type)}</span>
+          <div class="card-name" style="font-size:12px;line-height:1.3">${escapeHtml(p.name)}</div>
+          ${priceBlock}
+          <button class="btn-add-biz" data-sealed-add="${productData}">+ Ajouter au Business</button>
+          <a class="btn-tcgplayer" href="${escapeHtml(p.url)}" target="_blank" rel="noopener noreferrer">Voir sur TCGplayer ↗</a>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  renderSealed('all');
+  filtersBox.querySelectorAll('.rar-tab').forEach(btn => btn.addEventListener('click', () => {
+    filtersBox.querySelectorAll('.rar-tab').forEach(b => b.classList.toggle('active', b === btn));
+    renderSealed(btn.dataset.stype);
+  }));
+}
+
+// ─── Modal picker : ajouter un sealed à un dossier Business ───
+function openSealedBizPicker(sealedData){
+  if(!currentUser){ alert('Connecte-toi pour utiliser le Business.'); return; }
+  const m = document.getElementById('sealedBizPickerModal');
+  const info = document.getElementById('sealedBizPickerProductInfo');
+  info.innerHTML = `
+    ${sealedData.imageUrl ? `<img src="${escapeHtml(sealedData.imageUrl)}" style="width:50px;height:50px;object-fit:contain;background:#fff;border-radius:6px">` : '<div style="width:50px;height:50px;background:rgba(255,255,255,0.05);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:24px">📦</div>'}
+    <div style="flex:1;min-width:0">
+      <div style="font-size:12px;font-weight:600;color:#fff;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(sealedData.name)}</div>
+      <div style="font-size:11px;color:var(--mut);margin-top:2px">${escapeHtml(sealedData.type)}${sealedData.market != null ? ` · $${sealedData.market.toFixed(2)} market` : ''}</div>
+    </div>
+  `;
+  // Remplir le select avec les dossiers existants
+  const sel = document.getElementById('sealedBizPickerFolder');
+  const data = getBusinessData();
+  const folders = data.folders || [];
+  if(folders.length === 0){
+    sel.innerHTML = '<option value="">— Aucun dossier, crées-en un —</option>';
+  } else {
+    sel.innerHTML = folders.map(f => `<option value="${f.id}">${escapeHtml(f.name)} (${(f.transactions||[]).length} tx)</option>`).join('');
+  }
+  // Stocker les données du produit en attendant le confirm
+  m._sealedData = sealedData;
+  m.classList.remove('hidden');
+}
+
+function closeSealedBizPicker(){
+  document.getElementById('sealedBizPickerModal').classList.add('hidden');
+}
+
+function confirmSealedBizPicker(){
+  const m = document.getElementById('sealedBizPickerModal');
+  const sealedData = m._sealedData;
+  const folderId = document.getElementById('sealedBizPickerFolder').value;
+  if(!folderId){
+    alert('Crée d\'abord un dossier Business.');
+    return;
+  }
+  if(!sealedData) return;
+  closeSealedBizPicker();
+  // Ouvrir le dossier Business puis pré-remplir la modale tx
+  bizCurrentFolderId = folderId;
+  showView('business-folder');
+  if(typeof renderBusinessFolder === 'function') renderBusinessFolder();
+  setTimeout(() => {
+    openTxModal(null); // nouvelle transaction
+    // Pré-remplir avec les infos du sealed
+    document.getElementById('bizTxCardName').value = sealedData.name;
+    document.getElementById('bizTxCardNumber').value = ''; // pas de numéro pour un sealed
+    document.getElementById('bizTxTcg').value = 'pokemon';
+    document.getElementById('bizTxNotes').value = `Scellé · ${sealedData.type} · ${sealedData.setName}${sealedData.productId ? ' · TCGplayer #'+sealedData.productId : ''}`;
+    // Cote market USD → on la met dans customCote en indicatif (l'user peut convertir/ajuster)
+    if(sealedData.market != null){
+      document.getElementById('bizTxCustomCote').value = sealedData.market.toFixed(2);
+      // Afficher la pill avec le prix indicatif
+      const pill = document.getElementById('bizTxCotePill');
+      if(pill){
+        pill.classList.remove('hidden');
+        pill.innerHTML = `<span class="label">Cote indicative</span><span class="value">$${sealedData.market.toFixed(2)}</span><span class="src">via TCGplayer · ajuste en € si besoin</span>`;
+      }
+    }
+    if(typeof updateBizTxNetPreview === 'function') updateBizTxNetPreview();
+  }, 150);
+}
+
 /* === LORCANA : drill-down via lorcast === */
 async function showLorcanaSetCards(slug){
   const setInfo=LORCANA_SETS.find(s=>s.slug===slug);
   if(!setInfo||!setInfo.lorcastCode){showView('sets-lorcana'); return;}
   showView('set-detail');
+  setupSetModeUI('lorcana');
   const grid=document.getElementById('setCardGrid'), filtersBox=document.getElementById('rarityFilters');
   grid.innerHTML='<div class="empty-state"><div class="ico">…</div><h3>Chargement…</h3></div>';
   filtersBox.innerHTML='';
@@ -5149,6 +5400,7 @@ function renderMagicSetsGrid(){
 
 async function showMagicSetCards(setCode){
   showView('set-detail');
+  setupSetModeUI('magic');
   const grid=document.getElementById('setCardGrid'), filtersBox=document.getElementById('rarityFilters');
   grid.innerHTML='<div class="empty-state"><div class="ico">…</div><h3>Chargement…</h3></div>';
   filtersBox.innerHTML='';
@@ -6343,6 +6595,36 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
     if(!document.getElementById('view-wishlist').hidden) renderWishFolders();
+  });
+});
+
+// Listeners modal "Ajouter au Business" (scellés)
+document.addEventListener('DOMContentLoaded', () => {
+  const close = document.getElementById('sealedBizPickerClose');
+  if(close) close.addEventListener('click', closeSealedBizPicker);
+  const modal = document.getElementById('sealedBizPickerModal');
+  if(modal) modal.addEventListener('click', (e) => {
+    if(e.target.id === 'sealedBizPickerModal') closeSealedBizPicker();
+  });
+  const confirmBtn = document.getElementById('sealedBizPickerConfirm');
+  if(confirmBtn) confirmBtn.addEventListener('click', confirmSealedBizPicker);
+  const newFolderBtn = document.getElementById('sealedBizPickerNewFolder');
+  if(newFolderBtn) newFolderBtn.addEventListener('click', () => {
+    // Garde les données du produit en attente pendant qu'on crée le dossier
+    const m = document.getElementById('sealedBizPickerModal');
+    const sealedData = m._sealedData;
+    closeSealedBizPicker();
+    // Ouvre la modale de création de dossier business
+    if(typeof openBizFolderModal === 'function'){
+      openBizFolderModal(null);
+      // Pré-remplir avec le TCG pokemon (les scellés sont Pokémon pour l'instant)
+      const tcgSel = document.getElementById('bizFolderTcg');
+      if(tcgSel) tcgSel.value = 'pokemon';
+      // Stocker pour réouvrir le picker après création
+      window._pendingSealedAfterFolder = sealedData;
+    } else {
+      alert('Crée d\'abord un dossier depuis la section Business.');
+    }
   });
 });
 
@@ -7610,6 +7892,25 @@ document.addEventListener('click', (e)=>{
     if(!document.getElementById('view-era-detail').hidden){e.preventDefault(); showPokemonSetCards(setCard.dataset.setSlug); return;}
     if(!document.getElementById('view-sets-lorcana').hidden){e.preventDefault(); showLorcanaSetCards(setCard.dataset.setSlug); return;}
   }
+
+  // Toggle Cartes/Scellés
+  const modeTab = e.target.closest('.set-mode-tab');
+  if(modeTab){
+    e.preventDefault();
+    switchSetMode(modeTab.dataset.setMode);
+    return;
+  }
+
+  // Bouton "+ Business" sur une carte scellée
+  const addBizBtn = e.target.closest('[data-sealed-add]');
+  if(addBizBtn){
+    e.preventDefault();
+    try{
+      const data = JSON.parse(addBizBtn.dataset.sealedAdd.replace(/&quot;/g,'"'));
+      openSealedBizPicker(data);
+    }catch(err){ console.error('sealed-add parse:', err); }
+    return;
+  }
 });
 
 /* === BUSINESS (achat-revente) === */
@@ -8057,6 +8358,22 @@ function confirmBizFolder(){
   }
   saveBusinessData(data);
   closeBizFolderModal();
+  // Reprend le flow scellé si l'utilisateur venait du picker sealed
+  if(window._pendingSealedAfterFolder && !bizEditingFolderId){
+    const sealedData = window._pendingSealedAfterFolder;
+    window._pendingSealedAfterFolder = null;
+    // Le dernier dossier ajouté = celui qu'on vient de créer
+    const newFolder = data.folders[data.folders.length - 1];
+    if(newFolder){
+      setTimeout(() => {
+        // Rouvre le picker pré-rempli avec ce dossier sélectionné
+        openSealedBizPicker(sealedData);
+        const sel = document.getElementById('sealedBizPickerFolder');
+        if(sel) sel.value = newFolder.id;
+      }, 100);
+    }
+    return;
+  }
   if(bizCurrentFolderId) renderBusinessFolder();
   else renderBusiness();
 }
