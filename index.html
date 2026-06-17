@@ -225,8 +225,11 @@
   .card-price{margin-top:6px;font-size:12px;font-weight:700;color:var(--green)}
   .card-price.empty{color:var(--dim);font-weight:500}
   .rarity-filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
-  /* Garantit que [hidden] coupe l'affichage même quand display:flex/grid est appliqué */
-  [hidden]{display:none !important}
+  /* Force le masquage uniquement sur les éléments concernés par le toggle Cartes/Scellés
+     (.card-grid a display:grid, .rarity-filters a display:flex → écrasent [hidden] sans !important) */
+  #setCardGrid[hidden], #setSealedGrid[hidden],
+  #rarityFilters[hidden], #sealedTypeFilters[hidden],
+  #setSearchWrap[hidden]{display:none !important}
   /* Set mode toggle (Cartes / Scellés) */
   .set-mode-toggle{display:inline-flex;gap:4px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:4px;margin:14px 0 16px}
   .set-mode-tab{background:transparent;border:none;color:var(--mut);padding:8px 18px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;letter-spacing:.2px}
