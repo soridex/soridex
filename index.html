@@ -2648,30 +2648,6 @@
 </section>
 
 <!-- VIEW: BOUTIQUE -->
-<section class="view" id="view-shop" hidden>
-  <div class="breadcrumb">
-    <a data-view="home">← Accueil</a><span>/</span><span>Boutique</span>
-  </div>
-  <div class="sets-head">
-    <div>
-      <h2 class="view-title">Boutique</h2>
-      <p class="view-sub">Sélection d'accessoires testés pour bien démarrer ta collection. Liens d'affiliation.</p>
-    </div>
-  </div>
-  <div class="shop-categories" id="shopCategories">
-    <button class="shop-cat-btn active" data-shop-cat="all">Tout</button>
-    <button class="shop-cat-btn" data-shop-cat="portfolio">Portfolios</button>
-    <button class="shop-cat-btn" data-shop-cat="sleeves">Sleeves</button>
-    <button class="shop-cat-btn" data-shop-cat="toploader">Top loaders</button>
-    <button class="shop-cat-btn" data-shop-cat="box">Boîtes &amp; stockage</button>
-    <button class="shop-cat-btn" data-shop-cat="grading">Pour le grading</button>
-  </div>
-  <div class="shop-grid" id="shopGrid"></div>
-  <div class="shop-disclaimer">
-    <strong style="color:var(--gold-2)">ℹ︎ À propos des liens</strong> — En tant que partenaire Amazon, je perçois un petit pourcentage sur les achats réalisés via ces liens, sans coût supplémentaire pour toi. Les produits sont sélectionnés pour leur qualité, pas pour la commission.
-  </div>
-</section>
-
 <!-- VIEW: GUIDE -->
 <section class="view" id="view-guide" hidden>
   <div class="breadcrumb">
@@ -6547,7 +6523,7 @@ if(document.readyState !== 'loading') initPageSearches();
 
 /* === BOUTIQUE === */
 // IMPORTANT : remplace "fausse-calme-21" par ton vrai tag Amazon Affiliate quand tu auras le compte
-const AMZ_TAG = 'faussecalme-21';
+const AMZ_TAG = 'faussecalme04-21';
 function amzLink(searchQuery){
   return `https://www.amazon.fr/s?k=${encodeURIComponent(searchQuery)}&tag=${AMZ_TAG}`;
 }
