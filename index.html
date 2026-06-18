@@ -1567,6 +1567,26 @@
 
 
   .account-subnav{display:flex;gap:6px;flex-wrap:wrap;padding:8px;background:var(--bg2);border:1px solid var(--line2);border-radius:14px;margin-bottom:22px}
+  /* Settings rows + toggle switch */
+  .settings-card{background:linear-gradient(180deg,var(--surf),var(--bg2));border:1px solid var(--line2);border-radius:14px;padding:18px 20px;max-width:520px;margin-top:18px}
+  .settings-card h3{margin:0 0 4px;font-size:14px;font-weight:700;color:var(--tx);letter-spacing:.04em;text-transform:uppercase}
+  .settings-card .settings-sub{margin:0 0 14px;font-size:12px;color:var(--mut)}
+  .setting-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 0;border-top:1px solid var(--line2)}
+  .setting-row:first-of-type{border-top:none}
+  .setting-row .setting-label{flex:1;min-width:0}
+  .setting-row .setting-label .ttl{font-size:13px;font-weight:600;color:var(--tx);margin:0 0 2px}
+  .setting-row .setting-label .desc{font-size:11.5px;color:var(--mut);margin:0;line-height:1.4}
+  .toggle-switch{position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0}
+  .toggle-switch input{opacity:0;width:0;height:0}
+  .toggle-switch .slider{position:absolute;cursor:pointer;inset:0;background:#3a3a3a;border:1px solid var(--line2);border-radius:24px;transition:.2s}
+  .toggle-switch .slider:before{content:"";position:absolute;height:18px;width:18px;left:2px;top:2px;background:#ccc;border-radius:50%;transition:.2s}
+  .toggle-switch input:checked + .slider{background:linear-gradient(135deg,var(--gold-deep),var(--gold-2));border-color:var(--gold-deep)}
+  .toggle-switch input:checked + .slider:before{transform:translateX(20px);background:#1a1a1a}
+  /* Offline banner */
+  #offlineBanner{position:fixed;top:0;left:0;right:0;z-index:9999;background:#7a3a1a;color:#ffd9b3;text-align:center;padding:8px 14px;font-size:12.5px;font-weight:600;letter-spacing:.02em;border-bottom:1px solid #a05020;transform:translateY(-100%);transition:transform .25s ease;pointer-events:none}
+  #offlineBanner.visible{transform:translateY(0)}
+  #offlineBanner .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#ff9050;margin-right:8px;vertical-align:middle;animation:pulse-off 1.6s ease-in-out infinite}
+  @keyframes pulse-off{0%,100%{opacity:.5}50%{opacity:1}}
   .acc-tab{flex:1;min-width:130px;display:flex;align-items:center;justify-content:center;gap:8px;padding:11px 14px;border-radius:10px;font-size:13px;font-weight:600;letter-spacing:.05em;color:var(--mut);text-decoration:none;transition:.18s;cursor:pointer;border:1px solid transparent;text-transform:uppercase}
   .acc-tab:hover{color:var(--tx);background:rgba(212,168,90,.06);border-color:var(--line2)}
   .acc-tab.active{background:linear-gradient(135deg,rgba(212,168,90,.18),rgba(212,168,90,.08));border-color:var(--gold-deep);color:var(--gold-2);box-shadow:0 0 0 1px rgba(212,168,90,.2),0 4px 14px rgba(212,168,90,.1)}
@@ -2209,7 +2229,26 @@
     </div>
     <button class="logout-btn" id="paramLogoutBtn">Déconnexion</button>
   </div>
+
+  <!-- Préférences -->
+  <div class="settings-card">
+    <h3>Préférences</h3>
+    <p class="settings-sub">Personnalise ton expérience Soridex.</p>
+    <div class="setting-row">
+      <div class="setting-label">
+        <p class="ttl">Profil public</p>
+        <p class="desc">Ton profil et tes dossiers partagés seront accessibles via un lien public. Désactivé : tout reste privé. (Les pages publiques arrivent bientôt.)</p>
+      </div>
+      <label class="toggle-switch">
+        <input type="checkbox" id="paramTogglePublic">
+        <span class="slider"></span>
+      </label>
+    </div>
+  </div>
 </section>
+
+<!-- Banner mode hors ligne -->
+<div id="offlineBanner" aria-live="polite"><span class="dot"></span>Mode hors ligne — la synchronisation est en pause</div>
 
 <!-- VIEW: COMPTE (Portfolios) -->
 <section class="view" id="view-compte" hidden>
@@ -3339,6 +3378,40 @@ try { _bizCache = JSON.parse(localStorage.getItem('soridex_business_v1')||'{"fol
 function getUser(){ return currentUser; }
 function isProUser(){ return !!(currentUser && currentUser.isPro); }
 
+// === Mode hors ligne auto ===
+let _isOnline = navigator.onLine;
+function isOnline(){ return _isOnline; }
+function updateOfflineBanner(){
+  const b = document.getElementById('offlineBanner');
+  if(!b) return;
+  if(_isOnline) b.classList.remove('visible');
+  else b.classList.add('visible');
+}
+window.addEventListener('online', async () => {
+  _isOnline = true;
+  updateOfflineBanner();
+  console.log('[Soridex] Retour en ligne, resync…');
+  // Pousse la préférence is_public si elle est en attente
+  try {
+    const pending = localStorage.getItem('soridex_pending_is_public');
+    if(pending !== null && sb && currentUser){
+      await sb.auth.updateUser({ data: { is_public: pending === '1' } });
+      localStorage.removeItem('soridex_pending_is_public');
+    }
+  } catch(e){ console.warn('pending is_public resync failed', e); }
+  // Force le flush des données dirty
+  try { if(typeof flushPortfoliosToSb === 'function') flushPortfoliosToSb(); } catch(e){}
+  try { if(typeof flushWishlistsToSb === 'function') flushWishlistsToSb(); } catch(e){}
+  try { if(typeof flushBusinessToSb === 'function') flushBusinessToSb(); } catch(e){}
+});
+window.addEventListener('offline', () => {
+  _isOnline = false;
+  updateOfflineBanner();
+  console.log('[Soridex] Mode hors ligne activé');
+});
+// Init au boot
+setTimeout(updateOfflineBanner, 50);
+
 // Constantes des limites du plan gratuit
 const FREE_LIMITS = {
   bizFolders: 1,
@@ -3379,7 +3452,7 @@ async function hydrateSession(){
         pseudo = (session.user.user_metadata && (session.user.user_metadata.pseudo || session.user.user_metadata.username))
               || (session.user.email ? session.user.email.split('@')[0] : 'user');
       }
-      currentUser = { id: session.user.id, email: session.user.email, pseudo, isPro };
+      currentUser = { id: session.user.id, email: session.user.email, pseudo, isPro, isPublic: !!(session.user.user_metadata && session.user.user_metadata.is_public) };
       try { localStorage.setItem(AUTH_KEY, JSON.stringify(currentUser)); } catch(e){}
       // Charge toutes les données utilisateur depuis Supabase
       await loadAllUserDataFromSb();
@@ -8330,6 +8403,38 @@ function renderParametres(){
   if(avatarEl){
     const p = (user.username || user.pseudo || user.email || '?').trim();
     avatarEl.textContent = p[0] ? p[0].toUpperCase() : '?';
+  }
+  // Toggle profil public
+  const tog = document.getElementById('paramTogglePublic');
+  if(tog && !tog._bound){
+    tog._bound = true;
+    tog.checked = !!user.isPublic;
+    tog.addEventListener('change', async () => {
+      const val = tog.checked;
+      // Update optimiste
+      currentUser.isPublic = val;
+      try { localStorage.setItem(AUTH_KEY, JSON.stringify(currentUser)); } catch(e){}
+      if(!navigator.onLine){
+        // Stocké localement, sera repoussé au retour online
+        try { localStorage.setItem('soridex_pending_is_public', val ? '1' : '0'); } catch(e){}
+        return;
+      }
+      if(!sb) return;
+      try {
+        const { error } = await sb.auth.updateUser({ data: { is_public: val } });
+        if(error) throw error;
+        try { localStorage.removeItem('soridex_pending_is_public'); } catch(e){}
+      } catch(e){
+        console.warn('toggle public failed', e);
+        // Rollback visuel
+        tog.checked = !val;
+        currentUser.isPublic = !val;
+        try { localStorage.setItem(AUTH_KEY, JSON.stringify(currentUser)); } catch(e){}
+        alert('⚠️ Impossible de sauvegarder la préférence. Réessaie plus tard.');
+      }
+    });
+  } else if(tog){
+    tog.checked = !!user.isPublic;
   }
 }
 
