@@ -8219,13 +8219,20 @@ function pokemonEstimate(c){
   }
   const cm = (c.cardmarket && c.cardmarket.prices) || {};
   const tp = (c.tcgplayer && c.tcgplayer.prices) || {};
-  // 2) Moyenne Cardmarket : on agrège tous les signaux dispo (trend + avgSell)
-  const cmVals = [];
-  if(cm.trendPrice != null && cm.trendPrice > 0) cmVals.push(cm.trendPrice);
-  if(cm.averageSellPrice != null && cm.averageSellPrice > 0) cmVals.push(cm.averageSellPrice);
-  if(cmVals.length > 0){
-    const avg = cmVals.reduce((s,p)=>s+p, 0) / cmVals.length;
-    return { price: avg, source: 'Cardmarket' };
+  // 2) Cardmarket via API pokemontcg.io : on prend la donnée la plus récente disponible
+  //    Priorité : trendPrice (tendance actuelle) > avg7 > avg30 > averageSellPrice (moyenne long terme, biaisée vers le passé)
+  //    On NE moyenne PAS avec averageSellPrice : ça tire le prix vers le bas car ça inclut des ventes anciennes.
+  if(cm.trendPrice != null && cm.trendPrice > 0){
+    return { price: cm.trendPrice, source: 'Cardmarket (trend)' };
+  }
+  if(cm.avg7 != null && cm.avg7 > 0){
+    return { price: cm.avg7, source: 'Cardmarket (avg 7j)' };
+  }
+  if(cm.avg30 != null && cm.avg30 > 0){
+    return { price: cm.avg30, source: 'Cardmarket (avg 30j)' };
+  }
+  if(cm.averageSellPrice != null && cm.averageSellPrice > 0){
+    return { price: cm.averageSellPrice, source: 'Cardmarket (avg long terme)' };
   }
   // 3) Fallback TCGPlayer : on prend le market max parmi les variantes
   const tpKeys = ['holofoil','normal','reverseHolofoil','1stEditionHolofoil','unlimitedHolofoil'];
@@ -8301,7 +8308,9 @@ async function bulkRefreshCmPrices(cards, setName){
   for(let i = 0; i < cards.length; i++){
     if(_cmBulkAbort) break;
     const c = cards[i];
-    const url = (c.cardmarket && c.cardmarket.url) || null;
+    // c.cardmarket.url pointe vers prices.pokemontcg.io (tracker interne) qui renvoie 400.
+    // On utilise cardmarketUrlPokemon(c) qui construit une vraie URL cardmarket.com.
+    const url = (typeof cardmarketScrapeUrlPokemon === 'function') ? cardmarketScrapeUrlPokemon(c) : null;
     const displayName = (typeof translateCardNameToFr === 'function') ? translateCardNameToFr(c.name||'') : (c.name||'');
     updateCmProgress({ done: i, total: cards.length, ok, ko, currentName: displayName });
 
@@ -8357,6 +8366,15 @@ async function bulkRefreshCmPrices(cards, setName){
 function cardmarketUrlPokemon(c){
   return (c.cardmarket && c.cardmarket.url) ||
     `https://www.cardmarket.com/fr/Pokemon/Products/Search?searchString=${encodeURIComponent(c.name)}`;
+}
+// Variante dédiée au scrape : on ignore c.cardmarket.url (qui pointe vers prices.pokemontcg.io
+// et fait planter /api/cm-price avec un 400). On construit toujours une vraie URL cardmarket.com.
+function cardmarketScrapeUrlPokemon(c){
+  const setName = (c.set && c.set.name) || c._setName || '';
+  const num = c.number || '';
+  // Recherche large : nom + numéro pour limiter les ambiguïtés
+  const q = num ? `${c.name} ${num}` : c.name;
+  return `https://www.cardmarket.com/fr/Pokemon/Products/Search?searchString=${encodeURIComponent(q)}`;
 }
 function cardmarketUrlMagic(c){
   return (c.purchase_uris && c.purchase_uris.cardmarket) ||
