@@ -4805,7 +4805,9 @@ async function loadCardDetail(tcg, id, fallback){
         const cm = (card.cardmarket && card.cardmarket.prices) || {};
         cardmarketUrl = (card.cardmarket && card.cardmarket.url) || null;
         updatedAt = card.cardmarket && card.cardmarket.updatedAt;
-        if(cm.trendPrice != null) prices.push({label:'Cardmarket Trend', value:cm.trendPrice, featured:true});
+        if(cm.avg1 != null) prices.push({label:'Cote J-1', value:cm.avg1, featured:true});
+        if(cm.avg7 != null) prices.push({label:'Avg 7j', value:cm.avg7});
+        if(cm.trendPrice != null) prices.push({label:'Cardmarket Trend', value:cm.trendPrice});
         if(cm.lowPrice != null) prices.push({label:'Prix bas', value:cm.lowPrice});
         if(cm.averageSellPrice != null) prices.push({label:'Avg 30j', value:cm.averageSellPrice});
       }
@@ -4921,8 +4923,11 @@ async function loadCardDetail(tcg, id, fallback){
   document.getElementById('cardDetailCm').href = cardmarketUrl || '#';
   document.getElementById('cardDetailEbay').href = `https://www.ebay.fr/sch/i.html?_nkw=${encodeURIComponent(ebayQuery.trim())}&LH_Sold=1&LH_Complete=1`;
 
-  // === Si données obsolètes, on tente un scrape Cardmarket en direct ===
-  if(isStale && cardmarketUrl && /cardmarket\.com\/[a-z]+\/(Pokemon|Magic|Lorcana)\/Products\/(Singles|Boosters)/i.test(cardmarketUrl)){
+  // === Scrape Cardmarket en direct pour avoir la cote J-1 (avg1) ===
+  // Pour Pokémon : seulement si données API obsolètes (avg1 déjà dans pokemontcg.io)
+  // Pour Magic & Lorcana : toujours (Scryfall/Lorcast ne renvoient pas avg1)
+  const needsLiveScrape = (tcg === 'magic' || tcg === 'lorcana') || isStale;
+  if(needsLiveScrape && cardmarketUrl && /cardmarket\.com\/[a-z]+\/(Pokemon|Magic|Lorcana)\/Products\/(Singles|Boosters)/i.test(cardmarketUrl)){
     (async () => {
       try {
         const r = await fetch(`/api/cm-price?url=${encodeURIComponent(cardmarketUrl)}`);
@@ -4932,14 +4937,14 @@ async function loadCardDetail(tcg, id, fallback){
         }
         const data = await r.json();
         const live = (data && data.prices) || {};
-        if(live.trend != null || live.low != null || live.avg30 != null){
+        if(live.trend != null || live.low != null || live.avg30 != null || live.avg1 != null){
           // Remplace les valeurs affichées par les fraîches
           const newPrices = [];
-          if(live.trend != null) newPrices.push({label:'Cardmarket Trend (live)', value:live.trend, featured:true});
+          if(live.avg1 != null) newPrices.push({label:'Cote J-1 (live)', value:live.avg1, featured:true});
+          if(live.avg7 != null) newPrices.push({label:'Avg 7j (live)', value:live.avg7});
+          if(live.trend != null) newPrices.push({label:'Cardmarket Trend (live)', value:live.trend});
           if(live.low != null) newPrices.push({label:'Prix bas (live)', value:live.low});
           if(live.avg30 != null) newPrices.push({label:'Avg 30j (live)', value:live.avg30});
-          if(live.avg7 != null) newPrices.push({label:'Avg 7j (live)', value:live.avg7});
-          if(live.avg1 != null) newPrices.push({label:'Avg 1j (live)', value:live.avg1});
           pricesEl.innerHTML = newPrices.map(p => `
             <div class="card-detail-price-cell ${p.featured?'featured':''}">
               <div class="label">${escapeHtml(p.label)}</div>
