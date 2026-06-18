@@ -4607,7 +4607,7 @@ function renderPfCards(pf){
           <div class="pfcard-name">${escapeHtml(displayName)}</div>
           <div class="pfcard-meta">${escapeHtml(c.setName)} · ${escapeHtml(c.number)}</div>
           ${c.variant ? `<div class="pfcard-variant ${c.variant}">${c.variant === 'foil' ? '✦ Cold Foil' : 'Normal'}</div>` : ''}
-          <div class="pfcard-market">Cote: ${market}</div>
+          <div class="pfcard-market" data-card-id="${cardTcg}:${escapeHtml(c.apiId||'')}" data-tcg="${cardTcg}" data-card-name="${escapeHtml(c.name||'')}" data-tcggo-q="${escapeHtml((c.name||'')+' '+(c.number||'').split('/')[0])}">Cote: ${market}</div>
           <div class="pfcard-price-row">
             <label>Achat €</label>
             <input class="pfcard-price-input" type="number" step="0.01" min="0" value="${paid || ''}" placeholder="0.00" data-pf-card-idx="${idx}">
@@ -4791,82 +4791,189 @@ function closeCardDetailModal(){
 // === TCGGO API (RapidAPI) - prix Cardmarket EUR temps réel ===
 const TCGGO_API_KEY = 'dbe54cb5f9msh566368ec6b5ed8fp1c389ejsnf38d2446d56a';
 const TCGGO_HOST = 'pokemon-tcg-api.p.rapidapi.com';
-const _tcggoCache = new Map(); // cache mémoire pour éviter de brûler le quota
+const PRICE_CACHE_TTL_HOURS = 24;          // un prix est "frais" pendant 24h
+const PRICE_QUEUE_DELAY_MS = 1500;          // 1 call/1.5s = ~40 calls/min, safe pour BASIC
+const PRICE_RATE_LIMIT_PAUSE_MS = 60000;    // pause 60s sur 429
+const _priceMemCache = new Map();           // cache mémoire L1
+const _priceQueue = [];                     // queue d'IDs à rafraîchir
+let _priceQueueProcessing = false;
 
-async function fetchTcggoPrices(searchQuery) {
-  if(!searchQuery) return null;
-  const cacheKey = searchQuery.toLowerCase().trim();
-  if(_tcggoCache.has(cacheKey)) return _tcggoCache.get(cacheKey);
-
+// Appel TCGGO direct (sans cache)
+async function _fetchTcggoRaw(searchQuery) {
+  if(!searchQuery) return { _error: 'empty query' };
   try {
     const url = `https://${TCGGO_HOST}/cards?search=${encodeURIComponent(searchQuery)}&limit=3`;
     const res = await fetch(url, {
-      headers: {
-        'x-rapidapi-key': TCGGO_API_KEY,
-        'x-rapidapi-host': TCGGO_HOST
-      }
+      headers: { 'x-rapidapi-key': TCGGO_API_KEY, 'x-rapidapi-host': TCGGO_HOST }
     });
     if(!res.ok){
-      // Stocke l'erreur pour qu'on puisse l'afficher dans l'UI
       const errText = await res.text().catch(()=>'');
-      const errResult = { _error: `HTTP ${res.status}: ${errText.substring(0, 150)}` };
-      console.warn('TCGGO API error', res.status, errText);
-      _tcggoCache.set(cacheKey, errResult);
-      return errResult;
+      return { _error: `HTTP ${res.status}`, _details: errText.substring(0,150), _status: res.status };
     }
     const data = await res.json();
-    console.log('TCGGO response for', searchQuery, data);
     const cards = Array.isArray(data) ? data : (data.data || data.cards || data.results || []);
-    if(!cards.length){
-      const errResult = { _error: `Aucune carte trouvée pour "${searchQuery}". Réponse: ${JSON.stringify(data).substring(0, 200)}` };
-      _tcggoCache.set(cacheKey, errResult);
-      return errResult;
-    }
+    if(!cards.length) return { _error: 'no_match' };
     const card = cards[0];
     const cm = card && card.prices && card.prices.cardmarket;
-    if(!cm){
-      const errResult = { _error: `Pas de prix Cardmarket. Carte trouvée: ${card.name||'?'}. Clés dispo: ${Object.keys(card.prices||{}).join(',')}` };
-      _tcggoCache.set(cacheKey, errResult);
-      return errResult;
-    }
-
-    const result = {
-      avg1:  cm['1d_average']  || cm.avg1  || cm.average_1d  || null,
-      avg7:  cm['7d_average']  || cm.avg7  || cm.average_7d  || null,
-      avg30: cm['30d_average'] || cm.avg30 || cm.average_30d || null,
+    if(!cm) return { _error: 'no_cardmarket_price' };
+    return {
+      avg1:  cm['1d_average']  || cm.avg1  || null,
+      avg7:  cm['7d_average']  || cm.avg7  || null,
+      avg30: cm['30d_average'] || cm.avg30 || null,
       low:   cm.lowest_near_mint || cm.low || null,
       lowFr: cm.lowest_near_mint_FR || null,
-      trend: cm.trend || cm.price_trend || null,
-      raw: cm
+      trend: cm.trend || cm.price_trend || null
     };
-    _tcggoCache.set(cacheKey, result);
-    return result;
   } catch(e) {
-    const errResult = { _error: `Erreur réseau/CORS: ${e.message}` };
-    console.warn('TCGGO fetch failed:', e);
-    _tcggoCache.set(cacheKey, errResult);
-    return errResult;
+    return { _error: 'network', _details: e.message };
   }
 }
 
-// Refresh asynchrone des prix affichés dans une grille de cartes
-// Cherche tous les éléments .card-price[data-tcggo-q] et remplace le prix
-// par la cote TCGGO si disponible.
-async function refreshGridPricesWithTcggo(container) {
+// Garde l'ancien nom pour rétro-compat (utilisé dans loadCardDetail)
+async function fetchTcggoPrices(searchQuery) {
+  const cacheKey = (searchQuery||'').toLowerCase().trim();
+  if(_priceMemCache.has('q:'+cacheKey)) return _priceMemCache.get('q:'+cacheKey);
+  const result = await _fetchTcggoRaw(searchQuery);
+  _priceMemCache.set('q:'+cacheKey, result);
+  return result;
+}
+
+// Lit le cache Supabase (avec fallback mémoire)
+async function getCachedPrice(cardId) {
+  if(!cardId) return null;
+  if(_priceMemCache.has(cardId)) return _priceMemCache.get(cardId);
+  if(!sb) return null;
+  try {
+    const { data, error } = await sb.from('tcg_prices')
+      .select('prices, updated_at, error')
+      .eq('id', cardId)
+      .maybeSingle();
+    if(error || !data) return null;
+    const ageMs = Date.now() - new Date(data.updated_at).getTime();
+    const ageHours = ageMs / 3600000;
+    const result = {
+      prices: data.prices || {},
+      ageHours: ageHours,
+      isFresh: ageHours < PRICE_CACHE_TTL_HOURS,
+      hadError: !!data.error,
+      errorMsg: data.error
+    };
+    _priceMemCache.set(cardId, result);
+    return result;
+  } catch(e) {
+    return null;
+  }
+}
+
+// Écrit dans Supabase (upsert)
+async function setCachedPrice(cardId, tcg, name, query, prices, errorMsg) {
+  if(!sb || !cardId) return;
+  try {
+    await sb.from('tcg_prices').upsert({
+      id: cardId, tcg, name, query,
+      prices: prices || {},
+      updated_at: new Date().toISOString(),
+      error: errorMsg || null
+    });
+    _priceMemCache.set(cardId, {
+      prices: prices || {},
+      ageHours: 0,
+      isFresh: true,
+      hadError: !!errorMsg,
+      errorMsg
+    });
+  } catch(e) {
+    console.warn('setCachedPrice fail', e);
+  }
+}
+
+// Queue manager : refresh background throttlé
+function queuePriceRefresh(item) {
+  if(!item || !item.cardId) return;
+  if(_priceQueue.find(q => q.cardId === item.cardId)) return; // dédup
+  _priceQueue.push(item);
+  if(!_priceQueueProcessing) processPriceQueue();
+}
+
+async function processPriceQueue() {
+  if(_priceQueueProcessing) return;
+  _priceQueueProcessing = true;
+  while(_priceQueue.length > 0){
+    const item = _priceQueue.shift();
+    try {
+      const live = await _fetchTcggoRaw(item.query);
+      if(live && !live._error){
+        await setCachedPrice(item.cardId, item.tcg, item.name, item.query, live, null);
+        if(typeof item.onDone === 'function') item.onDone(live);
+      } else if(live && live._status === 429){
+        // Rate limit : pause et re-queue
+        console.warn('Rate limit, pausing queue', PRICE_RATE_LIMIT_PAUSE_MS, 'ms');
+        _priceQueue.unshift(item);
+        await new Promise(r => setTimeout(r, PRICE_RATE_LIMIT_PAUSE_MS));
+        continue;
+      } else {
+        // Erreur permanente : cache négatif pour pas réessayer pendant 24h
+        await setCachedPrice(item.cardId, item.tcg, item.name, item.query, {}, live._error || 'unknown');
+      }
+    } catch(e) {
+      console.warn('Queue err', e);
+    }
+    await new Promise(r => setTimeout(r, PRICE_QUEUE_DELAY_MS));
+  }
+  _priceQueueProcessing = false;
+}
+
+// Met à jour le DOM d'un élément de prix avec une cote fraîche
+// Fonctionne sur .card-price (catalogue) ET .pfcard-market (portfolio)
+function updatePriceDisplay(el, live) {
+  if(!el || !live) return;
+  const best = live.avg1 || live.avg7 || live.trend || live.lowFr || live.low || null;
+  if(best == null) return;
+  const label = live.avg1 ? 'J-1' : (live.avg7 ? '7j' : '');
+  // Format selon le type d'élément
+  if(el.classList.contains('pfcard-market')){
+    el.innerHTML = `Cote ${label}: <span style="color:#4ade80">€${best.toFixed(2)}</span>`;
+  } else {
+    const fullLabel = live.avg1 ? 'Cote J-1' : (live.avg7 ? 'Cote 7j' : 'Cote');
+    el.innerHTML = `${fullLabel} <span style="color:#4ade80;font-weight:700">€${best.toFixed(2)}</span><span style="display:block;font-size:9px;color:var(--mut);font-weight:500;margin-top:1px">via TCGGO (Cardmarket)</span>`;
+  }
+}
+
+// Scan d'un container et refresh des prix (cache si frais, queue sinon)
+async function refreshPriceDisplays(container) {
   if(!container) container = document;
-  const priceEls = container.querySelectorAll('.card-price[data-tcggo-q]');
-  for (const el of priceEls) {
-    const query = el.getAttribute('data-tcggo-q');
-    if(!query || el.getAttribute('data-tcggo-done') === '1') continue;
-    el.setAttribute('data-tcggo-done', '1');
-    // Pas de await : on parallélise
-    fetchTcggoPrices(query).then(live => {
-      if(!live) return;
-      const best = live.avg1 || live.avg7 || live.trend || live.lowFr || live.low || null;
-      if(best == null) return;
-      const label = live.avg1 ? 'Cote J-1' : (live.avg7 ? 'Cote 7j' : 'Cote');
-      // Remplace tout le contenu du .card-price par la valeur fraîche
-      el.innerHTML = `${label} <span style="color:#4ade80;font-weight:700">€${best.toFixed(2)}</span><span style="display:block;font-size:9px;color:var(--mut);font-weight:500;margin-top:1px">via TCGGO (Cardmarket)</span>`;
+  const sel = '.card-price[data-card-id][data-tcggo-q]:not([data-price-done]), .pfcard-market[data-card-id][data-tcggo-q]:not([data-price-done])';
+  const els = container.querySelectorAll(sel);
+  for(const el of els){
+    el.setAttribute('data-price-done', '1');
+    const cardId = el.getAttribute('data-card-id');
+    const query  = el.getAttribute('data-tcggo-q');
+    const tcg    = el.getAttribute('data-tcg') || 'pokemon';
+    const name   = el.getAttribute('data-card-name') || '';
+    if(!cardId || !query) continue;
+    // Lecture cache (mémoire ou Supabase)
+    getCachedPrice(cardId).then(cached => {
+      if(cached && cached.prices && !cached.hadError){
+        updatePriceDisplay(el, cached.prices);
+        if(!cached.isFresh){
+          queuePriceRefresh({
+            cardId, tcg, name, query,
+            onDone: (live) => updatePriceDisplay(el, live)
+          });
+        }
+      } else if(cached && cached.hadError){
+        if(cached.ageHours >= PRICE_CACHE_TTL_HOURS){
+          queuePriceRefresh({
+            cardId, tcg, name, query,
+            onDone: (live) => updatePriceDisplay(el, live)
+          });
+        }
+      } else {
+        queuePriceRefresh({
+          cardId, tcg, name, query,
+          onDone: (live) => updatePriceDisplay(el, live)
+        });
+      }
     });
   }
 }
@@ -5443,7 +5550,7 @@ async function showAllEraCards(slug){
         const trend = pokemonTrendBadge(c);
         const trendArrE = getTrendArrow(c.id, displayPrice);
         const priceStr = displayPrice != null
-          ? `<div class="card-price" data-tcggo-q="${escapeHtml((c.name||'')+' '+(c.number||''))}">Cote estimée €${displayPrice.toFixed(2)}${trendArrE}${trend}${pokemonSparkline(c)}<span style="display:block;font-size:9px;color:var(--mut);font-weight:500;margin-top:1px">d'après ${estimate ? estimate.source : 'Cardmarket'}</span>${priceDateBadgeHtml(c, 'pokemon', 'pk_'+(c._setId||''))}</div>`
+          ? `<div class="card-price" data-card-id="pokemon:${escapeHtml(c.id||'')}" data-tcg="pokemon" data-card-name="${escapeHtml(c.name||'')}" data-tcggo-q="${escapeHtml((c.name||'')+' '+(c.number||''))}">Cote estimée €${displayPrice.toFixed(2)}${trendArrE}${trend}${pokemonSparkline(c)}<span style="display:block;font-size:9px;color:var(--mut);font-weight:500;margin-top:1px">d'après ${estimate ? estimate.source : 'Cardmarket'}</span>${priceDateBadgeHtml(c, 'pokemon', 'pk_'+(c._setId||''))}</div>`
           : `<div class="card-price empty">— pas de cote disponible —${priceDateBadgeHtml(c, 'pokemon', 'pk_'+(c._setId||''))}</div>`;
         const num = `${c.number}/${c._setTotal||'?'}`;
         const large = (c.images && c.images.large) || (c.images && c.images.small) || '';
@@ -5620,7 +5727,7 @@ async function showPokemonSetCards(setId){
       const trend = pokemonTrendBadge(c);
       const trendArrP = getTrendArrow(c.id, displayPrice);
       const priceStr = displayPrice != null
-        ? `<div class="card-price" data-tcggo-q="${escapeHtml((c.name||'')+' '+(c.number||''))}">Cote estimée €${displayPrice.toFixed(2)}${trendArrP}${trend}${pokemonSparkline(c)}<span style="display:block;font-size:9px;color:var(--mut);font-weight:500;margin-top:1px">d'après ${estimate ? estimate.source : 'Cardmarket'}</span>${priceDateBadgeHtml(c, 'pokemon', 'pk_'+setId)}</div>`
+        ? `<div class="card-price" data-card-id="pokemon:${escapeHtml(c.id||'')}" data-tcg="pokemon" data-card-name="${escapeHtml(c.name||'')}" data-tcggo-q="${escapeHtml((c.name||'')+' '+(c.number||''))}">Cote estimée €${displayPrice.toFixed(2)}${trendArrP}${trend}${pokemonSparkline(c)}<span style="display:block;font-size:9px;color:var(--mut);font-weight:500;margin-top:1px">d'après ${estimate ? estimate.source : 'Cardmarket'}</span>${priceDateBadgeHtml(c, 'pokemon', 'pk_'+setId)}</div>`
         : `<div class="card-price empty">— pas de cote disponible —${priceDateBadgeHtml(c, 'pokemon', 'pk_'+setId)}</div>`;
       const num=`${c.number}${setInfo?'/'+(setInfo.printedTotal||setInfo.total):''}`;
       const large = (c.images && c.images.large) || (c.images && c.images.small) || '';
@@ -5924,7 +6031,7 @@ async function showLorcanaSetCards(slug){
       if(variants.length===0) variants.push({key:'normal',label:'Normal',price:null});
       const best=variants.reduce((m,v)=>(v.price!=null && (m==null||v.price>m))?v.price:m,null);
       const priceStr=best!=null
-        ? `<div class="card-price" data-tcggo-q="${escapeHtml((c.name||'')+' '+(c.collector_number||c.number||''))}">Cote estimée €${best.toFixed(2)}<span style="display:block;font-size:9px;color:var(--mut);font-weight:500;margin-top:1px">d'après Lorcast (USD→EUR)</span>${priceDateBadgeHtml(c, 'lorcana', 'lc_'+setInfo.lorcastCode)}</div>`
+        ? `<div class="card-price" data-card-id="lorcana:${escapeHtml(c.id||'')}" data-tcg="lorcana" data-card-name="${escapeHtml(c.name||'')}" data-tcggo-q="${escapeHtml((c.name||'')+' '+(c.collector_number||c.number||''))}">Cote estimée €${best.toFixed(2)}<span style="display:block;font-size:9px;color:var(--mut);font-weight:500;margin-top:1px">d'après Lorcast (USD→EUR)</span>${priceDateBadgeHtml(c, 'lorcana', 'lc_'+setInfo.lorcastCode)}</div>`
         : `<div class="card-price empty">— pas de cote disponible —${priceDateBadgeHtml(c, 'lorcana', 'lc_'+setInfo.lorcastCode)}</div>`;
       const large = (c.image_uris && c.image_uris.digital && (c.image_uris.digital.large || c.image_uris.digital.normal)) || img;
       const cmUrl = cardmarketUrlLorcana(c);
@@ -6709,6 +6816,33 @@ function closeOwnedAnywhereModal(){
   document.getElementById('ownAnywhereModal').classList.add('hidden');
   _ownedAnywhereState = null;
 }
+document.addEventListener('DOMContentLoaded', () => {
+  // Auto-refresh des prix : scanne les nouveaux éléments .card-price et .pfcard-market
+  // avec data-card-id, lit le cache Supabase, queue les périmés (1 call/1.5s)
+  const _priceObserver = new MutationObserver((mutations) => {
+    let needsRefresh = false;
+    for(const m of mutations){
+      for(const node of m.addedNodes){
+        if(node.nodeType !== 1) continue;
+        if(node.matches && (node.matches('.card-price[data-card-id]') || node.matches('.pfcard-market[data-card-id]'))) {
+          needsRefresh = true; break;
+        }
+        if(node.querySelector && node.querySelector('[data-card-id][data-tcggo-q]:not([data-price-done])')) {
+          needsRefresh = true; break;
+        }
+      }
+      if(needsRefresh) break;
+    }
+    if(needsRefresh){
+      clearTimeout(window._priceRefreshTimer);
+      window._priceRefreshTimer = setTimeout(() => refreshPriceDisplays(document), 300);
+    }
+  });
+  _priceObserver.observe(document.body, { childList: true, subtree: true });
+  // Premier scan au chargement
+  setTimeout(() => refreshPriceDisplays(document), 500);
+});
+
 document.addEventListener('DOMContentLoaded', () => {
   const closeBtn = document.getElementById('ownAnywhereClose');
   const cancelBtn = document.getElementById('ownAnywhereCancel');
