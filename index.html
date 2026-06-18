@@ -3412,6 +3412,17 @@ window.addEventListener('offline', () => {
 // Init au boot
 setTimeout(updateOfflineBanner, 50);
 
+// Service Worker pour cache des images de cartes (mode hors ligne)
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').then(reg => {
+      console.log('[Soridex] SW enregistré', reg.scope);
+    }).catch(err => {
+      console.warn('[Soridex] SW enregistrement échoué', err);
+    });
+  });
+}
+
 // Constantes des limites du plan gratuit
 const FREE_LIMITS = {
   bizFolders: 1,
@@ -3655,6 +3666,10 @@ async function handleAuthSubmit(){
   if(!email||!pass){showAuthMsg('Email et mot de passe requis.','err'); return;}
   if(pass.length < 6){showAuthMsg('Mot de passe trop court (6 caractères minimum).','err'); return;}
   if(authMode==='signup' && !pseudo){showAuthMsg('Choisis un pseudo.','err'); return;}
+  if(!navigator.onLine){
+    showAuthMsg('⚠️ Mode hors ligne — la connexion nécessite Internet. Repasse en ligne pour te '+(authMode==='signup'?'inscrire':'connecter')+'.','err');
+    return;
+  }
 
   btn.disabled = true;
   btn.textContent = authMode==='signup' ? 'Création en cours…' : 'Connexion en cours…';
