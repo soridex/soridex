@@ -4788,6 +4788,53 @@ function closeCardDetailModal(){
   if(m) m.classList.add('hidden');
 }
 
+// === TCGGO API (RapidAPI) - prix Cardmarket EUR temps réel ===
+const TCGGO_API_KEY = 'dbe54cb5f9msh566368ec6b5ed8fp1c389ejsnf38d2446d56a';
+const TCGGO_HOST = 'pokemon-tcg-api.p.rapidapi.com';
+const _tcggoCache = new Map(); // cache mémoire pour éviter de brûler le quota
+
+async function fetchTcggoPrices(searchQuery) {
+  if(!searchQuery) return null;
+  const cacheKey = searchQuery.toLowerCase().trim();
+  if(_tcggoCache.has(cacheKey)) return _tcggoCache.get(cacheKey);
+
+  try {
+    const url = `https://${TCGGO_HOST}/cards?search=${encodeURIComponent(searchQuery)}&limit=3`;
+    const res = await fetch(url, {
+      headers: {
+        'x-rapidapi-key': TCGGO_API_KEY,
+        'x-rapidapi-host': TCGGO_HOST
+      }
+    });
+    if(!res.ok){
+      console.warn('TCGGO API status', res.status);
+      return null;
+    }
+    const data = await res.json();
+    // La réponse peut être {data: [...]} ou directement un array
+    const cards = Array.isArray(data) ? data : (data.data || data.cards || data.results || []);
+    if(!cards.length) return null;
+    const card = cards[0];
+    const cm = card && card.prices && card.prices.cardmarket;
+    if(!cm) return null;
+
+    const result = {
+      avg1:  cm['1d_average']  || cm.avg1  || cm.average_1d  || null,
+      avg7:  cm['7d_average']  || cm.avg7  || cm.average_7d  || null,
+      avg30: cm['30d_average'] || cm.avg30 || cm.average_30d || null,
+      low:   cm.lowest_near_mint || cm.low || null,
+      lowFr: cm.lowest_near_mint_FR || null,
+      trend: cm.trend || cm.price_trend || null,
+      raw: cm
+    };
+    _tcggoCache.set(cacheKey, result);
+    return result;
+  } catch(e) {
+    console.warn('TCGGO fetch failed:', e);
+    return null;
+  }
+}
+
 async function loadCardDetail(tcg, id, fallback){
   let card = null;
   let cardmarketUrl = null;
@@ -4923,42 +4970,46 @@ async function loadCardDetail(tcg, id, fallback){
   document.getElementById('cardDetailCm').href = cardmarketUrl || '#';
   document.getElementById('cardDetailEbay').href = `https://www.ebay.fr/sch/i.html?_nkw=${encodeURIComponent(ebayQuery.trim())}&LH_Sold=1&LH_Complete=1`;
 
-  // === Scrape Cardmarket en direct pour avoir la cote J-1 (avg1) ===
-  // Pour Pokémon : seulement si données API obsolètes (avg1 déjà dans pokemontcg.io)
-  // Pour Magic & Lorcana : toujours (Scryfall/Lorcast ne renvoient pas avg1)
-  const needsLiveScrape = (tcg === 'magic' || tcg === 'lorcana') || isStale;
-  if(needsLiveScrape && cardmarketUrl && /cardmarket\.com\/[a-z]+\/(Pokemon|Magic|Lorcana)\/Products\/(Singles|Boosters)/i.test(cardmarketUrl)){
+  // === TCGGO API : récupère les prix Cardmarket à jour ===
+  // Marche pour Pokémon et Lorcana. Pour Magic, Scryfall fait déjà l'affaire.
+  if(tcg === 'pokemon' || tcg === 'lorcana'){
     (async () => {
-      try {
-        const r = await fetch(`/api/cm-price?url=${encodeURIComponent(cardmarketUrl)}`);
-        if(!r.ok){
-          updEl.innerHTML = `<span style="color:#f87171;font-weight:600">⚠ Cote API obsolète et refresh impossible. Clique "Voir sur Cardmarket" pour la vraie cote.</span>`;
-          return;
-        }
-        const data = await r.json();
-        const live = (data && data.prices) || {};
-        if(live.trend != null || live.low != null || live.avg30 != null || live.avg1 != null){
-          // Remplace les valeurs affichées par les fraîches
-          const newPrices = [];
-          if(live.avg1 != null) newPrices.push({label:'Cote J-1 (live)', value:live.avg1, featured:true});
-          if(live.avg7 != null) newPrices.push({label:'Avg 7j (live)', value:live.avg7});
-          if(live.trend != null) newPrices.push({label:'Cardmarket Trend (live)', value:live.trend});
-          if(live.low != null) newPrices.push({label:'Prix bas (live)', value:live.low});
-          if(live.avg30 != null) newPrices.push({label:'Avg 30j (live)', value:live.avg30});
-          pricesEl.innerHTML = newPrices.map(p => `
-            <div class="card-detail-price-cell ${p.featured?'featured':''}">
-              <div class="label">${escapeHtml(p.label)}</div>
-              <div class="val">${p.value.toFixed(2)} €</div>
-            </div>
-          `).join('');
-          updEl.innerHTML = `<span style="color:#4ade80;font-weight:600">✓ Cotes rafraîchies depuis Cardmarket à l'instant</span>`;
-        } else {
-          updEl.innerHTML = `<span style="color:#f87171;font-weight:600">⚠ Cote API obsolète et refresh impossible. Clique "Voir sur Cardmarket" pour la vraie cote.</span>`;
-        }
-      } catch(e){
-        console.warn('Cardmarket live fetch failed', e);
-        updEl.innerHTML = `<span style="color:#f87171;font-weight:600">⚠ Cote API obsolète et refresh impossible. Clique "Voir sur Cardmarket" pour la vraie cote.</span>`;
+      // Construit une query : nom + numéro de carte si dispo
+      const cardName = (card && card.name) || (fallback && fallback.name) || '';
+      const cardNum = (card && (card.number || (card.collector_number))) || (fallback && fallback.number) || '';
+      const searchQuery = (cardName + ' ' + cardNum).trim();
+      if(!searchQuery){
+        return;
       }
+      const live = await fetchTcggoPrices(searchQuery);
+      if(!live){
+        if(isStale){
+          updEl.innerHTML = `<span style="color:#f87171;font-weight:600">⚠ Cote API obsolète et refresh impossible. Clique "Voir sur Cardmarket" pour la vraie cote.</span>`;
+        }
+        return;
+      }
+      // Construit l'affichage avec les vraies cotes TCGGO
+      const newPrices = [];
+      if(live.avg1  != null) newPrices.push({label:'Cote J-1', value:live.avg1, featured:true});
+      else if(live.avg7 != null) newPrices.push({label:'Cote 7j', value:live.avg7, featured:true});
+      if(live.avg7  != null && live.avg1 != null) newPrices.push({label:'Avg 7j', value:live.avg7});
+      if(live.trend != null) newPrices.push({label:'Trend', value:live.trend});
+      if(live.low   != null) newPrices.push({label:'Prix bas', value:live.low});
+      if(live.lowFr != null) newPrices.push({label:'Prix bas FR', value:live.lowFr});
+      if(live.avg30 != null) newPrices.push({label:'Avg 30j', value:live.avg30});
+      if(newPrices.length === 0){
+        if(isStale){
+          updEl.innerHTML = `<span style="color:#f87171;font-weight:600">⚠ Cote indisponible via TCGGO. Voir Cardmarket direct.</span>`;
+        }
+        return;
+      }
+      pricesEl.innerHTML = newPrices.map(p => `
+        <div class="card-detail-price-cell ${p.featured?'featured':''}">
+          <div class="label">${escapeHtml(p.label)}</div>
+          <div class="val">${p.value.toFixed(2)} €</div>
+        </div>
+      `).join('');
+      updEl.innerHTML = `<span style="color:#4ade80;font-weight:600">✓ Cotes Cardmarket à jour (via TCGGO)</span>`;
     })();
   }
 
