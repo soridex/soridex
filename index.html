@@ -4807,21 +4807,27 @@ async function fetchTcggoPrices(searchQuery) {
       }
     });
     if(!res.ok){
-      console.warn('TCGGO API status', res.status);
-      _tcggoCache.set(cacheKey, null);
-      return null;
+      // Stocke l'erreur pour qu'on puisse l'afficher dans l'UI
+      const errText = await res.text().catch(()=>'');
+      const errResult = { _error: `HTTP ${res.status}: ${errText.substring(0, 150)}` };
+      console.warn('TCGGO API error', res.status, errText);
+      _tcggoCache.set(cacheKey, errResult);
+      return errResult;
     }
     const data = await res.json();
+    console.log('TCGGO response for', searchQuery, data);
     const cards = Array.isArray(data) ? data : (data.data || data.cards || data.results || []);
     if(!cards.length){
-      _tcggoCache.set(cacheKey, null);
-      return null;
+      const errResult = { _error: `Aucune carte trouvée pour "${searchQuery}". Réponse: ${JSON.stringify(data).substring(0, 200)}` };
+      _tcggoCache.set(cacheKey, errResult);
+      return errResult;
     }
     const card = cards[0];
     const cm = card && card.prices && card.prices.cardmarket;
     if(!cm){
-      _tcggoCache.set(cacheKey, null);
-      return null;
+      const errResult = { _error: `Pas de prix Cardmarket. Carte trouvée: ${card.name||'?'}. Clés dispo: ${Object.keys(card.prices||{}).join(',')}` };
+      _tcggoCache.set(cacheKey, errResult);
+      return errResult;
     }
 
     const result = {
@@ -4836,9 +4842,10 @@ async function fetchTcggoPrices(searchQuery) {
     _tcggoCache.set(cacheKey, result);
     return result;
   } catch(e) {
+    const errResult = { _error: `Erreur réseau/CORS: ${e.message}` };
     console.warn('TCGGO fetch failed:', e);
-    _tcggoCache.set(cacheKey, null);
-    return null;
+    _tcggoCache.set(cacheKey, errResult);
+    return errResult;
   }
 }
 
@@ -5011,10 +5018,9 @@ async function loadCardDetail(tcg, id, fallback){
         return;
       }
       const live = await fetchTcggoPrices(searchQuery);
-      if(!live){
-        if(isStale){
-          updEl.innerHTML = `<span style="color:#f87171;font-weight:600">⚠ Cote API obsolète et refresh impossible. Clique "Voir sur Cardmarket" pour la vraie cote.</span>`;
-        }
+      if(!live || live._error){
+        const errMsg = (live && live._error) ? live._error : 'TCGGO non disponible';
+        updEl.innerHTML = `<span style="color:#f87171;font-weight:600;font-size:11px;display:block;word-break:break-word">⚠ TCGGO échec : ${escapeHtml(errMsg)}</span>`;
         return;
       }
       // Construit l'affichage avec les vraies cotes TCGGO
