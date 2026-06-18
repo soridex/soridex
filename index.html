@@ -6710,27 +6710,6 @@ function closeOwnedAnywhereModal(){
   _ownedAnywhereState = null;
 }
 document.addEventListener('DOMContentLoaded', () => {
-  // Auto-refresh des prix TCGGO sur tout nouveau .card-price[data-tcggo-q]
-  const tcggoObserver = new MutationObserver((mutations) => {
-    let needsRefresh = false;
-    for(const m of mutations){
-      for(const node of m.addedNodes){
-        if(node.nodeType !== 1) continue;
-        if(node.matches && node.matches('.card-price[data-tcggo-q]')) { needsRefresh = true; break; }
-        if(node.querySelector && node.querySelector('.card-price[data-tcggo-q]:not([data-tcggo-done])')) { needsRefresh = true; break; }
-      }
-      if(needsRefresh) break;
-    }
-    if(needsRefresh){
-      // Debounce léger : on attend 200ms pour laisser le DOM se stabiliser
-      clearTimeout(window._tcggoRefreshTimer);
-      window._tcggoRefreshTimer = setTimeout(() => refreshGridPricesWithTcggo(document), 200);
-    }
-  });
-  tcggoObserver.observe(document.body, { childList: true, subtree: true });
-});
-
-document.addEventListener('DOMContentLoaded', () => {
   const closeBtn = document.getElementById('ownAnywhereClose');
   const cancelBtn = document.getElementById('ownAnywhereCancel');
   const confirmBtn = document.getElementById('ownAnywhereConfirm');
