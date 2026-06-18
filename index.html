@@ -4101,6 +4101,7 @@ function pkCardToPfEntry(c, setInfo){
     setReleaseDate: setInfo ? setInfo.releaseDate : (c.set ? c.set.releaseDate : null),
     number: c.number + (setInfo ? '/'+(setInfo.printedTotal||setInfo.total) : ''),
     rarity: c.rarity || '',
+    cardmarketUrl: (c.cardmarket && c.cardmarket.url) || null,
     marketPrice: market, pricePaid: 0, qty: 1, owned: false,
     addedAt: Date.now()
   };
@@ -4177,6 +4178,7 @@ function mgCardToPfEntry(c, setInfo){
     setReleaseDate: c.released_at || (setInfo ? setInfo.released_at : null),
     number: (c.collector_number || '') + (setInfo ? '/'+setInfo.card_count : ''),
     rarity: c.rarity || '',
+    cardmarketUrl: (c.purchase_uris && c.purchase_uris.cardmarket) || null,
     marketPrice: market, pricePaid: 0, qty: 1, owned: false,
     addedAt: Date.now()
   };
@@ -4525,10 +4527,17 @@ function renderPfTotals(pf){
 
 // URL Cardmarket selon le TCG du portfolio (pour pfcard)
 function pfCardmarketUrl(card, tcg){
+  // 1️⃣ Si on a déjà l'URL directe stockée (cartes ajoutées récemment) → on l'utilise
+  if(card.cardmarketUrl) return card.cardmarketUrl;
+  // 2️⃣ Sinon, recherche précise avec nom + numéro de carte (moins ambigu)
   const name = card.name || '';
   // Pour Lorcana, on retire la partie après " — " (version) pour mieux matcher Cardmarket
   const searchName = (tcg === 'lorcana' && name.includes(' — ')) ? name.split(' — ')[0] : name;
-  const enc = encodeURIComponent(searchName);
+  // Extrait le numéro (sans la partie /total)
+  const num = (card.number || '').split('/')[0].trim();
+  // Construit la query : nom + numéro si dispo
+  const query = num ? `${searchName} ${num}` : searchName;
+  const enc = encodeURIComponent(query);
   if(tcg === 'pokemon') return `https://www.cardmarket.com/fr/Pokemon/Products/Search?searchString=${enc}`;
   if(tcg === 'magic') return `https://www.cardmarket.com/fr/Magic/Products/Search?searchString=${enc}`;
   if(tcg === 'lorcana') return `https://www.cardmarket.com/fr/Lorcana/Products/Search?searchString=${enc}`;
@@ -4792,7 +4801,7 @@ function closeCardDetailModal(){
 const TCGGO_API_KEY = 'dbe54cb5f9msh566368ec6b5ed8fp1c389ejsnf38d2446d56a';
 const TCGGO_HOST = 'pokemon-tcg-api.p.rapidapi.com';
 const PRICE_CACHE_TTL_HOURS = 24;          // un prix est "frais" pendant 24h
-const PRICE_QUEUE_DELAY_MS = 1500;          // 1 call/1.5s = ~40 calls/min, safe pour BASIC
+const PRICE_QUEUE_DELAY_MS = 1000;          // 1 call/sec (= 60/min, on tente le max safe)
 const PRICE_RATE_LIMIT_PAUSE_MS = 60000;    // pause 60s sur 429
 const _priceMemCache = new Map();           // cache mémoire L1
 const _priceQueue = [];                     // queue d'IDs à rafraîchir
@@ -9910,36 +9919,68 @@ function bizHandleCardNameInput(){
 /* ----- Refresh cotes ----- */
 async function bizRefreshOneCard(tcg, cardId){
   try{
+    // Helper : tente TCGGO d'abord, retourne null si pas de match exact
+    async function tryTcggo(name, number){
+      if(!name || !number) return null;
+      const expectedNumber = String(number).split('/')[0];
+      const query = `${name} ${expectedNumber}`;
+      // Cherche dans cache Supabase d'abord
+      const cacheKey = `${tcg}:${cardId}`;
+      const cached = await getCachedPrice(cacheKey);
+      if(cached && cached.prices && !cached.hadError && cached.isFresh){
+        const p = cached.prices;
+        const best = p.avg1 || p.avg7 || p.trend || p.lowFr || p.low || null;
+        if(best != null) return { trendPrice: best, lowPrice: p.low || null, source:'tcggo-cache' };
+      }
+      // Sinon appel direct TCGGO (compte vs quota mais c'est un refresh manuel)
+      const live = await _fetchTcggoRaw(query, expectedNumber);
+      if(live && !live._error){
+        await setCachedPrice(cacheKey, tcg, name, query, live, null);
+        const best = live.avg1 || live.avg7 || live.trend || live.lowFr || live.low || null;
+        if(best != null) return { trendPrice: best, lowPrice: live.low || null, source:'tcggo-live' };
+      }
+      return null;
+    }
+
     if(tcg === 'pokemon'){
       const res = await fetch(`https://api.pokemontcg.io/v2/cards/${encodeURIComponent(cardId)}`);
       if(!res.ok) return null;
       const data = await res.json();
       const c = data.data || {};
       const cm = (c.cardmarket && c.cardmarket.prices) || {};
-      // Prendre le MAX de tous les signaux de prix "central"
-      // pour mieux capter les cartes en hausse (trendPrice de l'API a souvent du lag)
+      // 1️⃣ Tente TCGGO avec numéro exact
+      const tcggo = await tryTcggo(c.name, c.number);
+      if(tcggo) return tcggo;
+      // 2️⃣ Fallback : pokemontcg.io (souvent périmé pour les cartes récentes)
       const candidates = [cm.trendPrice, cm.avg1, cm.avg7, cm.avg30, cm.averageSellPrice, cm.suggestedPrice]
         .filter(p => typeof p === 'number' && p > 0);
       const trendPrice = candidates.length ? Math.max(...candidates) : null;
-      return {trendPrice, lowPrice: cm.lowPrice != null ? cm.lowPrice : null};
+      return {trendPrice, lowPrice: cm.lowPrice != null ? cm.lowPrice : null, source:'pokemontcg'};
     }
     if(tcg === 'lorcana'){
-      // Lorcast: /cards/{id}
       const res = await fetch(`https://api.lorcast.com/v0/cards/${encodeURIComponent(cardId)}`);
       if(!res.ok) return null;
       const c = await res.json();
+      // 1️⃣ TCGGO d'abord
+      const tcggo = await tryTcggo(c.name + (c.version?' '+c.version:''), c.collector_number);
+      if(tcggo) return tcggo;
+      // 2️⃣ Fallback Lorcast USD→EUR (mauvais pour les ICONIC mais c'est ce qu'on a)
       const usd = c.prices && c.prices.usd ? parseFloat(c.prices.usd) : null;
       const rate = (typeof USD_TO_EUR === 'number') ? USD_TO_EUR : 0.92;
-      return {trendPrice: usd != null ? +(usd*rate).toFixed(2) : null, lowPrice: null};
+      return {trendPrice: usd != null ? +(usd*rate).toFixed(2) : null, lowPrice: null, source:'lorcast'};
     }
     if(tcg === 'magic'){
       const res = await fetch(`https://api.scryfall.com/cards/${encodeURIComponent(cardId)}`, {headers:{'Accept':'application/json'}});
       if(!res.ok) return null;
       const c = await res.json();
+      // 1️⃣ TCGGO
+      const tcggo = await tryTcggo(c.name, c.collector_number);
+      if(tcggo) return tcggo;
+      // 2️⃣ Fallback Scryfall
       const eur = c.prices && c.prices.eur ? parseFloat(c.prices.eur) : null;
       const usd = c.prices && c.prices.usd ? parseFloat(c.prices.usd) : null;
       const rate = (typeof USD_TO_EUR === 'number') ? USD_TO_EUR : 0.92;
-      return {trendPrice: eur != null ? eur : (usd != null ? +(usd*rate).toFixed(2) : null), lowPrice: null};
+      return {trendPrice: eur != null ? eur : (usd != null ? +(usd*rate).toFixed(2) : null), lowPrice: null, source:'scryfall'};
     }
   }catch(e){ console.warn('refresh price error:', e); }
   return null;
