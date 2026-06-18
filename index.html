@@ -6817,8 +6817,32 @@ function closeOwnedAnywhereModal(){
   _ownedAnywhereState = null;
 }
 document.addEventListener('DOMContentLoaded', () => {
-  // Auto-refresh des prix : scanne les nouveaux éléments .card-price et .pfcard-market
-  // avec data-card-id, lit le cache Supabase, queue les périmés (1 call/1.5s)
+  // === Indicateur visuel queue prix ===
+  const statusEl = document.createElement('div');
+  statusEl.id = 'priceQueueStatus';
+  statusEl.style.cssText = 'position:fixed;bottom:12px;right:12px;background:rgba(16,14,40,.95);color:#f4f1e8;padding:8px 12px;border-radius:8px;font-size:12px;font-family:Outfit,sans-serif;border:1px solid rgba(212,168,90,.4);z-index:9999;display:none;max-width:280px;cursor:pointer';
+  statusEl.title = 'Cliquer pour forcer un scan';
+  statusEl.onclick = () => {
+    document.querySelectorAll('[data-price-done]').forEach(el => el.removeAttribute('data-price-done'));
+    refreshPriceDisplays(document);
+  };
+  document.body.appendChild(statusEl);
+
+  function updateStatus(){
+    const queueLen = _priceQueue.length;
+    const processing = _priceQueueProcessing;
+    const scannable = document.querySelectorAll('[data-card-id][data-tcggo-q]').length;
+    const done = document.querySelectorAll('[data-card-id][data-tcggo-q][data-price-done]').length;
+    if(queueLen === 0 && !processing && scannable === 0){
+      statusEl.style.display = 'none';
+    } else {
+      statusEl.style.display = 'block';
+      statusEl.innerHTML = `📊 Cotes : ${done}/${scannable} scannées · Queue: ${queueLen}${processing?' ⏳':''}`;
+    }
+  }
+  setInterval(updateStatus, 1000);
+
+  // === Auto-refresh des prix : MutationObserver ===
   const _priceObserver = new MutationObserver((mutations) => {
     let needsRefresh = false;
     for(const m of mutations){
@@ -6839,7 +6863,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
   _priceObserver.observe(document.body, { childList: true, subtree: true });
-  // Premier scan au chargement
   setTimeout(() => refreshPriceDisplays(document), 500);
 });
 
