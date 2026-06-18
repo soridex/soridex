@@ -4526,17 +4526,34 @@ function renderPfTotals(pf){
 
 
 // URL Cardmarket selon le TCG du portfolio (pour pfcard)
+// Helper : extrait un mot-clé de rareté à ajouter à la recherche Cardmarket
+// pour mieux cibler les variantes spéciales (Iconic, Enchanted, SIR, Hyper, etc.)
+function getRarityHint(rarity){
+  if(!rarity) return '';
+  const r = String(rarity).toLowerCase();
+  const keywords = ['iconic', 'enchanted', 'special illustration', 'hyper', 'secret', 'illustration rare', 'trainer gallery', 'rainbow', 'gold star', 'shiny', 'alternate art', 'extended art', 'borderless'];
+  for(const k of keywords){
+    if(r.includes(k)) return k;
+  }
+  return '';
+}
+
 function pfCardmarketUrl(card, tcg){
   // 1️⃣ Si on a déjà l'URL directe stockée (cartes ajoutées récemment) → on l'utilise
   if(card.cardmarketUrl) return card.cardmarketUrl;
-  // 2️⃣ Sinon, recherche précise avec nom + numéro de carte (moins ambigu)
+  // 2️⃣ Sinon, recherche précise avec nom + numéro + rareté si variante spéciale
   const name = card.name || '';
   // Pour Lorcana, on retire la partie après " — " (version) pour mieux matcher Cardmarket
   const searchName = (tcg === 'lorcana' && name.includes(' — ')) ? name.split(' — ')[0] : name;
   // Extrait le numéro (sans la partie /total)
   const num = (card.number || '').split('/')[0].trim();
-  // Construit la query : nom + numéro si dispo
-  const query = num ? `${searchName} ${num}` : searchName;
+  // Hint de rareté pour variantes spéciales
+  const rarityHint = getRarityHint(card.rarity || '');
+  // Construit la query
+  const parts = [searchName];
+  if(num) parts.push(num);
+  if(rarityHint) parts.push(rarityHint);
+  const query = parts.join(' ');
   const enc = encodeURIComponent(query);
   if(tcg === 'pokemon') return `https://www.cardmarket.com/fr/Pokemon/Products/Search?searchString=${enc}`;
   if(tcg === 'magic') return `https://www.cardmarket.com/fr/Magic/Products/Search?searchString=${enc}`;
