@@ -6654,7 +6654,7 @@ function renderGlobalSearchResults(){
         <div class="card-name">${escapeHtml(r.displayName)}</div>
         <div class="card-num">${escapeHtml(c.setName||'')} · ${escapeHtml(c.number||'')}</div>
         <div class="card-rarity">${escapeHtml(c.rarity||'')} · <span style="color:var(--mut)">${TCG_LABEL[r.tcg]||r.tcg}</span></div>
-        <div class="card-price">${market !== '—' ? 'Cote estimée ' + market : '— pas de cote —'}</div>
+        <div class="card-price" data-card-id="${escapeHtml(r.tcg+':'+(c.apiId||''))}" data-tcg="${escapeHtml(r.tcg||'')}" data-card-name="${escapeHtml(c.name||'')}" data-tcggo-q="${escapeHtml((c.name||'')+' '+((c.number||'').split('/')[0]))}">${market !== '—' ? 'Cote estimée ' + market : '— pas de cote —'}</div>
         <div class="card-actions">
           <a class="card-btn cm" href="${cmUrl}" target="_blank" rel="noopener noreferrer">Cardmarket</a>
           <a class="card-btn eb" href="${ebayUrl(ebQuery)}" target="_blank" rel="noopener noreferrer">eBay</a>
@@ -7279,7 +7279,7 @@ function renderWishFolderDetail(){
         <div class="card-name">${escapeHtml(displayName)}</div>
         <div class="card-num">${escapeHtml(c.setName||'')} · ${escapeHtml(c.number||'')}</div>
         <div class="card-rarity">${escapeHtml(c.rarity||'')} · <span style="color:var(--mut)">${TCG_LABEL[c.tcg]||c.tcg}</span></div>
-        <div class="card-price">${market !== '—' ? 'Cote estimée ' + market : '— pas de cote —'}</div>
+        <div class="card-price" data-card-id="${escapeHtml(c.tcg+':'+(c.apiId||''))}" data-tcg="${escapeHtml(c.tcg||'')}" data-card-name="${escapeHtml(c.name||'')}" data-tcggo-q="${escapeHtml((c.name||'')+' '+((c.number||'').split('/')[0]))}">${market !== '—' ? 'Cote estimée ' + market : '— pas de cote —'}</div>
         <div class="card-actions">
           <a class="card-btn cm" href="${cmUrl}" target="_blank" rel="noopener noreferrer">Cardmarket</a>
           <a class="card-btn eb" href="${ebayUrl(ebQuery)}" target="_blank" rel="noopener noreferrer">eBay</a>
