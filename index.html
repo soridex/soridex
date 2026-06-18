@@ -90,6 +90,14 @@
   .stat-card::before{content:"";position:absolute;inset:0;border-radius:var(--rad);padding:1px;background:linear-gradient(135deg,rgba(212,168,90,.4),transparent 40%,transparent 60%,rgba(212,168,90,.15));-webkit-mask:linear-gradient(#000,#000) content-box,linear-gradient(#000,#000);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
   .stat-label{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);margin-bottom:10px}
   .stat-value{font-family:"Outfit";font-weight:700;font-size:34px;color:#fff;letter-spacing:-.01em;line-height:1.1;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+  .stat-breakdown{margin-top:10px;display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--mut);font-weight:600}
+  .stat-breakdown .bk{display:flex;align-items:center;gap:5px}
+  .stat-breakdown .bk-tcg{font-size:9.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--mut)}
+  .stat-breakdown .bk-val{color:var(--gold-2);font-weight:700;font-family:"Outfit"}
+  .stat-breakdown .bk-pokemon .bk-dot{background:#3b82f6}
+  .stat-breakdown .bk-lorcana .bk-dot{background:#a855f7}
+  .stat-breakdown .bk-magic .bk-dot{background:#dc2626}
+  .stat-breakdown .bk-dot{width:7px;height:7px;border-radius:50%;display:inline-block}
   .stat-unit{font-size:18px;font-weight:500;color:var(--mut)}
   .stat-trend{font-size:14px;font-weight:600;color:var(--green);display:inline-flex;align-items:center;gap:2px}
   .stat-icon{position:absolute;right:22px;top:50%;transform:translateY(-50%);width:54px;height:54px;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 0 12px var(--gold-glow))}
@@ -1861,6 +1869,7 @@
       <div class="stat-card">
         <div class="stat-label">Valeur totale de la collection</div>
         <div class="stat-value"><span id="dashTotalValue">—</span> <span class="stat-trend" id="dashTotalTrend"></span></div>
+        <div class="stat-breakdown" id="dashValueBreakdown"></div>
         <div class="stat-icon">
           <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
             <defs><linearGradient id="gboxGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#e6c177"/><stop offset="100%" stop-color="#a87c2e"/></linearGradient></defs>
@@ -1869,8 +1878,8 @@
           </svg>
         </div>
       </div>
-      <div class="stat-card"><div class="stat-label">Sets disponibles</div><div class="stat-value"><span id="dashTotalSets">—</span> <span class="stat-unit">sets</span></div></div>
-      <div class="stat-card"><div class="stat-label">Cartes totales</div><div class="stat-value"><span id="dashTotalCards">—</span> <span class="stat-unit">cartes</span></div></div>
+      <div class="stat-card"><div class="stat-label">Sets disponibles</div><div class="stat-value"><span id="dashTotalSets">—</span> <span class="stat-unit">sets</span></div><div class="stat-breakdown" id="dashSetsBreakdown"></div></div>
+      <div class="stat-card"><div class="stat-label">Cartes totales</div><div class="stat-value"><span id="dashTotalCards">—</span> <span class="stat-unit">cartes</span></div><div class="stat-breakdown" id="dashCardsBreakdown"></div></div>
     </div>
   </section>
 
@@ -3977,10 +3986,12 @@ function renderPortfolios(filter){
   grid.innerHTML = qoHtml + list.map(p=>{
     const totals = computePfTotals(p);
     const count = (p.cards||[]).length;
+    const tcgLabel = p.tcg==='pokemon'?'Pokémon':p.tcg==='magic'?'Magic':'Lorcana';
+    const ownedText = count > 0 ? `${totals.owned}/${count} possédées` : `0 cartes`;
     return `<div class="pf-card" data-pf-id="${p.id}">
       <div class="pf-cover">${PF_ICONS[p.tcg]||''}</div>
       <div class="pf-name">${escapeHtml(p.name)}</div>
-      <div class="pf-meta"><span>${p.tcg==='pokemon'?'Pokémon':p.tcg==='magic'?'Magic':'Lorcana'} · ${count} cartes</span><span class="pf-value" title="Valeur si collection complète">€${totals.valueComplete.toFixed(2)}</span></div>
+      <div class="pf-meta"><span>${tcgLabel} · ${ownedText}</span><span class="pf-value" title="Valeur si collection complète">€${totals.valueComplete.toFixed(2)}</span></div>
     </div>`;
   }).join('') + createCard;
   document.getElementById('createPfBtn').addEventListener('click', createPortfolio);
@@ -4391,6 +4402,31 @@ function computePfTotals(pf){
 // État de tri par portfolio (en mémoire seulement)
 let pfSortState = { key: 'price', dir: 'desc' };
 let pfFilterState = 'all'; // 'all' | 'owned' | 'missing'
+
+// Construit un index { 'tcg|setName' → Set d'IDs uniques de cartes possédées }
+// Utilisé pour afficher la progression "X/Y possédées" sur les grilles de sets.
+// Dédoublonne les variantes (Normal/Foil) par "nom|numéro" → 1 carte unique.
+function getOwnedCardsBySetIndex(){
+  const idx = {};
+  const portfolios = getPortfolios();
+  for(const p of portfolios){
+    const pfTcg = p.tcg;
+    for(const c of (p.cards||[])){
+      if(c.owned === false) continue;
+      const cardTcg = c.tcg || pfTcg;
+      const setKey = (c.setName||'').toLowerCase().trim();
+      if(!setKey || !cardTcg) continue;
+      const key = cardTcg + '|' + setKey;
+      if(!idx[key]) idx[key] = new Set();
+      idx[key].add((c.name||'') + '|' + (c.number||''));
+    }
+  }
+  return idx;
+}
+function countOwnedInSet(idx, tcg, setName){
+  const key = tcg + '|' + (setName||'').toLowerCase().trim();
+  return idx[key] ? idx[key].size : 0;
+}
 
 function showPortfolioDetail(pfId){
   const pf = getPortfolios().find(p => p.id === pfId);
@@ -5154,8 +5190,9 @@ const LORCANA_SETS = [
 ];
 
 /* === COMMON: rendu d'une grille de sets === */
-function renderSetGrid(id, sets){
+function renderSetGrid(id, sets, tcg){
   const grid = document.getElementById(id);
+  const ownedIdx = tcg ? getOwnedCardsBySetIndex() : null;
   grid.innerHTML = sets.map(s=>{
     const visual = s.img ? `<img src="${s.img}" alt="${escapeHtml(s.name)}">` : `<div class="ph">${escapeHtml(s.name)}</div>`;
     if(s.upcoming){
@@ -5171,12 +5208,25 @@ function renderSetGrid(id, sets){
       </div>
     </div>`;
     }
+    // Ligne progression si tcg fourni
+    let ownedHtml = '';
+    if(ownedIdx && tcg){
+      const owned = countOwnedInSet(ownedIdx, tcg, s.name);
+      if(s.count){
+        const pct = Math.round((owned/s.count)*100);
+        const color = owned === 0 ? 'var(--mut)' : (owned >= s.count ? 'var(--green)' : 'var(--gold-2)');
+        ownedHtml = `<div class="set-stats"><span>Possédées</span><span class="cote" style="color:${color}">${owned}/${s.count}${pct>0?` · ${pct}%`:''}</span></div>`;
+      } else if(owned > 0){
+        ownedHtml = `<div class="set-stats"><span>Possédées</span><span class="cote" style="color:var(--gold-2)">${owned}</span></div>`;
+      }
+    }
     return `
     <div class="set-card" data-set-slug="${s.slug || ''}" data-set-name="${escapeHtml(s.name)}">
       <div class="set-img">${visual}</div>
       <div class="set-body">
         <div class="set-name">${escapeHtml(s.name)}</div>
         <div class="set-year">${s.year} · ${s.count} ${s.unit||'cartes'}</div>
+        ${ownedHtml}
         <div class="set-stats"><span>Cote moyenne</span><span class="cote">${s.cote}</span></div>
       </div>
     </div>`;
@@ -5792,7 +5842,12 @@ async function showLorcanaSetCards(slug){
   grid.innerHTML='<div class="empty-state"><div class="ico">…</div><h3>Chargement…</h3></div>';
   filtersBox.innerHTML='';
   document.getElementById('setDetailTitle').textContent=setInfo.name;
-  document.getElementById('setDetailSub').textContent=`${setInfo.year} · Chapitre ${setInfo.lorcastCode} · ${setInfo.count} cartes`;
+  {
+    const ownedIdx = getOwnedCardsBySetIndex();
+    const owned = countOwnedInSet(ownedIdx, 'lorcana', setInfo.name);
+    const progress = owned > 0 ? ` · ${owned}/${setInfo.count} possédées` : '';
+    document.getElementById('setDetailSub').textContent = `${setInfo.year} · Chapitre ${setInfo.lorcastCode} · ${setInfo.count} cartes${progress}`;
+  }
   document.getElementById('setDetailBreadcrumb').textContent=setInfo.name;
   setCurrentSetContext('lorcana', setInfo.lorcastCode, setInfo.name);
   const links=document.querySelectorAll('#view-set-detail .breadcrumb a');
@@ -7948,7 +8003,7 @@ document.addEventListener('click', (e) => {
 
 /* === INIT GRIDS === */
 renderPokemonEras();
-renderSetGrid('setGridLorcana', [...LORCANA_SETS].reverse());
+renderSetGrid('setGridLorcana', [...LORCANA_SETS].reverse(), 'lorcana');
 
 
 
@@ -8033,7 +8088,7 @@ async function loadUpcomingSets(force){
   const out = [];
 
   const tasks = await Promise.allSettled([
-    // Pokémon
+    // Pokémon (API) — récupère ce que l'API connaît
     (async() => {
       try{
         const all = await getAllPokemonSetsFromApi();
@@ -8044,6 +8099,19 @@ async function loadUpcomingSets(force){
           if(d > today) out.push({tcg:'pokemon', name:s.name, date:d, dateStr:s.releaseDate, raw:s});
         }
       }catch(e){ console.warn('upcoming pokemon', e); }
+    })(),
+    // Pokémon (constante hardcodée) — pour les annonces officielles non encore dans l'API
+    (async() => {
+      try{
+        if(typeof UPCOMING_POKEMON_SETS !== 'undefined' && Array.isArray(UPCOMING_POKEMON_SETS)){
+          for(const s of UPCOMING_POKEMON_SETS){
+            if(!s.releaseDate) continue;
+            const d = new Date(s.releaseDate);
+            if(isNaN(d.getTime())) continue;
+            if(d > today) out.push({tcg:'pokemon', name:s.name, date:d, dateStr:s.releaseDate, raw:s});
+          }
+        }
+      }catch(e){ console.warn('upcoming pokemon hardcoded', e); }
     })(),
     // Magic
     (async() => {
@@ -8057,7 +8125,7 @@ async function loadUpcomingSets(force){
         }
       }catch(e){ console.warn('upcoming magic', e); }
     })(),
-    // Lorcana
+    // Lorcana (API)
     (async() => {
       try{
         const r = await fetch('https://api.lorcast.com/v0/sets');
@@ -8073,10 +8141,31 @@ async function loadUpcomingSets(force){
         }
       }catch(e){ console.warn('upcoming lorcana', e); }
     })(),
+    // Lorcana (constante hardcodée) — chapitres annoncés avec flag upcoming
+    (async() => {
+      try{
+        if(typeof LORCANA_SETS !== 'undefined' && Array.isArray(LORCANA_SETS)){
+          for(const s of LORCANA_SETS){
+            if(!s.upcoming || !s.releaseDate) continue;
+            const d = new Date(s.releaseDate);
+            if(isNaN(d.getTime())) continue;
+            if(d > today) out.push({tcg:'lorcana', name:s.name, date:d, dateStr:s.releaseDate, raw:s});
+          }
+        }
+      }catch(e){ console.warn('upcoming lorcana hardcoded', e); }
+    })(),
   ]);
 
-  out.sort((a,b) => a.date - b.date);
-  _upcomingCache = out.slice(0, 12); // limit à 12 prochaines sorties
+  // Dédoublonner : si même nom+TCG vient de plusieurs sources, garde la plus ancienne date
+  const seen = new Map();
+  for(const item of out){
+    const key = item.tcg + '|' + item.name.toLowerCase().trim();
+    const existing = seen.get(key);
+    if(!existing || item.date < existing.date) seen.set(key, item);
+  }
+  const deduped = Array.from(seen.values());
+  deduped.sort((a,b) => a.date - b.date);
+  _upcomingCache = deduped.slice(0, 12);
   _upcomingLoading = false;
   renderUpcomingSets(_upcomingCache);
 }
@@ -8138,17 +8227,24 @@ function renderDashboard(){
   // 1. Calcul de la valeur totale + nombre de cartes possédées (uniquement si loggué)
   let totalValue = 0;
   let totalCards = 0;
+  const byTcgValue = { pokemon:0, lorcana:0, magic:0 };
+  const byTcgCards = { pokemon:0, lorcana:0, magic:0 };
   if(_isAuthed){
     const portfolios = (typeof getPortfolios === 'function') ? getPortfolios() : [];
     for(const pf of portfolios){
       if(!pf || !Array.isArray(pf.cards)) continue;
+      const pfTcg = pf.tcg;
       for(const c of pf.cards){
         const isOwned = c.owned !== false;
         if(!isOwned) continue;
         const qty = c.qty || 1;
+        const cardTcg = c.tcg || pfTcg;
         totalCards += qty;
+        if(byTcgCards[cardTcg] != null) byTcgCards[cardTcg] += qty;
         if(c.marketPrice != null && !isNaN(c.marketPrice)){
-          totalValue += c.marketPrice * qty;
+          const val = c.marketPrice * qty;
+          totalValue += val;
+          if(byTcgValue[cardTcg] != null) byTcgValue[cardTcg] += val;
         }
       }
     }
@@ -8156,9 +8252,10 @@ function renderDashboard(){
 
   // 2. Comptage des sets disponibles tous TCG (toujours affiché, c'est pas perso)
   let totalSets = 0;
-  try{ if(typeof _allApiSets !== 'undefined' && _allApiSets) totalSets += _allApiSets.length; }catch(e){}
-  try{ if(typeof LORCANA_SETS !== 'undefined' && LORCANA_SETS) totalSets += LORCANA_SETS.length; }catch(e){}
-  try{ if(typeof MAGIC_SETS !== 'undefined' && MAGIC_SETS) totalSets += MAGIC_SETS.length; }catch(e){}
+  const byTcgSets = { pokemon:0, lorcana:0, magic:0 };
+  try{ if(typeof _allApiSets !== 'undefined' && _allApiSets){ byTcgSets.pokemon = _allApiSets.length; totalSets += _allApiSets.length; } }catch(e){}
+  try{ if(typeof LORCANA_SETS !== 'undefined' && LORCANA_SETS){ byTcgSets.lorcana = LORCANA_SETS.length; totalSets += LORCANA_SETS.length; } }catch(e){}
+  try{ if(typeof MAGIC_SETS !== 'undefined' && MAGIC_SETS){ byTcgSets.magic = MAGIC_SETS.length; totalSets += MAGIC_SETS.length; } }catch(e){}
 
   // 3. Évolution 24h via snapshots agrégés (uniquement si loggué)
   let trendHtml = '';
@@ -8204,6 +8301,31 @@ function renderDashboard(){
   if(elTrend) elTrend.innerHTML = trendHtml;
   if(elSets) elSets.textContent = totalSets > 0 ? totalSets : '—';
   if(elCards) elCards.textContent = _isAuthed ? totalCards : '—';
+
+  // 5. Breakdown par TCG
+  const renderBreakdown = (elId, vals, formatter) => {
+    const el = document.getElementById(elId);
+    if(!el) return;
+    const tcgs = [
+      {key:'pokemon', label:'Pokémon'},
+      {key:'lorcana', label:'Lorcana'},
+      {key:'magic', label:'Magic'},
+    ];
+    el.innerHTML = tcgs.map(t => `
+      <div class="bk bk-${t.key}">
+        <span class="bk-dot"></span>
+        <span class="bk-tcg">${t.label}</span>
+        <span class="bk-val">${formatter(vals[t.key])}</span>
+      </div>`).join('');
+  };
+  if(_isAuthed){
+    renderBreakdown('dashValueBreakdown', byTcgValue, v => '€' + v.toFixed(2));
+    renderBreakdown('dashCardsBreakdown', byTcgCards, v => String(v));
+  } else {
+    const bv = document.getElementById('dashValueBreakdown'); if(bv) bv.innerHTML = '';
+    const bc = document.getElementById('dashCardsBreakdown'); if(bc) bc.innerHTML = '';
+  }
+  renderBreakdown('dashSetsBreakdown', byTcgSets, v => v > 0 ? String(v) : '—');
 }
 
 /* === SNAPSHOTS DE PRIX (localStorage) === */
