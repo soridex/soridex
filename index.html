@@ -4808,15 +4808,21 @@ async function fetchTcggoPrices(searchQuery) {
     });
     if(!res.ok){
       console.warn('TCGGO API status', res.status);
+      _tcggoCache.set(cacheKey, null);
       return null;
     }
     const data = await res.json();
-    // La réponse peut être {data: [...]} ou directement un array
     const cards = Array.isArray(data) ? data : (data.data || data.cards || data.results || []);
-    if(!cards.length) return null;
+    if(!cards.length){
+      _tcggoCache.set(cacheKey, null);
+      return null;
+    }
     const card = cards[0];
     const cm = card && card.prices && card.prices.cardmarket;
-    if(!cm) return null;
+    if(!cm){
+      _tcggoCache.set(cacheKey, null);
+      return null;
+    }
 
     const result = {
       avg1:  cm['1d_average']  || cm.avg1  || cm.average_1d  || null,
@@ -4831,7 +4837,30 @@ async function fetchTcggoPrices(searchQuery) {
     return result;
   } catch(e) {
     console.warn('TCGGO fetch failed:', e);
+    _tcggoCache.set(cacheKey, null);
     return null;
+  }
+}
+
+// Refresh asynchrone des prix affichés dans une grille de cartes
+// Cherche tous les éléments .card-price[data-tcggo-q] et remplace le prix
+// par la cote TCGGO si disponible.
+async function refreshGridPricesWithTcggo(container) {
+  if(!container) container = document;
+  const priceEls = container.querySelectorAll('.card-price[data-tcggo-q]');
+  for (const el of priceEls) {
+    const query = el.getAttribute('data-tcggo-q');
+    if(!query || el.getAttribute('data-tcggo-done') === '1') continue;
+    el.setAttribute('data-tcggo-done', '1');
+    // Pas de await : on parallélise
+    fetchTcggoPrices(query).then(live => {
+      if(!live) return;
+      const best = live.avg1 || live.avg7 || live.trend || live.lowFr || live.low || null;
+      if(best == null) return;
+      const label = live.avg1 ? 'Cote J-1' : (live.avg7 ? 'Cote 7j' : 'Cote');
+      // Remplace tout le contenu du .card-price par la valeur fraîche
+      el.innerHTML = `${label} <span style="color:#4ade80;font-weight:700">€${best.toFixed(2)}</span><span style="display:block;font-size:9px;color:var(--mut);font-weight:500;margin-top:1px">via TCGGO (Cardmarket)</span>`;
+    });
   }
 }
 
@@ -5408,7 +5437,7 @@ async function showAllEraCards(slug){
         const trend = pokemonTrendBadge(c);
         const trendArrE = getTrendArrow(c.id, displayPrice);
         const priceStr = displayPrice != null
-          ? `<div class="card-price">Cote estimée €${displayPrice.toFixed(2)}${trendArrE}${trend}${pokemonSparkline(c)}<span style="display:block;font-size:9px;color:var(--mut);font-weight:500;margin-top:1px">d'après ${estimate ? estimate.source : 'Cardmarket'}</span>${priceDateBadgeHtml(c, 'pokemon', 'pk_'+(c._setId||''))}</div>`
+          ? `<div class="card-price" data-tcggo-q="${escapeHtml((c.name||'')+' '+(c.number||''))}">Cote estimée €${displayPrice.toFixed(2)}${trendArrE}${trend}${pokemonSparkline(c)}<span style="display:block;font-size:9px;color:var(--mut);font-weight:500;margin-top:1px">d'après ${estimate ? estimate.source : 'Cardmarket'}</span>${priceDateBadgeHtml(c, 'pokemon', 'pk_'+(c._setId||''))}</div>`
           : `<div class="card-price empty">— pas de cote disponible —${priceDateBadgeHtml(c, 'pokemon', 'pk_'+(c._setId||''))}</div>`;
         const num = `${c.number}/${c._setTotal||'?'}`;
         const large = (c.images && c.images.large) || (c.images && c.images.small) || '';
@@ -5585,7 +5614,7 @@ async function showPokemonSetCards(setId){
       const trend = pokemonTrendBadge(c);
       const trendArrP = getTrendArrow(c.id, displayPrice);
       const priceStr = displayPrice != null
-        ? `<div class="card-price">Cote estimée €${displayPrice.toFixed(2)}${trendArrP}${trend}${pokemonSparkline(c)}<span style="display:block;font-size:9px;color:var(--mut);font-weight:500;margin-top:1px">d'après ${estimate ? estimate.source : 'Cardmarket'}</span>${priceDateBadgeHtml(c, 'pokemon', 'pk_'+setId)}</div>`
+        ? `<div class="card-price" data-tcggo-q="${escapeHtml((c.name||'')+' '+(c.number||''))}">Cote estimée €${displayPrice.toFixed(2)}${trendArrP}${trend}${pokemonSparkline(c)}<span style="display:block;font-size:9px;color:var(--mut);font-weight:500;margin-top:1px">d'après ${estimate ? estimate.source : 'Cardmarket'}</span>${priceDateBadgeHtml(c, 'pokemon', 'pk_'+setId)}</div>`
         : `<div class="card-price empty">— pas de cote disponible —${priceDateBadgeHtml(c, 'pokemon', 'pk_'+setId)}</div>`;
       const num=`${c.number}${setInfo?'/'+(setInfo.printedTotal||setInfo.total):''}`;
       const large = (c.images && c.images.large) || (c.images && c.images.small) || '';
@@ -5889,7 +5918,7 @@ async function showLorcanaSetCards(slug){
       if(variants.length===0) variants.push({key:'normal',label:'Normal',price:null});
       const best=variants.reduce((m,v)=>(v.price!=null && (m==null||v.price>m))?v.price:m,null);
       const priceStr=best!=null
-        ? `<div class="card-price">Cote estimée €${best.toFixed(2)}<span style="display:block;font-size:9px;color:var(--mut);font-weight:500;margin-top:1px">d'après Lorcast (USD→EUR)</span>${priceDateBadgeHtml(c, 'lorcana', 'lc_'+setInfo.lorcastCode)}</div>`
+        ? `<div class="card-price" data-tcggo-q="${escapeHtml((c.name||'')+' '+(c.collector_number||c.number||''))}">Cote estimée €${best.toFixed(2)}<span style="display:block;font-size:9px;color:var(--mut);font-weight:500;margin-top:1px">d'après Lorcast (USD→EUR)</span>${priceDateBadgeHtml(c, 'lorcana', 'lc_'+setInfo.lorcastCode)}</div>`
         : `<div class="card-price empty">— pas de cote disponible —${priceDateBadgeHtml(c, 'lorcana', 'lc_'+setInfo.lorcastCode)}</div>`;
       const large = (c.image_uris && c.image_uris.digital && (c.image_uris.digital.large || c.image_uris.digital.normal)) || img;
       const cmUrl = cardmarketUrlLorcana(c);
@@ -6674,6 +6703,27 @@ function closeOwnedAnywhereModal(){
   document.getElementById('ownAnywhereModal').classList.add('hidden');
   _ownedAnywhereState = null;
 }
+document.addEventListener('DOMContentLoaded', () => {
+  // Auto-refresh des prix TCGGO sur tout nouveau .card-price[data-tcggo-q]
+  const tcggoObserver = new MutationObserver((mutations) => {
+    let needsRefresh = false;
+    for(const m of mutations){
+      for(const node of m.addedNodes){
+        if(node.nodeType !== 1) continue;
+        if(node.matches && node.matches('.card-price[data-tcggo-q]')) { needsRefresh = true; break; }
+        if(node.querySelector && node.querySelector('.card-price[data-tcggo-q]:not([data-tcggo-done])')) { needsRefresh = true; break; }
+      }
+      if(needsRefresh) break;
+    }
+    if(needsRefresh){
+      // Debounce léger : on attend 200ms pour laisser le DOM se stabiliser
+      clearTimeout(window._tcggoRefreshTimer);
+      window._tcggoRefreshTimer = setTimeout(() => refreshGridPricesWithTcggo(document), 200);
+    }
+  });
+  tcggoObserver.observe(document.body, { childList: true, subtree: true });
+});
+
 document.addEventListener('DOMContentLoaded', () => {
   const closeBtn = document.getElementById('ownAnywhereClose');
   const cancelBtn = document.getElementById('ownAnywhereCancel');
