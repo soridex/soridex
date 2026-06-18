@@ -2453,6 +2453,13 @@
     </div>
     <div id="pfChartContent"></div>
   </div>
+  <div class="pf-sortbar" id="pfFilterbar" hidden style="margin-bottom:10px">
+    <span class="pf-sortbar-label">Afficher</span>
+    <button class="sort-btn active" data-filter="all">Toutes</button>
+    <button class="sort-btn" data-filter="owned">Possédées</button>
+    <button class="sort-btn" data-filter="missing">Manquantes</button>
+    <span class="pf-sortbar-label" id="pfFilterCount" style="margin-left:auto"></span>
+  </div>
   <div class="pf-sortbar" id="pfSortbar" hidden>
     <span class="pf-sortbar-label">Trier par</span>
     <button class="sort-btn" data-sort="number">Numéro <span class="arrow">↓</span></button>
@@ -4376,6 +4383,7 @@ function computePfTotals(pf){
 
 // État de tri par portfolio (en mémoire seulement)
 let pfSortState = { key: 'price', dir: 'desc' };
+let pfFilterState = 'all'; // 'all' | 'owned' | 'missing'
 
 function showPortfolioDetail(pfId){
   const pf = getPortfolios().find(p => p.id === pfId);
@@ -4410,8 +4418,10 @@ function showPortfolioDetail(pfId){
     }
   }
   document.getElementById('pfSortbar').hidden = ((pf.cards||[]).length === 0);
+  document.getElementById('pfFilterbar').hidden = ((pf.cards||[]).length === 0);
   // Reset visuel des boutons selon l'état
   updateSortBarUI();
+  updateFilterBarUI(pf);
   renderPfCards(pf);
   document.getElementById('pfDeleteBtn').onclick = () => deletePortfolio(pfId);
   document.getElementById('pfMarkNoneBtn').onclick = () => {
@@ -4433,6 +4443,31 @@ function updateSortBarUI(){
     if(arrow) arrow.textContent = isActive ? (pfSortState.dir === 'desc' ? '↓' : '↑') : '↓';
   });
 }
+
+function updateFilterBarUI(pf){
+  document.querySelectorAll('#pfFilterbar .sort-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.filter === pfFilterState);
+  });
+  // Compteur "X / Y cartes"
+  const countEl = document.getElementById('pfFilterCount');
+  if(countEl && pf){
+    const total = (pf.cards||[]).length;
+    const owned = (pf.cards||[]).filter(c => !!c.owned).length;
+    if(pfFilterState === 'owned')      countEl.textContent = `${owned} / ${total} possédées`;
+    else if(pfFilterState === 'missing') countEl.textContent = `${total - owned} / ${total} manquantes`;
+    else                                  countEl.textContent = `${total} cartes`;
+  }
+}
+
+// Listener filter bar (delegate)
+document.addEventListener('click', (e) => {
+  const filterBtn = e.target.closest('#pfFilterbar .sort-btn');
+  if(!filterBtn) return;
+  pfFilterState = filterBtn.dataset.filter || 'all';
+  const pf = getPortfolios().find(p => p.id === currentPfId);
+  updateFilterBarUI(pf);
+  if(pf) renderPfCards(pf);
+});
 
 // Listener sort bar (delegate)
 document.addEventListener('click', (e) => {
@@ -4529,8 +4564,14 @@ function renderPfCards(pf){
     grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="ico">✦</div><h3>Portfolio vide</h3><p>Aucune carte dans ce portfolio pour l\'instant.</p></div>';
     return;
   }
-  // Index original conservé + filtre search
+  // Index original conservé + filtre possédée/manquante + filtre search
   let cardsWithIdx = pf.cards.map((c, i) => ({...c, _idx: i}));
+  // Filtre possession
+  if(pfFilterState === 'owned'){
+    cardsWithIdx = cardsWithIdx.filter(c => !!c.owned);
+  } else if(pfFilterState === 'missing'){
+    cardsWithIdx = cardsWithIdx.filter(c => !c.owned);
+  }
   if(_searchState.pf){
     cardsWithIdx = cardsWithIdx.filter(c => {
       const cardTcg = c.tcg || pf.tcg;
@@ -4540,7 +4581,18 @@ function renderPfCards(pf){
   }
   const sortedWithIdx = sortPfCards(cardsWithIdx);
   if(sortedWithIdx.length === 0){
-    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="ico">⌕</div><h3>Aucune carte trouvée</h3><p>Essaie un autre terme ou efface la recherche.</p></div>';
+    let emptyTitle = 'Aucune carte trouvée';
+    let emptyDesc = 'Essaie un autre terme ou efface la recherche.';
+    if(!_searchState.pf){
+      if(pfFilterState === 'owned'){
+        emptyTitle = 'Aucune carte possédée';
+        emptyDesc = 'Coche les cartes que tu possèdes pour les voir ici.';
+      } else if(pfFilterState === 'missing'){
+        emptyTitle = 'Tout est possédé ✓';
+        emptyDesc = 'Tu as toutes les cartes de ce portfolio. Bravo !';
+      }
+    }
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="ico">⌕</div><h3>${emptyTitle}</h3><p>${emptyDesc}</p></div>`;
     return;
   }
   grid.innerHTML = sortedWithIdx.map((c) => {
@@ -4640,6 +4692,8 @@ function renderPfCards(pf){
       const tcgLabel = arr[pfIdx].tcg === 'pokemon' ? 'Pokémon' : arr[pfIdx].tcg === 'lorcana' ? 'Lorcana' : 'Magic';
       const t = computePfTotals(arr[pfIdx]);
       document.getElementById('pfDetailMeta').textContent = `${tcgLabel} · ${t.owned}/${t.total} cartes possédées`;
+      // Mise à jour du compteur dans la filterbar (Toutes/Possédées/Manquantes)
+      updateFilterBarUI(arr[pfIdx]);
     });
   });
 
