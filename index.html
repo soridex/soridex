@@ -4773,9 +4773,60 @@ async function loadCardDetail(tcg, id, fallback){
     `).join('');
   }
   const updEl = document.getElementById('cardDetailUpdated');
-  updEl.textContent = updatedAt ? `Dernière maj cote : ${updatedAt}` : '';
+  // Calcule l'âge de la donnée API
+  let isStale = false;
+  if(updatedAt){
+    const d = new Date(updatedAt.replace(/\//g,'-'));
+    if(!isNaN(d.getTime())){
+      const ageDays = Math.floor((Date.now() - d.getTime()) / (1000*60*60*24));
+      isStale = ageDays > 30;
+      updEl.innerHTML = isStale
+        ? `<span style="color:#f59e0b;font-weight:600">⚠ Cote API obsolète (${ageDays}j) — tentative de mise à jour temps réel…</span>`
+        : `Dernière maj cote : ${updatedAt}`;
+    } else {
+      updEl.textContent = `Dernière maj cote : ${updatedAt}`;
+    }
+  } else {
+    updEl.textContent = '';
+  }
   document.getElementById('cardDetailCm').href = cardmarketUrl || '#';
   document.getElementById('cardDetailEbay').href = `https://www.ebay.fr/sch/i.html?_nkw=${encodeURIComponent(ebayQuery.trim())}&LH_Sold=1&LH_Complete=1`;
+
+  // === Si données obsolètes, on tente un scrape Cardmarket en direct ===
+  if(isStale && cardmarketUrl && /cardmarket\.com\/[a-z]+\/(Pokemon|Magic|Lorcana)\/Products\/(Singles|Boosters)/i.test(cardmarketUrl)){
+    (async () => {
+      try {
+        const r = await fetch(`/api/cm-price?url=${encodeURIComponent(cardmarketUrl)}`);
+        if(!r.ok){
+          updEl.innerHTML = `<span style="color:#f87171;font-weight:600">⚠ Cote API obsolète et refresh impossible. Clique "Voir sur Cardmarket" pour la vraie cote.</span>`;
+          return;
+        }
+        const data = await r.json();
+        const live = (data && data.prices) || {};
+        if(live.trend != null || live.low != null || live.avg30 != null){
+          // Remplace les valeurs affichées par les fraîches
+          const newPrices = [];
+          if(live.trend != null) newPrices.push({label:'Cardmarket Trend (live)', value:live.trend, featured:true});
+          if(live.low != null) newPrices.push({label:'Prix bas (live)', value:live.low});
+          if(live.avg30 != null) newPrices.push({label:'Avg 30j (live)', value:live.avg30});
+          if(live.avg7 != null) newPrices.push({label:'Avg 7j (live)', value:live.avg7});
+          if(live.avg1 != null) newPrices.push({label:'Avg 1j (live)', value:live.avg1});
+          pricesEl.innerHTML = newPrices.map(p => `
+            <div class="card-detail-price-cell ${p.featured?'featured':''}">
+              <div class="label">${escapeHtml(p.label)}</div>
+              <div class="val">${p.value.toFixed(2)} €</div>
+            </div>
+          `).join('');
+          updEl.innerHTML = `<span style="color:#4ade80;font-weight:600">✓ Cotes rafraîchies depuis Cardmarket à l'instant</span>`;
+        } else {
+          updEl.innerHTML = `<span style="color:#f87171;font-weight:600">⚠ Cote API obsolète et refresh impossible. Clique "Voir sur Cardmarket" pour la vraie cote.</span>`;
+        }
+      } catch(e){
+        console.warn('Cardmarket live fetch failed', e);
+        updEl.innerHTML = `<span style="color:#f87171;font-weight:600">⚠ Cote API obsolète et refresh impossible. Clique "Voir sur Cardmarket" pour la vraie cote.</span>`;
+      }
+    })();
+  }
 
   // === Fetch eBay sold listings + comparaison vs Cardmarket Trend ===
   fetchEbayComparison(ebayQuery, prices);
@@ -7687,7 +7738,7 @@ function pokemonTrendBadge(c){
   if(Math.abs(change) < 1) return '';
   const cls = change > 0 ? 'up' : 'down';
   const arrow = change > 0 ? '↑' : '↓';
-  return `<span class="trend ${cls}">${arrow} ${Math.abs(change).toFixed(1)}%</span>`;
+  return `<span class="trend ${cls}" title="Variation du prix moyen 1 jour vs prix moyen 30 jours (Cardmarket)">${arrow} ${Math.abs(change).toFixed(1)}% sur 30j</span>`;
 }
 
 
