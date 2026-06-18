@@ -1587,6 +1587,25 @@
   #offlineBanner.visible{transform:translateY(0)}
   #offlineBanner .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#ff9050;margin-right:8px;vertical-align:middle;animation:pulse-off 1.6s ease-in-out infinite}
   @keyframes pulse-off{0%,100%{opacity:.5}50%{opacity:1}}
+  .btn-refresh-cm{background:linear-gradient(135deg,#1a3a5a,#0f2540);border:1px solid #2a5a8a;color:#7fc4ff;padding:9px 16px;border-radius:9px;font-weight:600;font-size:12.5px;cursor:pointer;transition:.18s;letter-spacing:.03em}
+  .btn-refresh-cm:hover{background:linear-gradient(135deg,#2a5a8a,#1f3550);color:#fff}
+  .btn-refresh-cm:disabled{opacity:.5;cursor:not-allowed}
+  /* Progress overlay for bulk Cardmarket refresh */
+  #cmRefreshOverlay{position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:9998;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+  #cmRefreshOverlay.visible{display:flex}
+  #cmRefreshOverlay .box{background:linear-gradient(180deg,var(--surf),var(--bg2));border:1px solid var(--gold-deep);border-radius:14px;padding:24px 28px;max-width:480px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+  #cmRefreshOverlay h3{margin:0 0 6px;color:#fff;font-size:17px}
+  #cmRefreshOverlay .sub{margin:0 0 18px;color:var(--mut);font-size:13px}
+  #cmRefreshOverlay .bar{height:10px;background:#222;border-radius:6px;overflow:hidden;margin-bottom:12px}
+  #cmRefreshOverlay .bar-fill{height:100%;background:linear-gradient(90deg,var(--gold-deep),var(--gold-2));transition:width .25s ease;width:0%}
+  #cmRefreshOverlay .status{font-size:12.5px;color:var(--tx);margin-bottom:8px;font-variant-numeric:tabular-nums}
+  #cmRefreshOverlay .current{font-size:11.5px;color:var(--mut);margin-bottom:18px;min-height:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #cmRefreshOverlay .stats{display:flex;gap:14px;font-size:11.5px;color:var(--mut);margin-bottom:18px;flex-wrap:wrap}
+  #cmRefreshOverlay .stats b{color:var(--tx);font-weight:600}
+  #cmRefreshOverlay .actions{display:flex;gap:10px;justify-content:flex-end}
+  #cmRefreshOverlay .btn-cancel{background:#3a1a1a;border:1px solid #6a2a2a;color:#ff9b9b;padding:9px 16px;border-radius:8px;cursor:pointer;font-weight:600;font-size:12.5px}
+  #cmRefreshOverlay .btn-cancel:hover{background:#5a2a2a}
+  #cmRefreshOverlay .btn-close{background:#1a3a1a;border:1px solid #2a6a2a;color:#9bff9b;padding:9px 16px;border-radius:8px;cursor:pointer;font-weight:600;font-size:12.5px}
   .acc-tab{flex:1;min-width:130px;display:flex;align-items:center;justify-content:center;gap:8px;padding:11px 14px;border-radius:10px;font-size:13px;font-weight:600;letter-spacing:.05em;color:var(--mut);text-decoration:none;transition:.18s;cursor:pointer;border:1px solid transparent;text-transform:uppercase}
   .acc-tab:hover{color:var(--tx);background:rgba(212,168,90,.06);border-color:var(--line2)}
   .acc-tab.active{background:linear-gradient(135deg,rgba(212,168,90,.18),rgba(212,168,90,.08));border-color:var(--gold-deep);color:var(--gold-2);box-shadow:0 0 0 1px rgba(212,168,90,.2),0 4px 14px rgba(212,168,90,.1)}
@@ -2247,6 +2266,21 @@
   </div>
 </section>
 
+<!-- Overlay de progression pour rafraîchissement Cardmarket bulk -->
+<div id="cmRefreshOverlay">
+  <div class="box">
+    <h3 id="cmRefreshTitle">🔄 Rafraîchissement des cotes Cardmarket</h3>
+    <p class="sub" id="cmRefreshSub">Scrape des prix carte par carte. Ne ferme pas cet onglet.</p>
+    <div class="bar"><div class="bar-fill" id="cmRefreshBar"></div></div>
+    <div class="status" id="cmRefreshStatus">Préparation…</div>
+    <div class="current" id="cmRefreshCurrent">—</div>
+    <div class="stats" id="cmRefreshStats"></div>
+    <div class="actions" id="cmRefreshActions">
+      <button class="btn-cancel" id="cmRefreshCancelBtn">Annuler</button>
+    </div>
+  </div>
+</div>
+
 <!-- Banner mode hors ligne -->
 <div id="offlineBanner" aria-live="polite"><span class="dot"></span>Mode hors ligne — la synchronisation est en pause</div>
 
@@ -2339,6 +2373,7 @@
       <p class="view-sub" id="setDetailSub">—</p>
     </div>
     <button class="btn-gold" id="setDetailCreatePfBtn" hidden style="white-space:nowrap">+ Créer un portfolio de ce set</button>
+    <button class="btn-refresh-cm" id="setDetailRefreshCmBtn" hidden style="white-space:nowrap" title="Scrape Cardmarket pour mettre à jour toutes les cotes du set (peut prendre quelques minutes)">🔄 Rafraîchir les cotes</button>
   </div>
   <div class="set-mode-toggle" id="setModeToggle">
     <button class="set-mode-tab active" data-set-mode="cards">🃏 Cartes</button>
@@ -4191,12 +4226,12 @@ function mgCardToPfEntry(c, setInfo){
 async function importCardsFromSet(tcg, setVal){
   if(tcg === 'pokemon'){
     let cards;
-    if(_setCardsCache['pk_'+setVal]) cards = _setCardsCache['pk_'+setVal];
+    if(_setCacheIsFresh('pk_'+setVal)) cards = _setCardsCache['pk_'+setVal];
     else{
       const res = await fetch(`https://api.pokemontcg.io/v2/cards?q=set.id:${encodeURIComponent(setVal)}&pageSize=250`);
       const data = await res.json();
       cards = data.data || [];
-      _setCardsCache['pk_'+setVal] = cards;
+      _setCacheStore('pk_'+setVal, cards);
     }
     const all = await getAllPokemonSetsFromApi();
     const setInfo = all.find(s => s.id === setVal);
@@ -4206,12 +4241,12 @@ async function importCardsFromSet(tcg, setVal){
     const setInfo = LORCANA_SETS.find(s => s.lorcastCode === setVal);
     if(!setInfo) return [];
     let cards;
-    if(_setCardsCache['lc_'+setVal]) cards = _setCardsCache['lc_'+setVal];
+    if(_setCacheIsFresh('lc_'+setVal)) cards = _setCardsCache['lc_'+setVal];
     else{
       const res = await fetch(`https://api.lorcast.com/v0/sets/${encodeURIComponent(setVal)}/cards`);
       const data = await res.json();
       cards = Array.isArray(data) ? data : (data.results || []);
-      _setCardsCache['lc_'+setVal] = cards;
+      _setCacheStore('lc_'+setVal, cards);
     }
     return cards.flatMap(c => lcCardToPfEntries(c, setInfo));
   }
@@ -4219,7 +4254,7 @@ async function importCardsFromSet(tcg, setVal){
     if(MAGIC_SETS.length === 0) await loadMagicSets();
     const setInfo = MAGIC_SETS.find(s => s.code === setVal);
     let cards;
-    if(_setCardsCache['mg_'+setVal]) cards = _setCardsCache['mg_'+setVal];
+    if(_setCacheIsFresh('mg_'+setVal)) cards = _setCardsCache['mg_'+setVal];
     else{
       cards = [];
       let url = `https://api.scryfall.com/cards/search?q=${encodeURIComponent('e:'+setVal+' lang:fr include:multilingual')}&order=set&unique=cards`;
@@ -4245,7 +4280,7 @@ async function importCardsFromSet(tcg, setVal){
           if(url) await new Promise(r => setTimeout(r, 100));
         }
       }
-      _setCardsCache['mg_'+setVal] = cards;
+      _setCacheStore('mg_'+setVal, cards);
     }
     return cards.map(c => mgCardToPfEntry(c, setInfo));
   }
@@ -5136,6 +5171,7 @@ async function showAllEraCards(slug){
   const era = POKEMON_ERAS.find(e=>e.slug===slug);
   if(!era) return;
   showView('set-detail');
+  { const b = document.getElementById('setDetailRefreshCmBtn'); if(b) b.hidden = true; }
   const grid=document.getElementById('setCardGrid'), filtersBox=document.getElementById('rarityFilters');
   grid.innerHTML='<div class="empty-state"><div class="ico">…</div><h3>Chargement des cartes de l\'ère…</h3><p>Plusieurs sets à récupérer, ça peut prendre quelques secondes.</p></div>';
   filtersBox.innerHTML='';
@@ -5156,14 +5192,14 @@ async function showAllEraCards(slug){
     let allCards = [];
     for(const setApi of eraSets){
       let cards;
-      if(_setCardsCache['pk_'+setApi.id]) cards = _setCardsCache['pk_'+setApi.id];
+      if(_setCacheIsFresh('pk_'+setApi.id)) cards = _setCardsCache['pk_'+setApi.id];
       else{
         try{
           const res = await fetch(`https://api.pokemontcg.io/v2/cards?q=set.id:${encodeURIComponent(setApi.id)}&pageSize=250&orderBy=number`);
           if(!res.ok) continue;
           const data = await res.json();
           cards = data.data || [];
-          _setCardsCache['pk_'+setApi.id] = cards;
+          _setCacheStore('pk_'+setApi.id, cards);
         }catch(e){console.warn('skip set', setApi.id, e); continue;}
         await new Promise(r=>setTimeout(r,80));
       }
@@ -5208,8 +5244,8 @@ async function showAllEraCards(slug){
         const trend = pokemonTrendBadge(c);
         const trendArrE = getTrendArrow(c.id, displayPrice);
         const priceStr = displayPrice != null
-          ? `<div class="card-price">Cote estimée €${displayPrice.toFixed(2)}${trendArrE}${trend}${pokemonSparkline(c)}<span style="display:block;font-size:9px;color:var(--mut);font-weight:500;margin-top:1px">d'après ${estimate ? estimate.source : 'Cardmarket'}</span></div>`
-          : `<div class="card-price empty">— pas de cote disponible —</div>`;
+          ? `<div class="card-price">Cote estimée €${displayPrice.toFixed(2)}${trendArrE}${trend}${pokemonSparkline(c)}<span style="display:block;font-size:9px;color:var(--mut);font-weight:500;margin-top:1px">d'après ${estimate ? estimate.source : 'Cardmarket'}</span>${priceDateBadgeHtml(c, 'pokemon', 'pk_'+(c._setId||''))}</div>`
+          : `<div class="card-price empty">— pas de cote disponible —${priceDateBadgeHtml(c, 'pokemon', 'pk_'+(c._setId||''))}</div>`;
         const num = `${c.number}/${c._setTotal||'?'}`;
         const large = (c.images && c.images.large) || (c.images && c.images.small) || '';
         const cmUrl = cardmarketUrlPokemon(c);
@@ -5241,9 +5277,75 @@ async function showAllEraCards(slug){
 }
 
 const _setCardsCache={};
+const _setCardsCacheTime={}; // timestamp (ms) du dernier fetch par clé de cache
+const SET_CACHE_MAX_AGE_MS = 6 * 60 * 60 * 1000; // 6h → auto-refresh transparent
+function _setCacheStore(key, value){ _setCardsCache[key]=value; _setCardsCacheTime[key]=Date.now(); }
+function _setCacheIsFresh(key){
+  if(!_setCardsCache[key]) return false;
+  const t = _setCardsCacheTime[key] || 0;
+  return (Date.now() - t) < SET_CACHE_MAX_AGE_MS;
+}
 // Taux de conversion USD->EUR (approximatif, juin 2026 ~0.92)
 const USD_TO_EUR = 0.92;
 function fmtEur(n){ return n != null && !isNaN(n) ? '€'+n.toFixed(2) : null; }
+
+/* === Helpers date "dernière maj cote" === */
+// Retourne la meilleure date connue pour la cote d'une carte :
+//   - timestamp ms du scrape Cardmarket live (si présent et < 7j)
+//   - sinon le cardmarket.updatedAt fourni par l'API pokemontcg.io
+//   - sinon le timestamp de notre dernier fetch API (cache du set)
+// tcg ∈ {'pokemon','lorcana','magic'} ; setCacheKey ex 'pk_swsh1', 'lc_TFC', 'mg_dft'
+function getCardPriceUpdatedAt(c, tcg, setCacheKey){
+  // 1) Cache live Cardmarket (Pokémon uniquement)
+  if(tcg === 'pokemon' && c && c.id){
+    try{
+      const live = (typeof getCmLivePrice === 'function') ? getCmLivePrice('pk:'+c.id) : null;
+      if(live && live.scrapedAt) return { ts: live.scrapedAt, source: 'live' };
+    }catch(e){}
+  }
+  // 2) updatedAt fourni par l'API
+  if(tcg === 'pokemon' && c && c.cardmarket && c.cardmarket.updatedAt){
+    const d = new Date(String(c.cardmarket.updatedAt).replace(/\//g,'-'));
+    if(!isNaN(d.getTime())) return { ts: d.getTime(), source: 'api' };
+  }
+  // 3) Timestamp du fetch local de notre cache de set
+  if(setCacheKey && _setCardsCacheTime[setCacheKey]){
+    return { ts: _setCardsCacheTime[setCacheKey], source: 'fetch' };
+  }
+  return null;
+}
+// Format relatif court "auj.", "hier", "il y a 3j", sinon JJ/MM
+function formatPriceDateShort(ts){
+  if(!ts) return '';
+  const now = Date.now();
+  const diffMs = now - ts;
+  const oneDay = 24*60*60*1000;
+  if(diffMs < 60*60*1000){
+    const mins = Math.max(1, Math.floor(diffMs/60000));
+    return `il y a ${mins} min`;
+  }
+  if(diffMs < oneDay){
+    const h = Math.floor(diffMs/(60*60*1000));
+    return `il y a ${h}h`;
+  }
+  const days = Math.floor(diffMs/oneDay);
+  if(days === 1) return 'hier';
+  if(days < 7) return `il y a ${days}j`;
+  const d = new Date(ts);
+  const dd = String(d.getDate()).padStart(2,'0');
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  return `${dd}/${mm}`;
+}
+// Renvoie un span HTML prêt à coller sous le prix (vide si pas de date)
+function priceDateBadgeHtml(c, tcg, setCacheKey){
+  const info = getCardPriceUpdatedAt(c, tcg, setCacheKey);
+  if(!info) return '';
+  const label = formatPriceDateShort(info.ts);
+  if(!label) return '';
+  const fullDate = new Date(info.ts).toLocaleString('fr-FR');
+  const tag = info.source === 'live' ? 'live' : (info.source === 'api' ? 'API' : 'cache');
+  return `<span class="price-date" title="Dernière maj cote (${tag}) : ${fullDate}" style="display:block;font-size:9px;color:var(--mut);font-weight:500;margin-top:1px;opacity:.75">↻ ${label}</span>`;
+}
 async function showPokemonSetCards(setId){
   showView('set-detail');
   setupSetModeUI('pokemon');
@@ -5264,16 +5366,24 @@ async function showPokemonSetCards(setId){
   const eraLink=document.getElementById('setDetailEraLink');
   if(eraInfo){eraLink.textContent=eraInfo.name; eraLink.onclick=(ev)=>{ev.preventDefault(); showEraSets(eraInfo.slug);};}
   let cards;
-  if(_setCardsCache['pk_'+setId]) cards=_setCardsCache['pk_'+setId];
+  if(_setCacheIsFresh('pk_'+setId)) cards=_setCardsCache['pk_'+setId];
   else{
     try{
       const res=await fetch(`https://api.pokemontcg.io/v2/cards?q=set.id:${encodeURIComponent(setId)}&pageSize=250&orderBy=number`);
       if(!res.ok) throw new Error('HTTP '+res.status);
       const data=await res.json();
-      cards=data.data||[]; _setCardsCache['pk_'+setId]=cards;
+      cards=data.data||[]; _setCacheStore('pk_'+setId, cards);
     }catch(err){console.error(err); grid.innerHTML='<div class="empty-state"><h3>Erreur</h3></div>'; return;}
   }
   if(!cards.length){grid.innerHTML='<div class="empty-state"><h3>Aucune carte</h3></div>'; return;}
+  // Bouton "Rafraîchir les cotes" visible pour les sets Pokémon
+  const refreshBtn = document.getElementById('setDetailRefreshCmBtn');
+  if(refreshBtn){
+    refreshBtn.hidden = false;
+    refreshBtn.onclick = () => bulkRefreshCmPrices(cards, setInfo ? setInfo.name : '');
+  }
+  // Mémorise le re-render courant (pour relancer après le bulk)
+  window._lastSetRender = () => { try { render(_currentRarFilter); } catch(e){} };
   const rarities=[...new Set(cards.map(c=>c.rarity).filter(Boolean))];
   filtersBox.innerHTML=`<button class="rar-tab active" data-rar="all">Toutes (${cards.length})</button>`+rarities.map(r=>`<button class="rar-tab" data-rar="${escapeHtml(r)}">${escapeHtml(r)} (${cards.filter(c=>c.rarity===r).length})</button>`).join('');
   let _currentRarFilter = 'all';
@@ -5311,8 +5421,8 @@ async function showPokemonSetCards(setId){
       const trend = pokemonTrendBadge(c);
       const trendArrP = getTrendArrow(c.id, displayPrice);
       const priceStr = displayPrice != null
-        ? `<div class="card-price">Cote estimée €${displayPrice.toFixed(2)}${trendArrP}${trend}${pokemonSparkline(c)}<span style="display:block;font-size:9px;color:var(--mut);font-weight:500;margin-top:1px">d'après ${estimate ? estimate.source : 'Cardmarket'}</span></div>`
-        : `<div class="card-price empty">— pas de cote disponible —</div>`;
+        ? `<div class="card-price">Cote estimée €${displayPrice.toFixed(2)}${trendArrP}${trend}${pokemonSparkline(c)}<span style="display:block;font-size:9px;color:var(--mut);font-weight:500;margin-top:1px">d'après ${estimate ? estimate.source : 'Cardmarket'}</span>${priceDateBadgeHtml(c, 'pokemon', 'pk_'+setId)}</div>`
+        : `<div class="card-price empty">— pas de cote disponible —${priceDateBadgeHtml(c, 'pokemon', 'pk_'+setId)}</div>`;
       const num=`${c.number}${setInfo?'/'+(setInfo.printedTotal||setInfo.total):''}`;
       const large = (c.images && c.images.large) || (c.images && c.images.small) || '';
       const cmUrl = cardmarketUrlPokemon(c);
@@ -5552,6 +5662,7 @@ async function showLorcanaSetCards(slug){
   const setInfo=LORCANA_SETS.find(s=>s.slug===slug);
   if(!setInfo||!setInfo.lorcastCode){showView('sets-lorcana'); return;}
   showView('set-detail');
+  { const b = document.getElementById('setDetailRefreshCmBtn'); if(b) b.hidden = true; }
   setupSetModeUI('lorcana');
   const grid=document.getElementById('setCardGrid'), filtersBox=document.getElementById('rarityFilters');
   grid.innerHTML='<div class="empty-state"><div class="ico">…</div><h3>Chargement…</h3></div>';
@@ -5565,7 +5676,7 @@ async function showLorcanaSetCards(slug){
   const eraLink=document.getElementById('setDetailEraLink');
   eraLink.textContent='Disney Lorcana'; eraLink.onclick=(ev)=>{ev.preventDefault(); showView('sets-lorcana');};
   let cards;
-  if(_setCardsCache['lc_'+setInfo.lorcastCode]) cards=_setCardsCache['lc_'+setInfo.lorcastCode];
+  if(_setCacheIsFresh('lc_'+setInfo.lorcastCode)) cards=_setCardsCache['lc_'+setInfo.lorcastCode];
   else{
     try{
       // On utilise /cards/search avec unique=prints pour récupérer TOUTES les variantes
@@ -5575,7 +5686,7 @@ async function showLorcanaSetCards(slug){
       const data=await res.json();
       // Le search endpoint renvoie {results: [...]}, le sets endpoint renvoie un array direct
       cards = Array.isArray(data) ? data : (data.results || []);
-      _setCardsCache['lc_'+setInfo.lorcastCode]=cards;
+      _setCacheStore('lc_'+setInfo.lorcastCode, cards);
     }catch(err){console.error(err); grid.innerHTML='<div class="empty-state"><h3>Erreur</h3></div>'; return;}
   }
   if(!cards||!cards.length){grid.innerHTML='<div class="empty-state"><h3>Aucune carte</h3></div>'; return;}
@@ -5609,8 +5720,8 @@ async function showLorcanaSetCards(slug){
       if(variants.length===0) variants.push({key:'normal',label:'Normal',price:null});
       const best=variants.reduce((m,v)=>(v.price!=null && (m==null||v.price>m))?v.price:m,null);
       const priceStr=best!=null
-        ? `<div class="card-price">Cote estimée €${best.toFixed(2)}<span style="display:block;font-size:9px;color:var(--mut);font-weight:500;margin-top:1px">d'après Lorcast (USD→EUR)</span></div>`
-        : `<div class="card-price empty">— pas de cote disponible —</div>`;
+        ? `<div class="card-price">Cote estimée €${best.toFixed(2)}<span style="display:block;font-size:9px;color:var(--mut);font-weight:500;margin-top:1px">d'après Lorcast (USD→EUR)</span>${priceDateBadgeHtml(c, 'lorcana', 'lc_'+setInfo.lorcastCode)}</div>`
+        : `<div class="card-price empty">— pas de cote disponible —${priceDateBadgeHtml(c, 'lorcana', 'lc_'+setInfo.lorcastCode)}</div>`;
       const large = (c.image_uris && c.image_uris.digital && (c.image_uris.digital.large || c.image_uris.digital.normal)) || img;
       const cmUrl = cardmarketUrlLorcana(c);
       const ebQuery = `${c.name} ${c.version||''} Lorcana ${setInfo.name} ${c.collector_number}`;
@@ -5689,6 +5800,7 @@ function renderMagicSetsGrid(){
 
 async function showMagicSetCards(setCode){
   showView('set-detail');
+  { const b = document.getElementById('setDetailRefreshCmBtn'); if(b) b.hidden = true; }
   setupSetModeUI('magic');
   const grid=document.getElementById('setCardGrid'), filtersBox=document.getElementById('rarityFilters');
   grid.innerHTML='<div class="empty-state"><div class="ico">…</div><h3>Chargement…</h3></div>';
@@ -5703,7 +5815,7 @@ async function showMagicSetCards(setCode){
   const eraLink=document.getElementById('setDetailEraLink');
   eraLink.textContent='Magic: The Gathering'; eraLink.onclick=(ev)=>{ev.preventDefault(); showView('sets-magic');};
   let cards;
-  if(_setCardsCache['mg_'+setCode]) cards=_setCardsCache['mg_'+setCode];
+  if(_setCacheIsFresh('mg_'+setCode)) cards=_setCardsCache['mg_'+setCode];
   else{
     try{
       cards=[];
@@ -5725,7 +5837,7 @@ async function showMagicSetCards(setCode){
       cards = await scryfallFetch('e:'+setCode+' lang:fr include:multilingual');
       // Fallback si pas de VF dispo pour ce set
       if(cards.length===0) cards = await scryfallFetch('e:'+setCode);
-      _setCardsCache['mg_'+setCode]=cards;
+      _setCacheStore('mg_'+setCode, cards);
     }catch(err){console.error(err); grid.innerHTML='<div class="empty-state"><h3>Erreur</h3></div>'; return;}
   }
   if(!cards.length){grid.innerHTML='<div class="empty-state"><h3>Aucune carte</h3></div>'; return;}
@@ -5763,8 +5875,8 @@ async function showMagicSetCards(setCode){
       if(variants.length===0) variants.push({key:'normal',label:'Normal',price:null});
       const best=variants.reduce((m,v)=>(v.price!=null && !isNaN(v.price) && (m==null||v.price>m))?v.price:m,null);
       const priceStr=best!=null
-        ? `<div class="card-price">Cote estimée €${best.toFixed(2)}<span style="display:block;font-size:9px;color:var(--mut);font-weight:500;margin-top:1px">d'après Scryfall</span></div>`
-        : `<div class="card-price empty">— pas de cote disponible —</div>`;
+        ? `<div class="card-price">Cote estimée €${best.toFixed(2)}<span style="display:block;font-size:9px;color:var(--mut);font-weight:500;margin-top:1px">d'après Scryfall</span>${priceDateBadgeHtml(c, 'magic', 'mg_'+setCode)}</div>`
+        : `<div class="card-price empty">— pas de cote disponible —${priceDateBadgeHtml(c, 'magic', 'mg_'+setCode)}</div>`;
       // Image large : pour double-faced, prendre la face avant
       let large = '';
       if(c.image_uris && (c.image_uris.normal || c.image_uris.large)) large = c.image_uris.large || c.image_uris.normal;
@@ -8095,9 +8207,19 @@ function portfolioChartSvg(pfId, currentValue){
 }
 
 function pokemonEstimate(c){
+  // 1) Priorité au cache live Cardmarket (scrape récent < 7 jours)
+  if(c && c.id){
+    const live = getCmLivePrice('pk:'+c.id);
+    if(live){
+      const price = (live.trend != null ? live.trend : (live.avg30 != null ? live.avg30 : null));
+      if(price != null && price > 0){
+        return { price, source: 'Cardmarket (live)' };
+      }
+    }
+  }
   const cm = (c.cardmarket && c.cardmarket.prices) || {};
   const tp = (c.tcgplayer && c.tcgplayer.prices) || {};
-  // 1) Moyenne Cardmarket : on agrège tous les signaux dispo (trend + avgSell)
+  // 2) Moyenne Cardmarket : on agrège tous les signaux dispo (trend + avgSell)
   const cmVals = [];
   if(cm.trendPrice != null && cm.trendPrice > 0) cmVals.push(cm.trendPrice);
   if(cm.averageSellPrice != null && cm.averageSellPrice > 0) cmVals.push(cm.averageSellPrice);
@@ -8105,7 +8227,7 @@ function pokemonEstimate(c){
     const avg = cmVals.reduce((s,p)=>s+p, 0) / cmVals.length;
     return { price: avg, source: 'Cardmarket' };
   }
-  // 2) Fallback TCGPlayer : on prend le market max parmi les variantes
+  // 3) Fallback TCGPlayer : on prend le market max parmi les variantes
   const tpKeys = ['holofoil','normal','reverseHolofoil','1stEditionHolofoil','unlimitedHolofoil'];
   let tpMax = 0;
   for(const k of tpKeys){
@@ -8115,6 +8237,120 @@ function pokemonEstimate(c){
     return { price: tpMax * USD_TO_EUR, source: 'TCGPlayer (converti)' };
   }
   return null;
+}
+
+/* === Cache des cotes Cardmarket scrappées (live) === */
+const CM_LIVE_KEY = 'soridex_cm_live_prices_v1';
+const CM_LIVE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 jours
+
+function getCmLivePricesAll(){
+  try { return JSON.parse(localStorage.getItem(CM_LIVE_KEY) || '{}'); } catch(e){ return {}; }
+}
+function setCmLivePrice(cacheKey, prices){
+  const all = getCmLivePricesAll();
+  all[cacheKey] = { ...prices, scrapedAt: Date.now() };
+  try { localStorage.setItem(CM_LIVE_KEY, JSON.stringify(all)); } catch(e){}
+}
+function getCmLivePrice(cacheKey){
+  const all = getCmLivePricesAll();
+  const entry = all[cacheKey];
+  if(!entry) return null;
+  if(Date.now() - (entry.scrapedAt||0) > CM_LIVE_MAX_AGE_MS) return null;
+  return entry;
+}
+
+/* === Bulk refresh Cardmarket pour un set Pokémon === */
+let _cmBulkAbort = false;
+let _cmBulkRunning = false;
+
+function showCmRefreshOverlay(){ document.getElementById('cmRefreshOverlay').classList.add('visible'); }
+function hideCmRefreshOverlay(){ document.getElementById('cmRefreshOverlay').classList.remove('visible'); }
+function updateCmProgress({ done, total, ok, ko, currentName }){
+  const pct = total > 0 ? Math.round((done/total)*100) : 0;
+  document.getElementById('cmRefreshBar').style.width = pct + '%';
+  document.getElementById('cmRefreshStatus').textContent = `${done} / ${total} cartes (${pct}%)`;
+  document.getElementById('cmRefreshCurrent').textContent = currentName ? `En cours : ${currentName}` : '';
+  document.getElementById('cmRefreshStats').innerHTML =
+    `<span>✓ <b>${ok}</b> mises à jour</span><span>✗ <b>${ko}</b> échecs</span>`;
+}
+
+async function bulkRefreshCmPrices(cards, setName){
+  if(_cmBulkRunning) return;
+  if(!cards || cards.length === 0) return;
+  // Estimation temps : 1.5s par carte
+  const totalSec = Math.round(cards.length * 1.5);
+  const mins = Math.floor(totalSec/60), secs = totalSec%60;
+  const estTxt = mins > 0 ? `~${mins} min ${secs}s` : `~${secs}s`;
+  const confirmed = confirm(
+    `Rafraîchir les cotes Cardmarket de ${cards.length} cartes${setName ? ' du set "'+setName+'"' : ''} ?\n\n` +
+    `Temps estimé : ${estTxt}\n\n` +
+    `Cardmarket sera scrapé carte par carte avec un délai pour éviter d'être bloqué. ` +
+    `Tu peux annuler à tout moment. Tes cotes existantes restent valides 7 jours en cache.`
+  );
+  if(!confirmed) return;
+
+  _cmBulkRunning = true;
+  _cmBulkAbort = false;
+  showCmRefreshOverlay();
+  document.getElementById('cmRefreshActions').innerHTML = `<button class="btn-cancel" id="cmRefreshCancelBtn">Annuler</button>`;
+  document.getElementById('cmRefreshCancelBtn').onclick = () => { _cmBulkAbort = true; };
+
+  let ok = 0, ko = 0;
+  updateCmProgress({ done: 0, total: cards.length, ok, ko, currentName: '' });
+
+  for(let i = 0; i < cards.length; i++){
+    if(_cmBulkAbort) break;
+    const c = cards[i];
+    const url = (c.cardmarket && c.cardmarket.url) || null;
+    const displayName = (typeof translateCardNameToFr === 'function') ? translateCardNameToFr(c.name||'') : (c.name||'');
+    updateCmProgress({ done: i, total: cards.length, ok, ko, currentName: displayName });
+
+    if(!url){ ko++; continue; }
+    try {
+      const r = await fetch(`/api/cm-price?url=${encodeURIComponent(url)}`);
+      if(r.ok){
+        const data = await r.json();
+        const prices = (data && data.prices) || {};
+        if(prices.trend != null || prices.avg30 != null){
+          setCmLivePrice('pk:'+c.id, prices);
+          ok++;
+        } else {
+          ko++;
+        }
+      } else {
+        ko++;
+      }
+    } catch(e){
+      ko++;
+    }
+    updateCmProgress({ done: i+1, total: cards.length, ok, ko, currentName: displayName });
+    // Délai 1.5s entre chaque pour éviter blocage Cloudflare (sauf à la fin)
+    if(i < cards.length - 1 && !_cmBulkAbort){
+      await new Promise(res => setTimeout(res, 1500));
+    }
+  }
+
+  _cmBulkRunning = false;
+  const wasAborted = _cmBulkAbort;
+  _cmBulkAbort = false;
+
+  // Fin : message final + bouton Fermer
+  document.getElementById('cmRefreshStatus').textContent = wasAborted
+    ? `⏹ Annulé après ${ok+ko} cartes`
+    : `✓ Terminé : ${ok} cotes mises à jour, ${ko} échecs`;
+  document.getElementById('cmRefreshCurrent').textContent = '';
+  document.getElementById('cmRefreshActions').innerHTML = `<button class="btn-close" id="cmRefreshCloseBtn">Fermer et rafraîchir l'affichage</button>`;
+  document.getElementById('cmRefreshCloseBtn').onclick = () => {
+    hideCmRefreshOverlay();
+    // Re-render du set en cours pour voir les nouvelles cotes
+    try {
+      if(window._lastSetRender && typeof window._lastSetRender === 'function'){
+        window._lastSetRender();
+      } else {
+        location.reload();
+      }
+    } catch(e){ location.reload(); }
+  };
 }
 
 /* === HELPERS LINKS === */
