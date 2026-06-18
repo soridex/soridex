@@ -4971,16 +4971,32 @@ async function processPriceQueue() {
 }
 
 // Met à jour le DOM d'un élément de prix avec une cote fraîche
-// Fonctionne sur .card-price (catalogue) ET .pfcard-market (portfolio)
+// Préserve les taux de progression (.trend-arrow) qui sont déjà calculés
+// Modifie uniquement .cp-price (montant) et .cp-source (label source)
 function updatePriceDisplay(el, live) {
   if(!el || !live) return;
   const best = live.avg1 || live.avg7 || live.trend || live.lowFr || live.low || null;
   if(best == null) return;
   const label = live.avg1 ? 'J-1' : (live.avg7 ? '7j' : '');
-  // Format selon le type d'élément
+
+  // Pour .pfcard-market (vue portfolio compact)
   if(el.classList.contains('pfcard-market')){
     el.innerHTML = `Cote ${label}: <span style="color:#4ade80">€${best.toFixed(2)}</span>`;
-  } else {
+    return;
+  }
+
+  // Pour .card-price avec structure en spans : on cible juste les parties à update
+  const priceSpan = el.querySelector('.cp-price');
+  const sourceSpan = el.querySelector('.cp-source');
+  if(priceSpan){
+    const fullLabel = live.avg1 ? 'Cote J-1' : (live.avg7 ? 'Cote 7j' : 'Cote');
+    priceSpan.innerHTML = `${fullLabel} <span style="color:#4ade80;font-weight:700">€${best.toFixed(2)}</span>`;
+  }
+  if(sourceSpan){
+    sourceSpan.textContent = 'via TCGGO (Cardmarket)';
+  }
+  // Si pas de structure en spans (vieille version), fallback : remplacement complet
+  if(!priceSpan){
     const fullLabel = live.avg1 ? 'Cote J-1' : (live.avg7 ? 'Cote 7j' : 'Cote');
     el.innerHTML = `${fullLabel} <span style="color:#4ade80;font-weight:700">€${best.toFixed(2)}</span><span style="display:block;font-size:9px;color:var(--mut);font-weight:500;margin-top:1px">via TCGGO (Cardmarket)</span>`;
   }
@@ -5597,7 +5613,7 @@ async function showAllEraCards(slug){
         const trend = pokemonTrendBadge(c);
         const trendArrE = getTrendArrow(c.id, displayPrice);
         const priceStr = displayPrice != null
-          ? `<div class="card-price" data-card-id="pokemon:${escapeHtml(c.id||'')}" data-tcg="pokemon" data-card-name="${escapeHtml(c.name||'')}" data-expected-num="${escapeHtml(c.number||'')}" data-tcggo-q="${escapeHtml((c.name||'')+' '+(c.number||''))}">Cote estimée €${displayPrice.toFixed(2)}${trendArrE}${trend}${pokemonSparkline(c)}<span style="display:block;font-size:9px;color:var(--mut);font-weight:500;margin-top:1px">d'après ${estimate ? estimate.source : 'Cardmarket'}</span>${priceDateBadgeHtml(c, 'pokemon', 'pk_'+(c._setId||''))}</div>`
+          ? `<div class="card-price" data-card-id="pokemon:${escapeHtml(c.id||'')}" data-tcg="pokemon" data-card-name="${escapeHtml(c.name||'')}" data-expected-num="${escapeHtml(c.number||'')}" data-tcggo-q="${escapeHtml((c.name||'')+' '+(c.number||''))}"><span class="cp-price">Cote estimée €${displayPrice.toFixed(2)}</span>${trendArrE}${trend}<span class="cp-source" style="display:block;font-size:9px;color:var(--mut);font-weight:500;margin-top:1px">d'après ${estimate ? estimate.source : 'Cardmarket'}</span>${priceDateBadgeHtml(c, 'pokemon', 'pk_'+(c._setId||''))}</div>`
           : `<div class="card-price empty">— pas de cote disponible —${priceDateBadgeHtml(c, 'pokemon', 'pk_'+(c._setId||''))}</div>`;
         const num = `${c.number}/${c._setTotal||'?'}`;
         const large = (c.images && c.images.large) || (c.images && c.images.small) || '';
@@ -5774,7 +5790,7 @@ async function showPokemonSetCards(setId){
       const trend = pokemonTrendBadge(c);
       const trendArrP = getTrendArrow(c.id, displayPrice);
       const priceStr = displayPrice != null
-        ? `<div class="card-price" data-card-id="pokemon:${escapeHtml(c.id||'')}" data-tcg="pokemon" data-card-name="${escapeHtml(c.name||'')}" data-expected-num="${escapeHtml(c.number||'')}" data-tcggo-q="${escapeHtml((c.name||'')+' '+(c.number||''))}">Cote estimée €${displayPrice.toFixed(2)}${trendArrP}${trend}${pokemonSparkline(c)}<span style="display:block;font-size:9px;color:var(--mut);font-weight:500;margin-top:1px">d'après ${estimate ? estimate.source : 'Cardmarket'}</span>${priceDateBadgeHtml(c, 'pokemon', 'pk_'+setId)}</div>`
+        ? `<div class="card-price" data-card-id="pokemon:${escapeHtml(c.id||'')}" data-tcg="pokemon" data-card-name="${escapeHtml(c.name||'')}" data-expected-num="${escapeHtml(c.number||'')}" data-tcggo-q="${escapeHtml((c.name||'')+' '+(c.number||''))}"><span class="cp-price">Cote estimée €${displayPrice.toFixed(2)}</span>${trendArrP}${trend}<span class="cp-source" style="display:block;font-size:9px;color:var(--mut);font-weight:500;margin-top:1px">d'après ${estimate ? estimate.source : 'Cardmarket'}</span>${priceDateBadgeHtml(c, 'pokemon', 'pk_'+setId)}</div>`
         : `<div class="card-price empty">— pas de cote disponible —${priceDateBadgeHtml(c, 'pokemon', 'pk_'+setId)}</div>`;
       const num=`${c.number}${setInfo?'/'+(setInfo.printedTotal||setInfo.total):''}`;
       const large = (c.images && c.images.large) || (c.images && c.images.small) || '';
@@ -6078,7 +6094,7 @@ async function showLorcanaSetCards(slug){
       if(variants.length===0) variants.push({key:'normal',label:'Normal',price:null});
       const best=variants.reduce((m,v)=>(v.price!=null && (m==null||v.price>m))?v.price:m,null);
       const priceStr=best!=null
-        ? `<div class="card-price" data-card-id="lorcana:${escapeHtml(c.id||'')}" data-tcg="lorcana" data-card-name="${escapeHtml(c.name||'')}" data-expected-num="${escapeHtml(c.collector_number||c.number||'')}" data-tcggo-q="${escapeHtml((c.name||'')+' '+(c.collector_number||c.number||''))}">Cote estimée €${best.toFixed(2)}<span style="display:block;font-size:9px;color:var(--mut);font-weight:500;margin-top:1px">d'après Lorcast (USD→EUR)</span>${priceDateBadgeHtml(c, 'lorcana', 'lc_'+setInfo.lorcastCode)}</div>`
+        ? `<div class="card-price" data-card-id="lorcana:${escapeHtml(c.id||'')}" data-tcg="lorcana" data-card-name="${escapeHtml(c.name||'')}" data-expected-num="${escapeHtml(c.collector_number||c.number||'')}" data-tcggo-q="${escapeHtml((c.name||'')+' '+(c.collector_number||c.number||''))}"><span class="cp-price">Cote estimée €${best.toFixed(2)}</span><span class="cp-source" style="display:block;font-size:9px;color:var(--mut);font-weight:500;margin-top:1px">d'après Lorcast (USD→EUR)</span>${priceDateBadgeHtml(c, 'lorcana', 'lc_'+setInfo.lorcastCode)}</div>`
         : `<div class="card-price empty">— pas de cote disponible —${priceDateBadgeHtml(c, 'lorcana', 'lc_'+setInfo.lorcastCode)}</div>`;
       const large = (c.image_uris && c.image_uris.digital && (c.image_uris.digital.large || c.image_uris.digital.normal)) || img;
       const cmUrl = cardmarketUrlLorcana(c);
