@@ -4880,10 +4880,10 @@ async function _fetchTcggoRaw(searchQuery, expectedNumber) {
 }
 
 // Garde l'ancien nom pour rétro-compat (utilisé dans loadCardDetail)
-async function fetchTcggoPrices(searchQuery) {
-  const cacheKey = (searchQuery||'').toLowerCase().trim();
+async function fetchTcggoPrices(searchQuery, expectedNumber) {
+  const cacheKey = (searchQuery||'').toLowerCase().trim() + '|n:' + (expectedNumber||'');
   if(_priceMemCache.has('q:'+cacheKey)) return _priceMemCache.get('q:'+cacheKey);
-  const result = await _fetchTcggoRaw(searchQuery);
+  const result = await _fetchTcggoRaw(searchQuery, expectedNumber);
   _priceMemCache.set('q:'+cacheKey, result);
   return result;
 }
@@ -5322,7 +5322,9 @@ async function loadCardDetail(tcg, id, fallback){
       if(!searchQuery){
         return;
       }
-      const live = await fetchTcggoPrices(searchQuery);
+      // Extrait le numéro nu (sans /total) pour le filtre strict TCGGO
+      const expectedNum = String(cardNum || '').trim().split('/')[0];
+      const live = await fetchTcggoPrices(searchQuery, expectedNum);
       if(!live || live._error){
         const errMsg = (live && live._error) ? live._error : 'TCGGO non disponible';
         updEl.innerHTML = `<span style="color:#f87171;font-weight:600;font-size:11px;display:block;word-break:break-word">⚠ TCGGO échec : ${escapeHtml(errMsg)}</span>`;
