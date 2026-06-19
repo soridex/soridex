@@ -5684,7 +5684,7 @@ async function showEraSets(slug){
     // Préfixer les sets à venir de cette ère
     const upcoming = UPCOMING_POKEMON_SETS.filter(u => u.eraSlug === slug);
     const upcomingHtml = upcoming.map(renderUpcomingSetCard).join('');
-    renderSetGrid('eraSetGrid', sets);
+    renderSetGrid('eraSetGrid', sets, 'pokemon');
     if(upcomingHtml){
       const grid = document.getElementById('eraSetGrid');
       grid.innerHTML = upcomingHtml + grid.innerHTML;
