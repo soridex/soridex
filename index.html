@@ -5045,6 +5045,7 @@ async function refreshPriceDisplays(container) {
 const _lorcanaCardmarketCache = new Map();
 
 function _getSupabaseClient() {
+  if (typeof sb !== 'undefined' && sb?.from) return sb;
   if (typeof supabaseClient !== 'undefined') return supabaseClient;
   if (typeof supabase !== 'undefined' && supabase?.from) return supabase;
   if (typeof window !== 'undefined') {
