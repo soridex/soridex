@@ -4325,7 +4325,8 @@ function computePfTotals(pf){
   let valueComplete = 0, value = 0, spent = 0, owned = 0, total = 0;
   for(const c of pf.cards || []){
     total++;
-    const isOwned = c.owned !== false;
+    // Sync croisé : possédée si owned localement OU dans un autre portfolio
+    const isOwned = (c.owned !== false) || (typeof isOwnedAnywhere === 'function' && isOwnedAnywhere(c.apiId));
     if(c.marketPrice != null) valueComplete += c.marketPrice * (c.qty || 1);
     if(isOwned){
       owned++;
