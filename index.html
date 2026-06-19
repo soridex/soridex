@@ -5352,6 +5352,24 @@ async function loadCardDetail(tcg, id, fallback){
         </div>
       `).join('');
       updEl.innerHTML = `<span style="color:#4ade80;font-weight:600">✓ Cotes Cardmarket à jour (via TCGGO)</span>`;
+      // === DEBUG TEMPORAIRE : affiche ce que TCGGO a renvoyé ===
+      try {
+        const dbg = document.createElement('div');
+        dbg.style.cssText = 'margin-top:12px;padding:10px;background:#1a1a2e;border:1px solid #f59e0b;border-radius:6px;font-size:11px;color:#fbbf24;font-family:monospace;white-space:pre-wrap;word-break:break-word;max-height:200px;overflow:auto';
+        dbg.textContent = `[DEBUG TCGGO]
+Query: "${searchQuery}"
+Expected number: "${expectedNum}"
+Matched name: ${live._matchedName}
+Matched number: ${live._matchedNumber}
+─────────────
+avg1  (J-1)  : ${live.avg1}
+avg7  (7j)   : ${live.avg7}
+avg30 (30j)  : ${live.avg30}
+low          : ${live.low}
+lowFr        : ${live.lowFr}
+trend        : ${live.trend}`;
+        pricesEl.parentNode.insertBefore(dbg, pricesEl.nextSibling);
+      } catch(e){ console.warn('debug fail', e); }
     })();
   }
 
