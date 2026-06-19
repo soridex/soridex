@@ -4117,8 +4117,10 @@ function lcCardToPfEntry(c, setInfo){
     img: (c.image_uris && c.image_uris.digital && (c.image_uris.digital.normal || c.image_uris.digital.small)) || '',
     largeImg: lcLarge,
     setName: setInfo ? setInfo.name : (c.set ? c.set.name : ''),
+    setCode: setInfo ? setInfo.lorcastCode : (c.set ? c.set.code : ''),
     setReleaseDate: setInfo ? String(setInfo.year) : (c.set && c.set.released_at ? c.set.released_at : null),
     number: c.collector_number + (setInfo ? '/'+setInfo.count : ''),
+    collectorNumber: c.collector_number || '',
     rarity: (c.rarity || '').replace('_',' '),
     marketPrice: market, pricePaid: 0, qty: 1, owned: false,
     addedAt: Date.now()
@@ -4134,8 +4136,10 @@ function lcCardToPfEntries(c, setInfo){
     img: (c.image_uris && c.image_uris.digital && (c.image_uris.digital.normal || c.image_uris.digital.small)) || '',
     largeImg: lcLarge,
     setName: setInfo ? setInfo.name : (c.set ? c.set.name : ''),
+    setCode: setInfo ? setInfo.lorcastCode : (c.set ? c.set.code : ''),
     setReleaseDate: setInfo ? String(setInfo.year) : (c.set && c.set.released_at ? c.set.released_at : null),
     number: c.collector_number + (setInfo ? '/'+setInfo.count : ''),
+    collectorNumber: c.collector_number || '',
     rarity: (c.rarity || '').replace('_',' '),
     pricePaid: 0, qty: 1, owned: false,
     addedAt: Date.now()
@@ -5091,6 +5095,87 @@ async function getLorcanaCardmarketUrlOrFallback(card) {
   const name = card?.version ? `${card.name} ${card.version}` : (card?.name || '');
   return `https://www.cardmarket.com/fr/Lorcana/Products/Search?searchString=${encodeURIComponent(name)}`;
 }
+
+// Upgrade les liens <a data-cm-lookup="lorcana"> de l'URL de recherche vers la fiche produit Cardmarket directe
+let _lorcanaCmUpgradeRunning = false;
+let _lorcanaCmUpgradeQueued = false;
+async function upgradeLorcanaCardmarketLinks(root) {
+  if (_lorcanaCmUpgradeRunning) { _lorcanaCmUpgradeQueued = true; return; }
+  _lorcanaCmUpgradeRunning = true;
+  try {
+    const sb = _getSupabaseClient();
+    if (!sb) return;
+    const scope = root || document;
+    const links = scope.querySelectorAll('a.card-btn.cm[data-cm-lookup="lorcana"]:not([data-cm-upgraded])');
+    if (!links.length) return;
+
+    const byKey = new Map(); // "setCode|num" -> [<a>...]
+    links.forEach(a => {
+      const setCode = (a.dataset.cmSet || '').trim();
+      const num = (a.dataset.cmNum || '').trim();
+      if (!setCode || !num) { a.dataset.cmUpgraded = '1'; return; }
+      const key = `${setCode}|${num}`;
+      if (!byKey.has(key)) byKey.set(key, []);
+      byKey.get(key).push(a);
+    });
+
+    for (const [key, anchors] of byKey) {
+      const [setCode, num] = key.split('|');
+      let url = null;
+      if (_lorcanaCardmarketCache.has(key)) {
+        url = _lorcanaCardmarketCache.get(key);
+      } else {
+        try {
+          const { data } = await sb
+            .from('lorcana_cardmarket_resolved')
+            .select('cardmarket_url')
+            .eq('set_code', String(setCode))
+            .eq('card_number', String(num))
+            .eq('language', 'fr')
+            .maybeSingle();
+          if (data?.cardmarket_url) {
+            url = data.cardmarket_url
+              .replace('/en/', '/fr/')
+              .replace(/[?&]language=\d+/, '');
+          }
+          _lorcanaCardmarketCache.set(key, url);
+        } catch (e) {
+          console.warn('[soridex] cm upgrade lookup failed', e);
+        }
+      }
+      anchors.forEach(a => {
+        if (url) a.href = url;
+        a.dataset.cmUpgraded = '1';
+      });
+    }
+  } finally {
+    _lorcanaCmUpgradeRunning = false;
+    if (_lorcanaCmUpgradeQueued) { _lorcanaCmUpgradeQueued = false; setTimeout(() => upgradeLorcanaCardmarketLinks(), 50); }
+  }
+}
+
+// MutationObserver global : upgrade auto les liens Lorcana quand ils apparaissent
+(function(){
+  let _scheduled = false;
+  const trigger = () => {
+    if (_scheduled) return;
+    _scheduled = true;
+    setTimeout(() => { _scheduled = false; upgradeLorcanaCardmarketLinks(); }, 150);
+  };
+  const obs = new MutationObserver(muts => {
+    for (const m of muts) {
+      for (const node of m.addedNodes) {
+        if (node.nodeType !== 1) continue;
+        if (node.matches?.('a.card-btn.cm[data-cm-lookup="lorcana"]') || node.querySelector?.('a.card-btn.cm[data-cm-lookup="lorcana"]:not([data-cm-upgraded])')) {
+          trigger();
+          return;
+        }
+      }
+    }
+  });
+  if (document.body) obs.observe(document.body, { childList: true, subtree: true });
+  else document.addEventListener('DOMContentLoaded', () => obs.observe(document.body, { childList: true, subtree: true }));
+})();
 
 async function loadCardDetail(tcg, id, fallback){
   let card = null;
@@ -6166,7 +6251,7 @@ async function showLorcanaSetCards(slug){
           ${priceStr}
           <div class="card-actions">
             <button class="card-btn cd" data-detail-tcg="lorcana" data-detail-id="${escapeHtml(c.id)}" data-detail-name="${escapeHtml(full)}" data-detail-set="${escapeHtml(setInfo.name||'')}" data-detail-num="${escapeHtml(num)}" data-detail-img="${escapeHtml(large||img||'')}" data-detail-rarity="${escapeHtml((c.rarity||'').replace('_',' '))}" title="Voir détails + cote">🔍 Détails</button>
-            <a class="card-btn cm" href="${cmUrl}" target="_blank" rel="noopener noreferrer">Cardmarket</a>
+            <a class="card-btn cm" href="${cmUrl}" data-cm-lookup="lorcana" data-cm-set="${escapeHtml(setInfo.lorcastCode||'')}" data-cm-num="${escapeHtml(c.collector_number||'')}" target="_blank" rel="noopener noreferrer">Cardmarket</a>
             <a class="card-btn eb" href="${ebayUrl(ebQuery)}" target="_blank" rel="noopener noreferrer">eBay</a>
           </div>
         </div></div>`;
@@ -6770,7 +6855,7 @@ function renderGlobalSearchResults(){
         <div class="card-rarity">${escapeHtml(c.rarity||'')} · <span style="color:var(--mut)">${TCG_LABEL[r.tcg]||r.tcg}</span></div>
         <div class="card-price" data-card-id="${escapeHtml(r.tcg+':'+(c.apiId||''))}" data-tcg="${escapeHtml(r.tcg||'')}" data-card-name="${escapeHtml(c.name||'')}" data-expected-num="${escapeHtml((c.number||'').split('/')[0])}" data-tcggo-q="${escapeHtml((c.name||'')+' '+((c.number||'').split('/')[0]))}">${market !== '—' ? 'Cote estimée ' + market : '— pas de cote —'}</div>
         <div class="card-actions">
-          <a class="card-btn cm" href="${cmUrl}" target="_blank" rel="noopener noreferrer">Cardmarket</a>
+          <a class="card-btn cm" href="${cmUrl}"${r.tcg==='lorcana'?` data-cm-lookup="lorcana" data-cm-set="${escapeHtml(c.setCode||'')}" data-cm-num="${escapeHtml(c.collectorNumber||(c.number||'').split('/')[0]||'')}"`:''} target="_blank" rel="noopener noreferrer">Cardmarket</a>
           <a class="card-btn eb" href="${ebayUrl(ebQuery)}" target="_blank" rel="noopener noreferrer">eBay</a>
         </div>
       </div></div>`;
@@ -7395,7 +7480,7 @@ function renderWishFolderDetail(){
         <div class="card-rarity">${escapeHtml(c.rarity||'')} · <span style="color:var(--mut)">${TCG_LABEL[c.tcg]||c.tcg}</span></div>
         <div class="card-price" data-card-id="${escapeHtml(c.tcg+':'+(c.apiId||''))}" data-tcg="${escapeHtml(c.tcg||'')}" data-card-name="${escapeHtml(c.name||'')}" data-expected-num="${escapeHtml((c.number||'').split('/')[0])}" data-tcggo-q="${escapeHtml((c.name||'')+' '+((c.number||'').split('/')[0]))}">${market !== '—' ? 'Cote estimée ' + market : '— pas de cote —'}</div>
         <div class="card-actions">
-          <a class="card-btn cm" href="${cmUrl}" target="_blank" rel="noopener noreferrer">Cardmarket</a>
+          <a class="card-btn cm" href="${cmUrl}"${c.tcg==='lorcana'?` data-cm-lookup="lorcana" data-cm-set="${escapeHtml(c.setCode||'')}" data-cm-num="${escapeHtml(c.collectorNumber||(c.number||'').split('/')[0]||'')}"`:''} target="_blank" rel="noopener noreferrer">Cardmarket</a>
           <a class="card-btn eb" href="${ebayUrl(ebQuery)}" target="_blank" rel="noopener noreferrer">eBay</a>
         </div>
       </div></div>`;
