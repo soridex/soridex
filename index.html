@@ -4867,6 +4867,10 @@ async function _fetchTcggoRaw(searchQuery, expectedNumber, expectedName) {
       });
       if(!card){
         const found = cards.map(c => `${c.name}#${c.card_number||c.number||'?'}`).join(' | ');
+        console.warn('[TCGGO number_mismatch]', {
+          searchQuery, expectedName, expectedNumber: wantNum,
+          rawCards: cards.map(c => ({ name: c.name, number: c.card_number || c.number, set: c.set_name || c.set, id: c.id }))
+        });
         return { _error: 'number_mismatch', _details: `expected "${expectedName||''}" #${wantNum}, got: ${found}` };
       }
     } else if(wantWords.length){
@@ -5341,7 +5345,9 @@ async function loadCardDetail(tcg, id, fallback){
       const live = await fetchTcggoPrices(searchQuery, expectedNum, cardName);
       if(!live || live._error){
         const errMsg = (live && live._error) ? live._error : 'TCGGO non disponible';
-        updEl.innerHTML = `<span style="color:#f87171;font-weight:600;font-size:11px;display:block;word-break:break-word">⚠ TCGGO échec : ${escapeHtml(errMsg)}</span>`;
+        const errDetails = (live && live._details) ? live._details : '';
+        updEl.innerHTML = `<span style="color:#f87171;font-weight:600;font-size:11px;display:block;word-break:break-word">⚠ TCGGO échec : ${escapeHtml(errMsg)}</span>`
+          + (errDetails ? `<details style="margin-top:4px;font-size:10px;color:#9ca3af;word-break:break-word"><summary style="cursor:pointer;color:#fbbf24">Voir détails debug</summary><div style="margin-top:4px;padding:6px;background:#1f2937;border-radius:4px;font-family:monospace;white-space:pre-wrap">${escapeHtml(errDetails)}</div></details>` : '');
         return;
       }
       // Construit l'affichage avec les vraies cotes TCGGO
