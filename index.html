@@ -4829,7 +4829,8 @@ let _priceQueueProcessing = false;
 
 // Appel TCGGO direct (sans cache)
 // expectedNumber : numéro exact pour filtrer le bon variant (ex: "199" pour 199/165)
-async function _fetchTcggoRaw(searchQuery, expectedNumber) {
+// expectedName   : nom de la carte pour éviter de matcher une carte d'un autre jeu (ex: Salazzle Pokémon n°224 vs Ohana Lorcana n°224)
+async function _fetchTcggoRaw(searchQuery, expectedNumber, expectedName) {
   if(!searchQuery) return { _error: 'empty query' };
   try {
     const url = `https://${TCGGO_HOST}/cards?search=${encodeURIComponent(searchQuery)}&limit=10`;
@@ -4845,19 +4846,32 @@ async function _fetchTcggoRaw(searchQuery, expectedNumber) {
     if(!cards.length) return { _error: 'no_match' };
 
     // === Sélection de la bonne carte ===
-    // Si on attend un numéro précis, on REFUSE tout résultat dont le numéro
-    // ne matche pas exactement (mieux vaut pas de prix qu'un prix faux)
+    // Filtre strict : numéro exact + nom doit matcher (au moins un mot significatif)
     let card = null;
-    if(expectedNumber){
-      const want = String(expectedNumber).trim().split('/')[0];
+    const wantNum = expectedNumber ? String(expectedNumber).trim().split('/')[0] : null;
+    const wantNameNorm = expectedName ? String(expectedName).toLowerCase().replace(/[^a-z0-9 ]/g,' ').trim() : null;
+    // Mots significatifs du nom attendu (>=4 chars, pas "the/and/of/for")
+    const stopWords = new Set(['the','and','for','with','from','your','that','this','dans','avec','pour','sans','vers']);
+    const wantWords = wantNameNorm ? wantNameNorm.split(/\s+/).filter(w => w.length >= 4 && !stopWords.has(w)) : [];
+
+    const matchesName = (cardName) => {
+      if(!wantWords.length) return true; // pas de nom à comparer = on accepte
+      const norm = String(cardName||'').toLowerCase().replace(/[^a-z0-9 ]/g,' ');
+      return wantWords.some(w => norm.includes(w));
+    };
+
+    if(wantNum){
       card = cards.find(c => {
         const cn = String(c.card_number || c.number || '').trim();
-        return cn === want;
+        return cn === wantNum && matchesName(c.name);
       });
       if(!card){
-        const found = cards.map(c => c.card_number || c.number || '?').join(',');
-        return { _error: 'number_mismatch', _details: `expected ${want}, got: ${found}` };
+        const found = cards.map(c => `${c.name}#${c.card_number||c.number||'?'}`).join(' | ');
+        return { _error: 'number_mismatch', _details: `expected "${expectedName||''}" #${wantNum}, got: ${found}` };
       }
+    } else if(wantWords.length){
+      card = cards.find(c => matchesName(c.name));
+      if(!card) return { _error: 'name_mismatch', _details: cards.map(c=>c.name).join(', ') };
     } else {
       card = cards[0];
     }
@@ -4880,10 +4894,10 @@ async function _fetchTcggoRaw(searchQuery, expectedNumber) {
 }
 
 // Garde l'ancien nom pour rétro-compat (utilisé dans loadCardDetail)
-async function fetchTcggoPrices(searchQuery, expectedNumber) {
-  const cacheKey = (searchQuery||'').toLowerCase().trim() + '|n:' + (expectedNumber||'');
+async function fetchTcggoPrices(searchQuery, expectedNumber, expectedName) {
+  const cacheKey = (searchQuery||'').toLowerCase().trim() + '|n:' + (expectedNumber||'') + '|nm:' + (expectedName||'').toLowerCase();
   if(_priceMemCache.has('q:'+cacheKey)) return _priceMemCache.get('q:'+cacheKey);
-  const result = await _fetchTcggoRaw(searchQuery, expectedNumber);
+  const result = await _fetchTcggoRaw(searchQuery, expectedNumber, expectedName);
   _priceMemCache.set('q:'+cacheKey, result);
   return result;
 }
@@ -4951,7 +4965,7 @@ async function processPriceQueue() {
   while(_priceQueue.length > 0){
     const item = _priceQueue.shift();
     try {
-      const live = await _fetchTcggoRaw(item.query, item.expectedNumber);
+      const live = await _fetchTcggoRaw(item.query, item.expectedNumber, item.expectedName || item.name);
       if(live && !live._error){
         await setCachedPrice(item.cardId, item.tcg, item.name, item.query, live, null);
         if(typeof item.onDone === 'function') item.onDone(live);
@@ -5324,7 +5338,7 @@ async function loadCardDetail(tcg, id, fallback){
       }
       // Extrait le numéro nu (sans /total) pour le filtre strict TCGGO
       const expectedNum = String(cardNum || '').trim().split('/')[0];
-      const live = await fetchTcggoPrices(searchQuery, expectedNum);
+      const live = await fetchTcggoPrices(searchQuery, expectedNum, cardName);
       if(!live || live._error){
         const errMsg = (live && live._error) ? live._error : 'TCGGO non disponible';
         updEl.innerHTML = `<span style="color:#f87171;font-weight:600;font-size:11px;display:block;word-break:break-word">⚠ TCGGO échec : ${escapeHtml(errMsg)}</span>`;
