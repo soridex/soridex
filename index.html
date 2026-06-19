@@ -5112,6 +5112,55 @@ async function loadCardDetail(tcg, id, fallback){
     else if(card.card_faces && card.card_faces[0] && card.card_faces[0].image_uris) imgUrl = card.card_faces[0].image_uris.normal;
     ebayQuery = `${card.name||''} ${setName} ${num}`;
     if(!cardmarketUrl) cardmarketUrl = `https://www.cardmarket.com/fr/Magic/Products/Search?searchString=${encodeURIComponent(card.name||fallback.name||'')}`;
+    // === Soridex : lookup Cardmarket URL pour Lorcana via Supabase ===
+const _lorcanaCardmarketCache = new Map();
+
+function _getSupabaseClient() {
+  if (typeof supabaseClient !== 'undefined') return supabaseClient;
+  if (typeof supabase !== 'undefined' && supabase?.from) return supabase;
+  if (typeof window !== 'undefined') {
+    if (window.supabaseClient) return window.supabaseClient;
+    if (window.supabase?.from) return window.supabase;
+  }
+  return null;
+}
+
+async function getLorcanaCardmarketUrlOrFallback(card) {
+  const setCode = card?.set?.code;
+  const cardNumber = card?.collector_number;
+  const sb = _getSupabaseClient();
+
+  if (setCode && cardNumber && sb) {
+    const cacheKey = `${setCode}|${cardNumber}`;
+    if (_lorcanaCardmarketCache.has(cacheKey)) {
+      const cached = _lorcanaCardmarketCache.get(cacheKey);
+      if (cached) return cached;
+    } else {
+      try {
+        const { data } = await sb
+          .from('lorcana_cardmarket_resolved')
+          .select('cardmarket_url')
+          .eq('set_code', String(setCode))
+          .eq('card_number', String(cardNumber))
+          .eq('language', 'fr')
+          .maybeSingle();
+        if (data?.cardmarket_url) {
+          const frUrl = data.cardmarket_url
+            .replace('/en/', '/fr/')
+            .replace(/[?&]language=\d+/, '');
+          _lorcanaCardmarketCache.set(cacheKey, frUrl);
+          return frUrl;
+        }
+        _lorcanaCardmarketCache.set(cacheKey, null);
+      } catch (e) {
+        console.warn('[soridex] cardmarket lookup failed', e);
+      }
+    }
+  }
+
+  const name = card?.version ? `${card.name} ${card.version}` : (card?.name || '');
+  return `https://www.cardmarket.com/fr/Lorcana/Products/Search?searchString=${encodeURIComponent(name)}`;
+}
   } else if(tcg === 'lorcana' && card){
     displayName = card.version ? `${card.name} — ${card.version}` : (card.name||'');
     setName = card.set ? (card.set.name||card.set.code||'') : '';
