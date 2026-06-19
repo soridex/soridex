@@ -4435,7 +4435,7 @@ function updateFilterBarUI(pf){
   const countEl = document.getElementById('pfFilterCount');
   if(countEl && pf){
     const total = (pf.cards||[]).length;
-    const owned = (pf.cards||[]).filter(c => !!c.owned).length;
+    const owned = (pf.cards||[]).filter(c => !!c.owned || (typeof isOwnedAnywhere === 'function' && isOwnedAnywhere(c.apiId))).length;
     if(pfFilterState === 'owned')      countEl.textContent = `${owned} / ${total} possédées`;
     else if(pfFilterState === 'missing') countEl.textContent = `${total - owned} / ${total} manquantes`;
     else                                  countEl.textContent = `${total} cartes`;
@@ -4573,11 +4573,13 @@ function renderPfCards(pf){
   }
   // Index original conservé + filtre possédée/manquante + filtre search
   let cardsWithIdx = pf.cards.map((c, i) => ({...c, _idx: i}));
+  // Helper : carte effectivement possédée (localement OU ailleurs dans tes portfolios)
+  const _effectivelyOwned = (c) => !!c.owned || (typeof isOwnedAnywhere === 'function' && isOwnedAnywhere(c.apiId));
   // Filtre possession
   if(pfFilterState === 'owned'){
-    cardsWithIdx = cardsWithIdx.filter(c => !!c.owned);
+    cardsWithIdx = cardsWithIdx.filter(c => _effectivelyOwned(c));
   } else if(pfFilterState === 'missing'){
-    cardsWithIdx = cardsWithIdx.filter(c => !c.owned);
+    cardsWithIdx = cardsWithIdx.filter(c => !_effectivelyOwned(c));
   }
   if(_searchState.pf){
     cardsWithIdx = cardsWithIdx.filter(c => {
@@ -4618,7 +4620,8 @@ function renderPfCards(pf){
     const imgSrc = smartImg(c.img || '');
     const large = smartImg(c.largeImg || c.img || '');
     // Backward compat: ancien portfolio sans owned => considéré comme possédé
-    const isOwned = c.owned !== false;
+    // Sync croisé : possédée si owned localement OU dans un autre portfolio (Mes cartes possédées notamment)
+    const isOwned = (c.owned !== false) || (typeof isOwnedAnywhere === 'function' && isOwnedAnywhere(c.apiId));
     const qty = Math.max(1, parseInt(c.qty, 10) || 1);
     const ownedClass = isOwned ? 'owned' : '';
     const badge = isOwned
@@ -5357,6 +5360,16 @@ async function loadCardDetail(tcg, id, fallback){
       if(live.avg1  != null) newPrices.push({label:'Cote J-1', value:live.avg1, featured:true});
       else if(live.avg7 != null) newPrices.push({label:'Cote 7j', value:live.avg7, featured:true});
       if(live.avg7  != null && live.avg1 != null) newPrices.push({label:'Avg 7j', value:live.avg7});
+      // Progression 7j : compare cote actuelle (avg1) à la moyenne 7j
+      if(live.avg1 != null && live.avg7 != null && live.avg7 > 0){
+        const pct = ((live.avg1 - live.avg7) / live.avg7) * 100;
+        const color = Math.abs(pct) < 0.5 ? '#9ca3af' : (pct > 0 ? '#4ade80' : '#f87171');
+        const arrow = Math.abs(pct) < 0.5 ? '→' : (pct > 0 ? '↑' : '↓');
+        newPrices.push({
+          label: 'Progression 7j',
+          customHtml: `<span style="color:${color};font-weight:700">${arrow} ${pct > 0 ? '+' : ''}${pct.toFixed(1)} %</span>`
+        });
+      }
       if(live.trend != null) newPrices.push({label:'Trend', value:live.trend});
       if(live.low   != null) newPrices.push({label:'Prix bas', value:live.low});
       if(live.lowFr != null) newPrices.push({label:'Prix bas FR', value:live.lowFr});
@@ -5370,7 +5383,7 @@ async function loadCardDetail(tcg, id, fallback){
       pricesEl.innerHTML = newPrices.map(p => `
         <div class="card-detail-price-cell ${p.featured?'featured':''}">
           <div class="label">${escapeHtml(p.label)}</div>
-          <div class="val">${p.value.toFixed(2)} €</div>
+          <div class="val">${p.customHtml || (p.value.toFixed(2) + ' €')}</div>
         </div>
       `).join('');
       updEl.innerHTML = `<span style="color:#4ade80;font-weight:600">✓ Cotes Cardmarket à jour (via TCGGO)</span>`;
