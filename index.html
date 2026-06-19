@@ -5330,8 +5330,10 @@ async function loadCardDetail(tcg, id, fallback){
   document.getElementById('cardDetailEbay').href = `https://www.ebay.fr/sch/i.html?_nkw=${encodeURIComponent(ebayQuery.trim())}&LH_Sold=1&LH_Complete=1`;
 
   // === TCGGO API : récupère les prix Cardmarket à jour ===
-  // Marche pour Pokémon et Lorcana. Pour Magic, Scryfall fait déjà l'affaire.
-  if(tcg === 'pokemon' || tcg === 'lorcana'){
+  // Pokémon uniquement : l'API RapidAPI utilisée (pokemon-tcg-api) ne contient
+  // PAS Lorcana ni Magic. Pour Lorcana → Lorcast fournit déjà Standard+Foil
+  // (converti USD→EUR). Pour Magic → Scryfall fournit déjà le prix EUR Cardmarket.
+  if(tcg === 'pokemon'){
     (async () => {
       // Construit une query : nom + numéro de carte si dispo
       const cardName = (card && card.name) || (fallback && fallback.name) || '';
