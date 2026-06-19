@@ -6759,13 +6759,26 @@ async function showGlobalSearchResults(query){
   const qEnc = encodeURIComponent(query);
   const qPokEnc = encodeURIComponent(qPokemon);
 
+  // Détection : query purement numérique → on cherche par numéro de carte
+  const isNumeric = /^\d+$/.test(query.trim());
+
   let tasks;
   try{
-    tasks = await Promise.allSettled([
-      fetch(`https://api.pokemontcg.io/v2/cards?q=name:*${qPokEnc}*&pageSize=60&orderBy=-set.releaseDate`).then(r => r.json()).catch(()=>({data:[]})),
-      fetch(`https://api.scryfall.com/cards/search?q=${qEnc}+lang:fr+include:multilingual&order=released&unique=cards`, {headers:{'Accept':'application/json'}}).then(r => r.ok ? r.json() : {data:[]}).catch(()=>({data:[]})),
-      fetch(`https://api.lorcast.com/v0/cards/search?q=name%3A${qEnc}`).then(r => r.ok ? r.json() : {results:[]}).catch(()=>({results:[]})),
-    ]);
+    if(isNumeric){
+      // Recherche par numéro de carte
+      tasks = await Promise.allSettled([
+        fetch(`https://api.pokemontcg.io/v2/cards?q=number:${qEnc}&pageSize=60&orderBy=-set.releaseDate`).then(r => r.json()).catch(()=>({data:[]})),
+        fetch(`https://api.scryfall.com/cards/search?q=cn:${qEnc}&order=released&unique=cards`, {headers:{'Accept':'application/json'}}).then(r => r.ok ? r.json() : {data:[]}).catch(()=>({data:[]})),
+        fetch(`https://api.lorcast.com/v0/cards/search?q=number%3A${qEnc}`).then(r => r.ok ? r.json() : {results:[]}).catch(()=>({results:[]})),
+      ]);
+    } else {
+      // Recherche par nom (comportement par défaut)
+      tasks = await Promise.allSettled([
+        fetch(`https://api.pokemontcg.io/v2/cards?q=name:*${qPokEnc}*&pageSize=60&orderBy=-set.releaseDate`).then(r => r.json()).catch(()=>({data:[]})),
+        fetch(`https://api.scryfall.com/cards/search?q=${qEnc}+lang:fr+include:multilingual&order=released&unique=cards`, {headers:{'Accept':'application/json'}}).then(r => r.ok ? r.json() : {data:[]}).catch(()=>({data:[]})),
+        fetch(`https://api.lorcast.com/v0/cards/search?q=name%3A${qEnc}`).then(r => r.ok ? r.json() : {results:[]}).catch(()=>({results:[]})),
+      ]);
+    }
   }catch(e){
     document.getElementById('globSearchGrid').innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="ico">⚠</div><h3>Erreur de recherche</h3></div>';
     return;
