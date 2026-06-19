@@ -4770,7 +4770,17 @@ function renderPfCards(pf){
           <div class="pfcard-name">${escapeHtml(displayName)}</div>
           <div class="pfcard-meta">${escapeHtml(c.setName)} · ${escapeHtml(c.number)}</div>
           ${c.variant ? `<div class="pfcard-variant ${c.variant}">${c.variant === 'foil' ? '✦ Cold Foil' : 'Normal'}</div>` : ''}
-          <div class="pfcard-market" data-card-id="${cardTcg}:${escapeHtml(c.apiId||'')}" data-tcg="${cardTcg}" data-card-name="${escapeHtml(c.name||'')}" data-expected-num="${escapeHtml((c.number||'').split('/')[0])}" data-tcggo-q="${escapeHtml((c.name||'')+' '+(c.number||'').split('/')[0])}">Cote: ${market}</div>
+          ${(() => {
+            // Détection Iconic pour Lorcana (numéro avant "/" > numéro après "/")
+            const parts = String(c.number||'').split('/');
+            const cn = parseInt(parts[0], 10);
+            const total = parseInt(parts[1], 10);
+            const isIconic = cardTcg === 'lorcana' && !isNaN(cn) && !isNaN(total) && cn > total;
+            const attrs = isIconic
+              ? `data-card-id="${cardTcg}:${escapeHtml(c.apiId||'')}" data-tcg="${cardTcg}" data-card-name="${escapeHtml(c.name||'')}"`
+              : `data-card-id="${cardTcg}:${escapeHtml(c.apiId||'')}" data-tcg="${cardTcg}" data-card-name="${escapeHtml(c.name||'')}" data-expected-num="${escapeHtml((c.number||'').split('/')[0])}" data-tcggo-q="${escapeHtml((c.name||'')+' '+(c.number||'').split('/')[0])}"`;
+            return `<div class="pfcard-market" ${attrs}>Cote: ${market}</div>`;
+          })()}
           <div class="pfcard-price-row">
             <label>Achat €</label>
             <input class="pfcard-price-input" type="number" step="0.01" min="0" value="${paid || ''}" placeholder="0.00" data-pf-card-idx="${idx}">
@@ -6392,8 +6402,16 @@ async function showLorcanaSetCards(slug){
       if(pF!=null&&!isNaN(pF)) variants.push({key:'holo',label:'Cold Foil',price:pF});
       if(variants.length===0) variants.push({key:'normal',label:'Normal',price:null});
       const best=variants.reduce((m,v)=>(v.price!=null && (m==null||v.price>m))?v.price:m,null);
+      // Détection variante Iconic/Enchanted : collector_number au-delà du printed_total du set
+      const cn = parseInt(c.collector_number, 10);
+      const isIconic = !isNaN(cn) && setInfo.count && cn > setInfo.count;
+      // Pour les Iconic : on skippe TCGGO (data peu fiable), on garde Lorcast Cold Foil
+      const tcggoAttrs = isIconic
+        ? `data-card-id="lorcana:${escapeHtml(c.id||'')}" data-tcg="lorcana" data-card-name="${escapeHtml(c.name||'')}"`
+        : `data-card-id="lorcana:${escapeHtml(c.id||'')}" data-tcg="lorcana" data-card-name="${escapeHtml(c.name||'')}" data-expected-num="${escapeHtml(c.collector_number||c.number||'')}" data-tcggo-q="${escapeHtml((c.name||'')+' '+(c.collector_number||c.number||''))}"`;
+      const priceSource = isIconic ? 'Lorcast (variante Iconic/Enchanted)' : 'Lorcast (USD→EUR)';
       const priceStr=best!=null
-        ? `<div class="card-price" data-card-id="lorcana:${escapeHtml(c.id||'')}" data-tcg="lorcana" data-card-name="${escapeHtml(c.name||'')}" data-expected-num="${escapeHtml(c.collector_number||c.number||'')}" data-tcggo-q="${escapeHtml((c.name||'')+' '+(c.collector_number||c.number||''))}"><span class="cp-price">Cote estimée €${best.toFixed(2)}</span><span class="cp-source" style="display:block;font-size:9px;color:var(--mut);font-weight:500;margin-top:1px">d'après Lorcast (USD→EUR)</span>${priceDateBadgeHtml(c, 'lorcana', 'lc_'+setInfo.lorcastCode)}</div>`
+        ? `<div class="card-price" ${tcggoAttrs}><span class="cp-price">Cote estimée €${best.toFixed(2)}</span><span class="cp-source" style="display:block;font-size:9px;color:var(--mut);font-weight:500;margin-top:1px">d'après ${priceSource}</span>${priceDateBadgeHtml(c, 'lorcana', 'lc_'+setInfo.lorcastCode)}</div>`
         : `<div class="card-price empty">— pas de cote disponible —${priceDateBadgeHtml(c, 'lorcana', 'lc_'+setInfo.lorcastCode)}</div>`;
       const large = (c.image_uris && c.image_uris.digital && (c.image_uris.digital.large || c.image_uris.digital.normal)) || img;
       const cmUrl = cardmarketUrlLorcana(c);
