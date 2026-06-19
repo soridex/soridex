@@ -5122,7 +5122,7 @@ async function loadCardDetail(tcg, id, fallback){
             || card.image_uris.large || card.image_uris.normal || card.image_uris.small || '';
     }
     ebayQuery = `${card.name||''} ${card.version||''} Lorcana`;
-    cardmarketUrl = `https://www.cardmarket.com/fr/Lorcana/Products/Search?searchString=${encodeURIComponent((card.version?card.name+' '+card.version:card.name)||fallback.name||'')}`;
+    cardmarketUrl = await getLorcanaCardmarketUrlOrFallback(card);
   } else {
     // Pas de card chargé : fallback sur les hints
     displayName = (fallback && fallback.name) || 'Carte';
