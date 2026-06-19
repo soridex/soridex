@@ -2802,6 +2802,16 @@
       <div class="stat-card"><div class="stat-label">Cartes possédées</div><div class="stat-value" id="statsCardsCount">—</div><div class="stat-breakdown" id="statsCardsSub" style="color:var(--mut);font-size:12px;margin-top:4px"></div></div>
     </div>
 
+    <!-- Recommandations personnalisées (Pro) -->
+    <div id="statsRecoSection">
+      <h2 style="font-size:20px;margin:32px 0 8px;display:flex;align-items:center;gap:10px">
+        Recommandations pour toi
+        <span style="background:linear-gradient(135deg,#d4a857,#a16207);color:#1a1a2e;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:700">PRO</span>
+      </h2>
+      <p style="color:var(--mut);font-size:13px;margin:0 0 20px">Basé sur ce que tu possèdes : tes goûts détectés, ce que tu pourrais viser, ce qu'il vaut mieux éviter.</p>
+      <div id="statsRecoContent"></div>
+    </div>
+
     <!-- Analyse de portefeuille (Pro) -->
     <div id="statsAnalysisSection">
       <h2 style="font-size:20px;margin:32px 0 16px;display:flex;align-items:center;gap:10px">
@@ -9441,6 +9451,225 @@ function showStats(){
   showView('stats');
   renderStats();
 }
+
+// === Extraction du nom de personnage à partir du nom de carte ===
+function extractCharacterBase(name, tcg){
+  if(!name) return null;
+  let n = String(name).trim();
+  if(tcg === 'lorcana'){
+    // Lorcana : "Mickey Mouse — Brave Little Tailor" → "Mickey Mouse"
+    const sepIdx = n.search(/[—–-]/);
+    if(sepIdx > 0) n = n.slice(0, sepIdx).trim();
+  } else if(tcg === 'pokemon'){
+    // Pokémon : strip suffixes " ex", " V", " VMAX", " VSTAR", " GX", " EX", " BREAK", " Prime"
+    n = n.replace(/\s+(ex|EX|V|VMAX|VSTAR|GX|BREAK|Prime|LV\.X|Star)\b.*$/i, '').trim();
+    // strip leading "Mega" / "Dark" / "Light" qualifiers? non, on garde car Mega Dracaufeu ≠ Dracaufeu
+  }
+  return n.toLowerCase();
+}
+
+// === Fourchette de prix typique de l'utilisateur ===
+function computePriceBand(owned){
+  const prices = owned
+    .filter(c => c.marketPrice != null && c.marketPrice > 0)
+    .map(c => c.marketPrice)
+    .sort((a, b) => a - b);
+  if(prices.length === 0) return { min: 0, max: Infinity, median: null };
+  const median = prices[Math.floor(prices.length / 2)];
+  // 25e et 75e percentile pour la fourchette
+  const p25 = prices[Math.floor(prices.length * 0.25)];
+  const p75 = prices[Math.floor(prices.length * 0.75)];
+  // Élargit un peu : entre p25*0.5 et p75*2
+  return { min: Math.max(0.5, p25 * 0.5), max: p75 * 2, median: median, p25: p25, p75: p75 };
+}
+
+// État + cache
+let _recoMarketCache = null; // Réutilisera _marketDataCache si dispo
+async function renderStatsRecommendations(owned){
+  const el = document.getElementById('statsRecoContent');
+  if(!el) return;
+  if(owned.length === 0){
+    el.innerHTML = `<div class="stat-card" style="text-align:center;color:var(--mut);padding:32px">Marque au moins quelques cartes comme possédées pour qu'on détecte tes goûts.</div>`;
+    return;
+  }
+
+  // 1. Détection des personnages préférés
+  const charCounts = new Map(); // key = tcg|charBase → { count, tcg, label }
+  for(const c of owned){
+    const t = c.tcg || c._pfTcg;
+    const base = extractCharacterBase(c.name, t);
+    if(!base) continue;
+    const k = t + '|' + base;
+    const existing = charCounts.get(k);
+    if(existing){
+      existing.count++;
+    } else {
+      // Affichage : on garde la casse originale du premier nom rencontré
+      const labelName = t === 'lorcana'
+        ? (c.name.split(/[—–-]/)[0] || c.name).trim()
+        : (c.name.replace(/\s+(ex|EX|V|VMAX|VSTAR|GX|BREAK|Prime|LV\.X|Star)\b.*$/i, '').trim());
+      charCounts.set(k, { count: 1, tcg: t, base: base, label: labelName });
+    }
+  }
+  const topChars = [...charCounts.values()]
+    .filter(c => c.count >= 1)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5);
+
+  // 2. Sets préférés
+  const setCounts = new Map();
+  for(const c of owned){
+    if(!c.setName) continue;
+    const k = (c.tcg || c._pfTcg) + '|' + c.setName.toLowerCase();
+    const existing = setCounts.get(k);
+    if(existing) existing.count++;
+    else setCounts.set(k, { count: 1, label: c.setName, tcg: c.tcg || c._pfTcg });
+  }
+  const topSets = [...setCounts.values()].sort((a, b) => b.count - a.count).slice(0, 3);
+
+  // 3. Fourchette de prix
+  const band = computePriceBand(owned);
+
+  // 4. Construire le bloc "Profil détecté"
+  const profileBlock = `
+    <div class="stat-card" style="margin-bottom:16px">
+      <div class="stat-label">Ton profil détecté</div>
+      <div style="margin-top:12px;display:grid;gap:14px">
+        <div>
+          <div style="font-size:12px;color:var(--mut);margin-bottom:6px">Tes personnages préférés</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">
+            ${topChars.length ? topChars.map(c => {
+              const tcgColor = c.tcg === 'pokemon' ? '#ffcb05' : (c.tcg === 'lorcana' ? '#a78bfa' : '#fb923c');
+              return `<span style="background:rgba(212,168,90,.08);border:1px solid var(--line);border-radius:14px;padding:4px 10px;font-size:12px"><span style="color:${tcgColor};font-weight:700;font-size:10px">●</span> ${escapeHtml(c.label)} <span style="color:var(--mut)">×${c.count}</span></span>`;
+            }).join('') : '<span style="color:var(--mut);font-size:12px">Pas encore assez de données.</span>'}
+          </div>
+        </div>
+        <div>
+          <div style="font-size:12px;color:var(--mut);margin-bottom:6px">Tes sets favoris</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">
+            ${topSets.length ? topSets.map(s => `<span style="background:rgba(212,168,90,.08);border:1px solid var(--line);border-radius:14px;padding:4px 10px;font-size:12px">${escapeHtml(s.label)} <span style="color:var(--mut)">×${s.count}</span></span>`).join('') : '<span style="color:var(--mut);font-size:12px">—</span>'}
+          </div>
+        </div>
+        <div>
+          <div style="font-size:12px;color:var(--mut);margin-bottom:6px">Ta fourchette de prix habituelle</div>
+          <div style="font-size:14px;color:var(--gold-2);font-weight:600">
+            ${band.median != null ? `~ €${band.p25.toFixed(2)} – €${band.p75.toFixed(2)} par carte` : 'Non détectable (pas assez de cartes avec cote)'}
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="statsRecoTarget"></div>
+    <div id="statsRecoAvoid"></div>
+  `;
+  el.innerHTML = profileBlock;
+
+  // 5. Fetch marché si pas en cache (réutilise _marketDataCache si possible)
+  let marketData = _marketDataCache;
+  if(!marketData){
+    try {
+      const { data, error } = await sb.from('tcg_prices')
+        .select('id, tcg, name, prices, updated_at')
+        .order('updated_at', { ascending: false })
+        .limit(2000);
+      if(!error){
+        marketData = (data || [])
+          .filter(r => r.id && !r.id.startsWith('test:'))
+          .filter(r => {
+            const p = r.prices || {};
+            return p.avg7 != null && p.avg7 > 0 && (p.avg1 != null || p.trend != null);
+          })
+          .map(r => {
+            const p = r.prices;
+            const current = p.avg1 != null ? p.avg1 : p.trend;
+            return {
+              id: r.id, tcg: r.tcg, name: r.name,
+              apiId: r.id.split(':').slice(1).join(':'),
+              avg7: p.avg7, current: current,
+              pct: ((current - p.avg7) / p.avg7) * 100
+            };
+          });
+      }
+    } catch(e){ console.warn('Reco market fetch error', e); }
+  }
+  if(!marketData || marketData.length === 0){
+    document.getElementById('statsRecoTarget').innerHTML = `<div class="stat-card" style="text-align:center;color:var(--mut);padding:24px;margin-bottom:16px">Pas encore assez de données marché pour faire des recommandations. La base se construit au fil des consultations utilisateurs.</div>`;
+    return;
+  }
+
+  // 6. Filtrer marché : cartes correspondant aux personnages préférés, pas déjà possédées, dans la fourchette de prix
+  const ownedApiIds = new Set(owned.map(c => c.apiId));
+  const favCharKeys = new Set(topChars.map(c => c.tcg + '|' + c.base));
+
+  const candidates = marketData
+    .filter(d => !ownedApiIds.has(d.apiId)) // pas déjà possédée
+    .filter(d => {
+      const base = extractCharacterBase(d.name, d.tcg);
+      return base && favCharKeys.has(d.tcg + '|' + base);
+    })
+    .filter(d => band.max === Infinity || (d.current >= band.min && d.current <= band.max));
+
+  // À viser : stables ou en plongeon (opportunités)
+  const toTarget = candidates
+    .filter(d => d.pct < 5) // stables ou en baisse
+    .sort((a, b) => a.pct - b.pct) // les plus en baisse en premier (meilleures affaires)
+    .slice(0, 6);
+
+  // À éviter : en surchauffe sur tes personnages favoris
+  const toAvoid = candidates
+    .filter(d => d.pct >= 20)
+    .sort((a, b) => b.pct - a.pct)
+    .slice(0, 6);
+
+  const renderRecoCard = (d, kind) => {
+    const palette = kind === 'target'
+      ? { color: '#4ade80', label: d.pct < -10 ? '🔵 En plongeon' : '🟢 Stable', hint: 'Bon moment pour viser' }
+      : { color: '#fb923c', label: '🟠 Surchauffe', hint: 'Attendre que ça redescende' };
+    const tcgBadge = d.tcg === 'pokemon' ? 'PK' : (d.tcg === 'lorcana' ? 'LC' : 'MG');
+    const tcgColor = d.tcg === 'pokemon' ? '#ffcb05' : (d.tcg === 'lorcana' ? '#a78bfa' : '#fb923c');
+    return `
+      <div class="opp-card" data-tcg="${escapeHtml(d.tcg)}" data-api-id="${escapeHtml(d.apiId)}" style="border:1px solid var(--line);border-radius:10px;padding:10px;background:rgba(212,168,90,.02);cursor:pointer;transition:transform .15s,border-color .15s" onmouseover="this.style.transform='translateY(-2px)';this.style.borderColor='${palette.color}'" onmouseout="this.style.transform='translateY(0)';this.style.borderColor='var(--line)'">
+        <div style="aspect-ratio:5/7;background:var(--line);border-radius:6px;margin-bottom:8px;overflow:hidden;position:relative" data-img-slot="${escapeHtml(d.tcg+':'+d.apiId)}">
+          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--mut);font-size:11px">…</div>
+        </div>
+        <div style="font-weight:600;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px">${escapeHtml(d.name || '—')}</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--mut);margin-bottom:4px">
+          <span style="color:${tcgColor};font-weight:700">${tcgBadge}</span>
+          <span>€${d.current.toFixed(2)}</span>
+        </div>
+        <div style="font-size:11px;color:${palette.color};font-weight:600">${palette.label}</div>
+        <div style="font-size:10px;color:var(--mut);margin-top:2px;font-style:italic">${palette.hint}</div>
+      </div>
+    `;
+  };
+
+  document.getElementById('statsRecoTarget').innerHTML = `
+    <h3 style="font-size:15px;margin:20px 0 4px;color:#4ade80">🎯 À viser pour toi</h3>
+    <p style="color:var(--mut);font-size:12px;margin:0 0 10px">Cartes dans tes personnages favoris, dans ta fourchette de prix, pas encore possédées.</p>
+    ${toTarget.length === 0
+      ? `<div class="stat-card" style="text-align:center;color:var(--mut);padding:20px;margin-bottom:16px">Aucune recommandation pour l'instant. Quand le marché aura plus de données sur tes personnages préférés, ça se remplira.</div>`
+      : `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-bottom:24px">${toTarget.map(d => renderRecoCard(d, 'target')).join('')}</div>`}
+  `;
+
+  document.getElementById('statsRecoAvoid').innerHTML = `
+    <h3 style="font-size:15px;margin:20px 0 4px;color:#fb923c">⚠ À éviter en ce moment</h3>
+    <p style="color:var(--mut);font-size:12px;margin:0 0 10px">Cartes dans tes personnages favoris mais actuellement en surchauffe. Attendre que les prix redescendent.</p>
+    ${toAvoid.length === 0
+      ? `<div class="stat-card" style="text-align:center;color:var(--mut);padding:20px;margin-bottom:16px">Aucune carte de tes personnages favoris en surchauffe en ce moment. Tu peux acheter sereinement.</div>`
+      : `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-bottom:24px">${toAvoid.map(d => renderRecoCard(d, 'avoid')).join('')}</div>`}
+  `;
+
+  // Lazy load images (réutilise fetchCardImage)
+  document.querySelectorAll('#statsRecoTarget [data-img-slot], #statsRecoAvoid [data-img-slot]').forEach(slot => {
+    const [tcg, ...rest] = slot.dataset.imgSlot.split(':');
+    const apiId = rest.join(':');
+    if(typeof fetchCardImage === 'function'){
+      fetchCardImage(tcg, apiId).then(url => {
+        if(!url) return;
+        slot.innerHTML = `<img src="${escapeHtml(url)}" alt="" style="width:100%;height:100%;object-fit:cover" loading="lazy">`;
+      });
+    }
+  });
+}
 let _statsTcgFilter = 'all';
 function renderStats(){
   const portfolios = getPortfolios();
@@ -9507,6 +9736,9 @@ function renderStats(){
     }
   }
   document.getElementById('statsCardsSub').textContent = `Pokémon ${tcgCounts.pokemon} · Lorcana ${tcgCounts.lorcana} · Magic ${tcgCounts.magic}`;
+
+  // === Recommandations personnalisées (Pro) ===
+  renderStatsRecommendations(owned);
 
   // === Analyse de portefeuille (Pro) ===
   const analysisEl = document.getElementById('statsAnalysisContent');
