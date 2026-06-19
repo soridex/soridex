@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Soridex — Le dashboard des collectionneurs TCG</title>
-<meta name="description" content="Le dashboard des collectionneurs TCG. Gère ta collection Pokémon, Lorcana et Magic avec des cotes en temps réel.">
+<title>Soridex — La bourse TCG</title>
+<meta name="description" content="La bourse TCG. Cotes Cardmarket en temps réel, analyse des mouvements de marché, portefeuilles d'investissement Pokémon, Lorcana et Magic.">
 <meta name="theme-color" content="#0c0a1f">
 
 <!-- Supabase JS SDK (chargé tôt pour que tout le code puisse l'utiliser) -->
@@ -13,19 +13,19 @@
 <!-- Open Graph (Facebook, LinkedIn, WhatsApp, Discord, etc.) -->
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Soridex">
-<meta property="og:title" content="Soridex — Le dashboard des collectionneurs TCG">
-<meta property="og:description" content="Le dashboard des collectionneurs TCG. Gère ta collection Pokémon, Lorcana et Magic avec des cotes en temps réel.">
+<meta property="og:title" content="Soridex — La bourse TCG">
+<meta property="og:description" content="La bourse TCG. Cotes Cardmarket en temps réel, analyse des mouvements de marché, portefeuilles d'investissement Pokémon, Lorcana et Magic.">
 <meta property="og:url" content="https://soridex.vercel.app/">
 <meta property="og:locale" content="fr_FR">
 <meta property="og:image" content="https://soridex.vercel.app/og-image.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Soridex — Dashboard pour collectionneurs Pokémon, Lorcana et Magic">
+<meta property="og:image:alt" content="Soridex — La bourse TCG : Pokémon, Lorcana, Magic">
 
 <!-- Twitter / X -->
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Soridex — Le dashboard des collectionneurs TCG">
-<meta name="twitter:description" content="Le dashboard des collectionneurs TCG. Gère ta collection Pokémon, Lorcana et Magic avec des cotes en temps réel.">
+<meta name="twitter:title" content="Soridex — La bourse TCG">
+<meta name="twitter:description" content="La bourse TCG. Cotes Cardmarket en temps réel, analyse des mouvements de marché, portefeuilles d'investissement Pokémon, Lorcana et Magic.">
 <meta name="twitter:image" content="https://soridex.vercel.app/og-image.png">
 
 <!-- Favicon + apple-touch-icon (vrais fichiers PNG hébergés, plus fiable que data: URI sur iOS) -->
@@ -33,7 +33,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
 <!-- PWA — installable comme une app sur iOS/Android -->
-<link rel="manifest" href='data:application/manifest+json;charset=utf-8,{"name":"Soridex","short_name":"Soridex","description":"Dashboard des collectionneurs TCG","start_url":"/","display":"standalone","background_color":"%230c0a1f","theme_color":"%230c0a1f","orientation":"portrait-primary","lang":"fr","icons":[{"src":"/icon-192.png","sizes":"192x192","type":"image/png","purpose":"any maskable"},{"src":"/icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}]}'>
+<link rel="manifest" href='data:application/manifest+json;charset=utf-8,{"name":"Soridex","short_name":"Soridex","description":"La bourse TCG","start_url":"/","display":"standalone","background_color":"%230c0a1f","theme_color":"%230c0a1f","orientation":"portrait-primary","lang":"fr","icons":[{"src":"/icon-192.png","sizes":"192x192","type":"image/png","purpose":"any maskable"},{"src":"/icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}]}'>
 
 <!-- iOS Safari : installation en plein écran sans barre Safari -->
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1794,13 +1794,13 @@
   <!-- LANDING HERO (visible non-connectés uniquement) -->
   <section class="section landing-hero" id="landingHero" hidden>
     <div class="hero-left">
-      <h1 class="hero-title">Le dashboard des collectionneurs <span class="hero-gold">TCG</span></h1>
-      <p class="hero-sub">Suis tes cartes Pokémon, Lorcana et Magic en un seul endroit. Crée des portfolios thématiques, des wishlists, et garde un œil sur les cotes Cardmarket en temps réel.</p>
+      <h1 class="hero-title">La bourse <span class="hero-gold">TCG</span></h1>
+      <p class="hero-sub">Cotes Cardmarket en temps réel, analyse des hausses et baisses du marché, portefeuilles d'investissement pour tes cartes Pokémon, Lorcana et Magic.</p>
       <div class="hero-cta">
         <button class="btn-gold" id="heroSignupBtn">Créer mon compte gratuit</button>
-        <button class="btn-gold-outline" id="heroDiscoverBtn">Découvrir les sets</button>
+        <button class="btn-gold-outline" id="heroDiscoverBtn">Voir le marché</button>
       </div>
-      <div class="hero-pill">✨ Plus de 300 sets référencés · 3 TCG · gratuit</div>
+      <div class="hero-pill">📈 3 TCG · 300+ sets cotés · gratuit</div>
     </div>
     <div class="hero-right">
       <div class="hero-sparkle" aria-hidden="true">
@@ -1828,44 +1828,44 @@
     <div class="features-track" id="featuresTrack">
       <div class="feature-card">
         <div class="feature-ico" style="background:linear-gradient(135deg,#ec4899,#be185d)">📁</div>
-        <div class="feature-name">Portfolios thématiques</div>
-        <div class="feature-desc">Organise ta collection en sets complets, deck personnages ou chasses thématiques. Suivi visuel instantané de ta progression.</div>
+        <div class="feature-name">Portefeuilles thématiques</div>
+        <div class="feature-desc">Organise tes cartes en portefeuilles : par série, par stratégie d'investissement, ou par personnage. Suivi visuel de la valeur et de la progression.</div>
       </div>
       <div class="feature-card">
         <div class="feature-ico" style="background:linear-gradient(135deg,#a78bfa,#7c3aed)">♥</div>
-        <div class="feature-name">Wishlists pour la chasse</div>
-        <div class="feature-desc">Liste les cartes à chasser en brocante, convention ou en ligne. Marque-les trouvées et la sync se fait avec tes portfolios.</div>
+        <div class="feature-name">Watchlists</div>
+        <div class="feature-desc">Surveille les cartes que tu vises et leur évolution de cote avant d'acheter. Synchro avec tes portefeuilles dès que tu les acquiers.</div>
       </div>
       <div class="feature-card">
         <div class="feature-ico" style="background:linear-gradient(135deg,#4ade80,#16a34a)">✓</div>
         <div class="feature-name">Cartes possédées</div>
-        <div class="feature-desc">Marque tes cartes possédées d'un clic sur n'importe quelle vue de set. Sans avoir à créer de portfolio.</div>
+        <div class="feature-desc">Marque tes cartes en 1 clic depuis n'importe quelle vue de set. Pas besoin de créer un portefeuille pour commencer.</div>
       </div>
       <div class="feature-card">
         <div class="feature-ico" style="background:linear-gradient(135deg,#fbbf24,#a16207)">€</div>
-        <div class="feature-name">Cotes en temps réel</div>
-        <div class="feature-desc">Prix Cardmarket (EUR) actualisés automatiquement pour chaque carte. Tendance 30 jours sur les Pokémon.</div>
+        <div class="feature-name">Cotes Cardmarket temps réel</div>
+        <div class="feature-desc">Prix Cardmarket (EUR) actualisés automatiquement. Progression J-1 vs 7 jours pour repérer les mouvements de marché.</div>
       </div>
       <div class="feature-card">
         <div class="feature-ico" style="background:linear-gradient(135deg,#22d3ee,#0e7490)">📚</div>
-        <div class="feature-name">Guide débutant</div>
-        <div class="feature-desc">Tout pour bien collectionner : analyser une carte, reconnaître les raretés, le grading, la conservation. Sans bullshit.</div>
+        <div class="feature-name">Guide d'analyse</div>
+        <div class="feature-desc">Comprendre ce qui fait monter une carte : print run, IP, rareté, grading, conservation. Pour décider sans biais d'achat.</div>
       </div>
       <div class="feature-card">
         <div class="feature-ico" style="background:linear-gradient(135deg,#fbbf24,#059669)">€</div>
-        <div class="feature-name">Achat-Revente</div>
-        <div class="feature-desc">Suis tes flips : prix d'achat, frais, cote actuelle et bénéfice net en temps réel. Idéal pour les collectionneurs qui revendent leurs doublons comme pour les flippers actifs.</div>
+        <div class="feature-name">Trading & arbitrage</div>
+        <div class="feature-desc">Suis tes opérations : prix d'achat, frais, cote actuelle, bénéfice net en temps réel. Du flip actif à la revente de doublons.</div>
       </div>
       <div class="feature-card upcoming">
         <div class="feature-ico" style="background:linear-gradient(135deg,#d4a857,#6b5333)">🔔</div>
-        <div class="feature-name">Alertes prix <span class="soon-pill">Bientôt</span></div>
-        <div class="feature-desc">Reçois une notification quand une carte de ta collection prend ou perd de la valeur de manière significative.</div>
+        <div class="feature-name">Alertes de marché <span class="soon-pill">Bientôt</span></div>
+        <div class="feature-desc">Reçois une notification dès qu'une carte de ton portefeuille décolle ou décroche significativement.</div>
       </div>
     </div>
   </section>
 
   <section class="section">
-    <h2 class="section-title">Dashboard Soridex</h2>
+    <h2 class="section-title">Le marché TCG en chiffres</h2>
     <div class="stats-grid">
       <div class="stat-card">
         <div class="stat-label">Valeur totale de la collection</div>
@@ -2062,7 +2062,7 @@
   <div class="sets-head">
     <div>
       <h2 class="view-title">Soridex Pro</h2>
-      <p class="view-sub">Passe ta collection au niveau supérieur. Pour les flippers sérieux et les collectionneurs avancés.</p>
+      <p class="view-sub">Passe ton portefeuille TCG au niveau supérieur. Pour les investisseurs sérieux et les traders actifs.</p>
     </div>
     <div id="subCurrentBadge"></div>
   </div>
@@ -2093,7 +2093,7 @@
       <div class="sub-card-head">
         <div class="sub-card-name">Pro <span class="sub-pro-diamond">⭐</span></div>
         <div class="sub-card-price"><span class="amount">4,99€</span><span class="period">/ mois</span></div>
-        <div class="sub-card-tagline">Pour les flippers et collectionneurs sérieux · Early bird : <strong>29€/an</strong> pour les 200 premiers</div>
+        <div class="sub-card-tagline">Pour les investisseurs et traders actifs · Early bird : <strong>29€/an</strong> pour les 200 premiers</div>
       </div>
       <ul class="sub-features">
         <li>✓ <strong>Tout du plan gratuit, sans limite</strong></li>
@@ -2290,7 +2290,7 @@
   <div class="sets-head">
     <div>
       <h2 class="view-title">Mes Portfolios</h2>
-      <p class="view-sub">Tes cartes possédées et tes portfolios thématiques.</p>
+      <p class="view-sub">Tes cartes possédées et tes portefeuilles d'investissement.</p>
     </div>
   </div>
   <div class="portfolio-tabs">
