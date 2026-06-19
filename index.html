@@ -5770,7 +5770,6 @@ async function showAllEraCards(slug){
             <div class="card-variants">${variants.map(v=>`<span class="var-pill ${v.key}">${v.label}${v.price!=null?' €'+v.price.toFixed(2):''}</span>`).join('')}</div>
             ${priceStr}
             <div class="card-actions">
-              <a class="card-btn cm" href="${cmUrl}" target="_blank" rel="noopener noreferrer">Cardmarket</a>
               <a class="card-btn eb" href="${ebayUrl(ebQuery)}" target="_blank" rel="noopener noreferrer">eBay</a>
             </div>
           </div></div>`;
@@ -5948,7 +5947,6 @@ async function showPokemonSetCards(setId){
           ${priceStr}
           <div class="card-actions">
             <button class="card-btn cd" data-detail-tcg="pokemon" data-detail-id="${escapeHtml(c.id)}" data-detail-name="${escapeHtml(displayName)}" data-detail-set="${escapeHtml(setInfo?setInfo.name:'')}" data-detail-num="${escapeHtml(num)}" data-detail-img="${escapeHtml(large)}" data-detail-rarity="${escapeHtml(c.rarity||'')}" title="Voir détails + cote">🔍 Détails</button>
-            <a class="card-btn cm" href="${cmUrl}" target="_blank" rel="noopener noreferrer" title="Voir sur Cardmarket">Cardmarket</a>
             <a class="card-btn eb" href="${ebayUrl(ebQuery)}" target="_blank" rel="noopener noreferrer" title="Ventes eBay récentes">eBay</a>
           </div>
         </div></div>`;
@@ -6251,7 +6249,6 @@ async function showLorcanaSetCards(slug){
           ${priceStr}
           <div class="card-actions">
             <button class="card-btn cd" data-detail-tcg="lorcana" data-detail-id="${escapeHtml(c.id)}" data-detail-name="${escapeHtml(full)}" data-detail-set="${escapeHtml(setInfo.name||'')}" data-detail-num="${escapeHtml(num)}" data-detail-img="${escapeHtml(large||img||'')}" data-detail-rarity="${escapeHtml((c.rarity||'').replace('_',' '))}" title="Voir détails + cote">🔍 Détails</button>
-            <a class="card-btn cm" href="${cmUrl}" data-cm-lookup="lorcana" data-cm-set="${escapeHtml(setInfo.lorcastCode||'')}" data-cm-num="${escapeHtml(c.collector_number||'')}" target="_blank" rel="noopener noreferrer">Cardmarket</a>
             <a class="card-btn eb" href="${ebayUrl(ebQuery)}" target="_blank" rel="noopener noreferrer">eBay</a>
           </div>
         </div></div>`;
@@ -6408,7 +6405,6 @@ async function showMagicSetCards(setCode){
           ${priceStr}
           <div class="card-actions">
             <button class="card-btn cd" data-detail-tcg="magic" data-detail-id="${escapeHtml(c.id)}" data-detail-name="${escapeHtml(c.name)}" data-detail-set="${escapeHtml(c.set_name||'')}" data-detail-num="${escapeHtml(num)}" data-detail-img="${escapeHtml((c.image_uris&&c.image_uris.normal)||(c.image_uris&&c.image_uris.small)||(c.card_faces&&c.card_faces[0]&&c.card_faces[0].image_uris&&c.card_faces[0].image_uris.normal)||'')}" data-detail-rarity="${escapeHtml(LBL[c.rarity]||c.rarity||'')}" title="Voir détails + cote">🔍 Détails</button>
-            <a class="card-btn cm" href="${cmUrl}" target="_blank" rel="noopener noreferrer">Cardmarket</a>
             <a class="card-btn eb" href="${ebayUrl(ebQuery)}" target="_blank" rel="noopener noreferrer">eBay</a>
           </div>
         </div></div>`;
@@ -6855,7 +6851,6 @@ function renderGlobalSearchResults(){
         <div class="card-rarity">${escapeHtml(c.rarity||'')} · <span style="color:var(--mut)">${TCG_LABEL[r.tcg]||r.tcg}</span></div>
         <div class="card-price" data-card-id="${escapeHtml(r.tcg+':'+(c.apiId||''))}" data-tcg="${escapeHtml(r.tcg||'')}" data-card-name="${escapeHtml(c.name||'')}" data-expected-num="${escapeHtml((c.number||'').split('/')[0])}" data-tcggo-q="${escapeHtml((c.name||'')+' '+((c.number||'').split('/')[0]))}">${market !== '—' ? 'Cote estimée ' + market : '— pas de cote —'}</div>
         <div class="card-actions">
-          <a class="card-btn cm" href="${cmUrl}"${r.tcg==='lorcana'?` data-cm-lookup="lorcana" data-cm-set="${escapeHtml(c.setCode||'')}" data-cm-num="${escapeHtml(c.collectorNumber||(c.number||'').split('/')[0]||'')}"`:''} target="_blank" rel="noopener noreferrer">Cardmarket</a>
           <a class="card-btn eb" href="${ebayUrl(ebQuery)}" target="_blank" rel="noopener noreferrer">eBay</a>
         </div>
       </div></div>`;
@@ -7480,7 +7475,6 @@ function renderWishFolderDetail(){
         <div class="card-rarity">${escapeHtml(c.rarity||'')} · <span style="color:var(--mut)">${TCG_LABEL[c.tcg]||c.tcg}</span></div>
         <div class="card-price" data-card-id="${escapeHtml(c.tcg+':'+(c.apiId||''))}" data-tcg="${escapeHtml(c.tcg||'')}" data-card-name="${escapeHtml(c.name||'')}" data-expected-num="${escapeHtml((c.number||'').split('/')[0])}" data-tcggo-q="${escapeHtml((c.name||'')+' '+((c.number||'').split('/')[0]))}">${market !== '—' ? 'Cote estimée ' + market : '— pas de cote —'}</div>
         <div class="card-actions">
-          <a class="card-btn cm" href="${cmUrl}"${c.tcg==='lorcana'?` data-cm-lookup="lorcana" data-cm-set="${escapeHtml(c.setCode||'')}" data-cm-num="${escapeHtml(c.collectorNumber||(c.number||'').split('/')[0]||'')}"`:''} target="_blank" rel="noopener noreferrer">Cardmarket</a>
           <a class="card-btn eb" href="${ebayUrl(ebQuery)}" target="_blank" rel="noopener noreferrer">eBay</a>
         </div>
       </div></div>`;
