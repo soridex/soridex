@@ -2801,6 +2801,15 @@
       <div class="stat-card"><div class="stat-label">Cartes possédées</div><div class="stat-value" id="statsCardsCount">—</div><div class="stat-breakdown" id="statsCardsSub" style="color:var(--mut);font-size:12px;margin-top:4px"></div></div>
     </div>
 
+    <!-- Analyse de portefeuille (Pro) -->
+    <div id="statsAnalysisSection">
+      <h2 style="font-size:20px;margin:32px 0 16px;display:flex;align-items:center;gap:10px">
+        Analyse de portefeuille
+        <span style="background:linear-gradient(135deg,#d4a857,#a16207);color:#1a1a2e;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:700">PRO</span>
+      </h2>
+      <div id="statsAnalysisContent" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-bottom:32px"></div>
+    </div>
+
     <!-- Répartition par TCG -->
     <div id="statsTcgSection">
       <h2 style="font-size:20px;margin:32px 0 16px">Répartition par TCG</h2>
@@ -2852,6 +2861,16 @@
       <p style="color:var(--mut);font-size:12px;font-style:italic;margin-top:32px">
         📊 Les courbes d'évolution sur 7/30 jours arrivent prochainement — elles nécessitent un historique de prix qui se construit progressivement dans la base.
       </p>
+      <div style="margin-top:20px;padding:14px;background:rgba(212,168,90,.04);border:1px solid var(--line);border-radius:var(--rad);font-size:12px;color:var(--mut)">
+        <div style="font-weight:700;color:var(--gold-2);margin-bottom:8px">Lecture des indicateurs</div>
+        <div style="display:flex;flex-direction:column;gap:4px">
+          <div><span style="color:#4ade80">🟢 Stable</span> — variation &lt; 5%, cote ancrée autour de sa moyenne</div>
+          <div><span style="color:#fbbf24">🟡 Volatile</span> — variation 5-20%, mouvement de marché en cours</div>
+          <div><span style="color:#fb923c">🟠 Surchauffe</span> — hausse &gt; 20%, attention au retour à la moyenne (bulle potentielle)</div>
+          <div><span style="color:#60a5fa">🔵 Plongeon</span> — baisse &gt; 20%, opportunité ou risque selon contexte</div>
+        </div>
+        <div style="margin-top:10px;font-size:11px;font-style:italic">Indicateurs factuels basés sur l'écart cote J-1 vs moyenne 7j. Ce ne sont pas des conseils financiers.</div>
+      </div>
     </div>
   </div>
 </section>
@@ -9478,6 +9497,115 @@ function renderStats(){
   }
   document.getElementById('statsCardsSub').textContent = `Pokémon ${tcgCounts.pokemon} · Lorcana ${tcgCounts.lorcana} · Magic ${tcgCounts.magic}`;
 
+  // === Analyse de portefeuille (Pro) ===
+  const analysisEl = document.getElementById('statsAnalysisContent');
+  const isPro = (typeof isProUser === 'function') && isProUser();
+  if(analysisEl){
+    // Score de diversification : 100 - max(%TCG). Plus tu es équilibré, plus le score est haut.
+    let diversificationCards = [];
+    if(totalValue > 0){
+      const maxTcgPct = Math.max(
+        (tcgValues.pokemon || 0) / totalValue * 100,
+        (tcgValues.lorcana || 0) / totalValue * 100,
+        (tcgValues.magic || 0) / totalValue * 100
+      );
+      const divScore = Math.round(100 - maxTcgPct + 33); // base 33 (équilibre théorique)
+      const divNorm = Math.max(0, Math.min(100, divScore));
+      let divVerdict, divColor;
+      if(divNorm >= 75){ divVerdict = 'Bien diversifié'; divColor = '#4ade80'; }
+      else if(divNorm >= 50){ divVerdict = 'Diversification correcte'; divColor = '#fbbf24'; }
+      else if(divNorm >= 30){ divVerdict = 'Concentré'; divColor = '#fb923c'; }
+      else { divVerdict = 'Très concentré'; divColor = '#f87171'; }
+
+      diversificationCards.push(`
+        <div class="stat-card">
+          <div class="stat-label">Score de diversification</div>
+          <div class="stat-value" style="color:${divColor}">${divNorm}/100</div>
+          <div class="stat-breakdown" style="color:${divColor};font-size:12px;margin-top:4px;font-weight:600">${divVerdict}</div>
+          <div style="background:var(--line);height:4px;border-radius:2px;margin-top:10px;overflow:hidden"><div style="background:${divColor};height:100%;width:${divNorm}%"></div></div>
+          <div style="color:var(--mut);font-size:11px;margin-top:8px">Concentration max : ${maxTcgPct.toFixed(0)}% sur un seul TCG</div>
+        </div>
+      `);
+
+      // Concentration top 3 cartes
+      const sortedValues = owned
+        .filter(c => c.marketPrice != null)
+        .map(c => c.marketPrice * (c.qty || 1))
+        .sort((a, b) => b - a);
+      const top3Sum = sortedValues.slice(0, 3).reduce((s, v) => s + v, 0);
+      const top3Pct = totalValue > 0 ? (top3Sum / totalValue * 100) : 0;
+      let concVerdict, concColor;
+      if(top3Pct >= 70){ concVerdict = 'Risque élevé'; concColor = '#f87171'; }
+      else if(top3Pct >= 50){ concVerdict = 'Concentration notable'; concColor = '#fb923c'; }
+      else if(top3Pct >= 30){ concVerdict = 'Concentration modérée'; concColor = '#fbbf24'; }
+      else { concVerdict = 'Bien réparti'; concColor = '#4ade80'; }
+
+      diversificationCards.push(`
+        <div class="stat-card">
+          <div class="stat-label">Concentration top 3 cartes</div>
+          <div class="stat-value" style="color:${concColor}">${top3Pct.toFixed(0)}%</div>
+          <div class="stat-breakdown" style="color:${concColor};font-size:12px;margin-top:4px;font-weight:600">${concVerdict}</div>
+          <div style="color:var(--mut);font-size:11px;margin-top:8px">Tes 3 cartes les + chères représentent ${top3Pct.toFixed(0)}% de ta valeur totale</div>
+        </div>
+      `);
+
+      // Cartes en surchauffe (basé sur snapshots locaux)
+      let overheating = 0;
+      let coolingDown = 0;
+      if(typeof getPriceSnapshots === 'function'){
+        const snaps = getPriceSnapshots();
+        for(const c of owned){
+          const arr = snaps[c.apiId] || [];
+          if(arr.length < 2) continue;
+          const oldest = arr[0].p;
+          if(!oldest || oldest <= 0) continue;
+          const current = c.marketPrice;
+          if(current == null) continue;
+          const diff = (current - oldest) / oldest * 100;
+          if(diff > 25) overheating++;
+          else if(diff < -25) coolingDown++;
+        }
+      }
+      diversificationCards.push(`
+        <div class="stat-card">
+          <div class="stat-label">Signaux de marché</div>
+          <div style="display:flex;gap:16px;margin-top:8px">
+            <div>
+              <div style="color:#fb923c;font-size:24px;font-weight:700">${overheating}</div>
+              <div style="font-size:11px;color:var(--mut)">🟠 en surchauffe</div>
+            </div>
+            <div>
+              <div style="color:#60a5fa;font-size:24px;font-weight:700">${coolingDown}</div>
+              <div style="font-size:11px;color:var(--mut)">🔵 en repli</div>
+            </div>
+          </div>
+          <div style="color:var(--mut);font-size:11px;margin-top:8px">Cartes avec variation ±25% depuis tes premiers snapshots</div>
+        </div>
+      `);
+    } else {
+      diversificationCards.push(`<div class="stat-card" style="grid-column:1/-1;text-align:center;color:var(--mut);padding:32px">Pas encore assez de cartes possédées pour l'analyse.</div>`);
+    }
+
+    if(isPro || true){ // (paywall désactivé pour l'instant — voir TODO)
+      analysisEl.innerHTML = diversificationCards.join('');
+      analysisEl.style.filter = isPro ? 'none' : 'none'; // pas de flou tant que personne ne paie
+    } else {
+      // Teaser blurré pour utilisateurs free
+      analysisEl.innerHTML = `
+        <div style="position:relative">
+          <div style="filter:blur(8px);pointer-events:none">${diversificationCards.join('')}</div>
+          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(12,10,31,.6);border-radius:var(--rad)">
+            <div style="text-align:center;padding:24px">
+              <div style="font-size:18px;font-weight:700;color:var(--gold-2);margin-bottom:8px">🔒 Réservé aux abonnés Pro</div>
+              <div style="color:var(--mut);margin-bottom:16px">Analyse de portefeuille, score de diversification, signaux marché.</div>
+              <a href="#" data-nav="subscription" class="btn-gold">Découvrir Soridex Pro</a>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+  }
+
   // Répartition par TCG (cachée si filtre actif sur un seul TCG)
   const tcgSection = document.getElementById('statsTcgSection');
   if(tcgSection) tcgSection.hidden = (_statsTcgFilter !== 'all');
@@ -9630,6 +9758,22 @@ function renderMarket(){
     const arrow = isUp ? '↑' : '↓';
     const tcgBadge = d.tcg === 'pokemon' ? 'PK' : (d.tcg === 'lorcana' ? 'LC' : 'MG');
     const tcgColor = d.tcg === 'pokemon' ? '#ffcb05' : (d.tcg === 'lorcana' ? '#a78bfa' : '#fb923c');
+    // Indicateur de stabilité factuel (basé sur amplitude J-1 vs avg7)
+    const absPct = Math.abs(d.pct);
+    let sLabel, sColor, sTitle;
+    if(absPct < 5){
+      sLabel = '🟢 Stable'; sColor = '#4ade80';
+      sTitle = 'Faible variation — cote stable autour de sa moyenne 7j';
+    } else if(absPct < 20){
+      sLabel = '🟡 Volatile'; sColor = '#fbbf24';
+      sTitle = 'Variation modérée — mouvement de marché en cours';
+    } else if(d.pct > 0){
+      sLabel = '🟠 Surchauffe'; sColor = '#fb923c';
+      sTitle = 'Forte hausse rapide — attention au retour à la moyenne (bulle potentielle)';
+    } else {
+      sLabel = '🔵 Plongeon'; sColor = '#60a5fa';
+      sTitle = 'Forte baisse rapide — opportunité ou risque selon contexte';
+    }
     return `
       <div class="market-row" data-market-card-id="${escapeHtml(d.id)}" data-tcg="${escapeHtml(d.tcg)}" data-api-id="${escapeHtml(d.apiId)}" style="display:flex;align-items:center;gap:12px;padding:12px;border-bottom:1px solid var(--line2);cursor:pointer;transition:background .15s" onmouseover="this.style.background='rgba(212,168,90,.05)'" onmouseout="this.style.background='transparent'">
         <div style="font-weight:700;color:${color};width:32px;text-align:right">#${i+1}</div>
@@ -9639,6 +9783,7 @@ function renderMarket(){
         <div style="flex:1;min-width:0">
           <div style="font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(d.name || '—')}</div>
           <div style="color:var(--mut);font-size:12px">Avg 7j: €${d.avg7.toFixed(2)} · ${d.avg1 != null ? 'Cote J-1' : 'Trend'}: €${d.current.toFixed(2)}</div>
+          <div style="font-size:11px;margin-top:3px" title="${sTitle}"><span style="color:${sColor};font-weight:600">${sLabel}</span></div>
         </div>
         <div style="text-align:right">
           <div style="font-weight:700;color:${color};font-size:16px">${arrow} ${d.pct > 0 ? '+' : ''}${d.pct.toFixed(1)}%</div>
