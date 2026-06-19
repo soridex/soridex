@@ -39,14 +39,17 @@ module.exports = async (req, res) => {
     const cards = data.cards || [];
     totalProcessed = cards.length;
 
-    // 2. Mapper -> rows Supabase
-    const rows = [];
+    // 2. Mapper -> rows, en dédupliquant sur (set_code, card_number, language).
+    // LorcanaJSON peut avoir plusieurs entrées par clé (Cold Foil vs Lore, promos...).
+    // On garde celle qui a une cardmarket_url ; si plusieurs en ont, on garde la première.
+    const dedupMap = new Map();
+    let duplicatesCount = 0;
     for (const c of cards) {
       if (!c.setCode) { skippedNoSetCode++; continue; }
       if (c.number === undefined || c.number === null) { skippedNoNumber++; continue; }
 
       const ext = c.externalLinks || {};
-      rows.push({
+      const row = {
         lorcanajson_id: c.id,
         set_code: String(c.setCode),
         card_number: String(c.number),
@@ -58,8 +61,20 @@ module.exports = async (req, res) => {
         tcgplayer_id: ext.tcgPlayerId || null,
         language: LANGUAGE,
         updated_at: new Date().toISOString(),
-      });
+      };
+      const key = `${row.set_code}|${row.card_number}|${row.language}`;
+      const existing = dedupMap.get(key);
+      if (!existing) {
+        dedupMap.set(key, row);
+      } else {
+        duplicatesCount++;
+        // Si l'existant n'a pas d'URL Cardmarket et la nouvelle en a une, on remplace
+        if (!existing.cardmarket_url && row.cardmarket_url) {
+          dedupMap.set(key, row);
+        }
+      }
     }
+    const rows = Array.from(dedupMap.values());
 
     // 3. Upsert par batches via API REST Supabase
     const upsertUrl = `${supabaseUrl}/rest/v1/lorcana_cardmarket_mapping?on_conflict=set_code,card_number,language`;
@@ -88,6 +103,7 @@ module.exports = async (req, res) => {
       language: LANGUAGE,
       processed: totalProcessed,
       upserted: totalUpserted,
+      duplicates_collapsed: duplicatesCount,
       skipped_no_setcode: skippedNoSetCode,
       skipped_no_number: skippedNoNumber,
       duration_ms: durationMs,
