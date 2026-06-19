@@ -2783,7 +2783,15 @@
   </div>
   <div style="max-width:1280px;margin:0 auto;padding:0 0 60px">
     <h1 style="font-size:32px;margin:24px 0 8px">Mes Statistiques</h1>
-    <p style="color:var(--mut);margin:0 0 28px">Vue d'ensemble de ta collection, toutes cartes possédées confondues.</p>
+    <p style="color:var(--mut);margin:0 0 20px">Vue d'ensemble de ta collection, toutes cartes possédées confondues.</p>
+
+    <!-- Filtre TCG -->
+    <div style="display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap">
+      <button class="pf-tab active" data-stats-tcg="all">Tous</button>
+      <button class="pf-tab" data-stats-tcg="pokemon">Pokémon</button>
+      <button class="pf-tab" data-stats-tcg="lorcana">Lorcana</button>
+      <button class="pf-tab" data-stats-tcg="magic">Magic</button>
+    </div>
 
     <!-- KPIs principaux -->
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:32px">
@@ -2794,8 +2802,10 @@
     </div>
 
     <!-- Répartition par TCG -->
-    <h2 style="font-size:20px;margin:32px 0 16px">Répartition par TCG</h2>
-    <div id="statsTcgBreakdown" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-bottom:32px"></div>
+    <div id="statsTcgSection">
+      <h2 style="font-size:20px;margin:32px 0 16px">Répartition par TCG</h2>
+      <div id="statsTcgBreakdown" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-bottom:32px"></div>
+    </div>
 
     <!-- Top cartes par valeur -->
     <h2 style="font-size:20px;margin:32px 0 16px">Top 10 cartes les plus valorisées</h2>
@@ -9401,6 +9411,7 @@ function showStats(){
   showView('stats');
   renderStats();
 }
+let _statsTcgFilter = 'all';
 function renderStats(){
   const portfolios = getPortfolios();
   // Agrège toutes les cartes possédées (dédoublonnées par apiId pour éviter de compter en double les cartes présentes dans plusieurs portfolios)
@@ -9410,12 +9421,10 @@ function renderStats(){
       const isOwned = (c.owned !== false) || (typeof isOwnedAnywhere === 'function' && isOwnedAnywhere(c.apiId));
       if(!isOwned) continue;
       if(!c.apiId) continue;
-      // On garde la version avec le plus de data (pricePaid ou marketPrice)
       const existing = ownedMap.get(c.apiId);
       if(!existing){
         ownedMap.set(c.apiId, {...c, _pfTcg: pf.tcg, _pfName: pf.name});
       } else {
-        // Merge : garder le pricePaid le plus élevé (priorité au portfolio thématique)
         if((c.pricePaid || 0) > (existing.pricePaid || 0)){
           existing.pricePaid = c.pricePaid;
           existing._pfName = pf.name;
@@ -9423,7 +9432,11 @@ function renderStats(){
       }
     }
   }
-  const owned = [...ownedMap.values()];
+  let owned = [...ownedMap.values()];
+  // Filtre TCG
+  if(_statsTcgFilter !== 'all'){
+    owned = owned.filter(c => (c.tcg || c._pfTcg) === _statsTcgFilter);
+  }
 
   // KPIs globaux
   let totalValue = 0, totalSpent = 0;
@@ -9465,7 +9478,9 @@ function renderStats(){
   }
   document.getElementById('statsCardsSub').textContent = `Pokémon ${tcgCounts.pokemon} · Lorcana ${tcgCounts.lorcana} · Magic ${tcgCounts.magic}`;
 
-  // Répartition par TCG
+  // Répartition par TCG (cachée si filtre actif sur un seul TCG)
+  const tcgSection = document.getElementById('statsTcgSection');
+  if(tcgSection) tcgSection.hidden = (_statsTcgFilter !== 'all');
   const tcgLabels = {pokemon: 'Pokémon', lorcana: 'Lorcana', magic: 'Magic'};
   const tcgColors = {pokemon: '#ffcb05', lorcana: '#a78bfa', magic: '#fb923c'};
   document.getElementById('statsTcgBreakdown').innerHTML = ['pokemon', 'lorcana', 'magic'].map(t => {
@@ -9649,6 +9664,15 @@ document.addEventListener('click', (e) => {
   document.querySelectorAll('[data-market-tcg]').forEach(b => b.classList.toggle('active', b === btn));
   _marketTcgFilter = btn.dataset.marketTcg;
   if(_marketDataCache) renderMarket();
+});
+
+// Listener filtre TCG Mes Stats
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-stats-tcg]');
+  if(!btn) return;
+  document.querySelectorAll('[data-stats-tcg]').forEach(b => b.classList.toggle('active', b === btn));
+  _statsTcgFilter = btn.dataset.statsTcg;
+  renderStats();
 });
 
 // Listener clic sur une ligne marché → ouvre la fiche carte
