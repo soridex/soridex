@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/sync-lorcanajson",
+      "schedule": "0 3 * * 0"
+    }
+  ]
+}
