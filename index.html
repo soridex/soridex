@@ -2846,6 +2846,16 @@
     <div id="marketLoading" style="text-align:center;padding:40px;color:var(--mut)">Chargement des données marché…</div>
 
     <div id="marketContent" hidden>
+      <!-- Opportunités du moment (Pro) -->
+      <div id="marketOppSection" style="margin-bottom:40px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+          <h2 style="font-size:22px;margin:0">Opportunités du moment</h2>
+          <span style="background:linear-gradient(135deg,#d4a857,#a16207);color:#1a1a2e;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:700">PRO</span>
+        </div>
+        <p style="color:var(--mut);font-size:13px;margin:0 0 20px">En un coup d'œil : où regarder, et quoi éviter. Indicateurs factuels, pas des conseils financiers.</p>
+        <div id="marketOppContent"></div>
+      </div>
+
       <!-- Top hausses -->
       <h2 style="font-size:20px;margin:16px 0 12px;display:flex;align-items:center;gap:8px">
         <span style="color:#4ade80">↑</span> Top 10 hausses
@@ -9847,7 +9857,158 @@ function renderMarket(){
   document.getElementById('marketTopDown').innerHTML = downs.length
     ? downs.map((d, i) => renderRow(d, i, false)).join('')
     : `<div style="padding:32px;text-align:center;color:var(--mut)">Aucune baisse significative pour l'instant.</div>`;
+
+  // Render section Opportunités
+  renderMarketOpportunities(data);
 }
+
+// === Cache d'images carte (localStorage) ===
+const _imgCacheKey = 'soridex_card_img_cache_v1';
+let _imgCache = null;
+function _loadImgCache(){
+  if(_imgCache) return _imgCache;
+  try { _imgCache = JSON.parse(localStorage.getItem(_imgCacheKey) || '{}'); }
+  catch(e){ _imgCache = {}; }
+  return _imgCache;
+}
+function _saveImgCache(){
+  try { localStorage.setItem(_imgCacheKey, JSON.stringify(_imgCache)); } catch(e){}
+}
+async function fetchCardImage(tcg, apiId){
+  if(!tcg || !apiId) return null;
+  const cache = _loadImgCache();
+  const k = tcg + ':' + apiId;
+  if(cache[k] !== undefined) return cache[k]; // peut être null (déjà tenté)
+  let url = null;
+  try {
+    if(tcg === 'pokemon'){
+      const r = await fetch(`https://api.pokemontcg.io/v2/cards/${encodeURIComponent(apiId)}`);
+      if(r.ok){ const d = await r.json(); url = (d.data && d.data.images && (d.data.images.small || d.data.images.large)) || null; }
+    } else if(tcg === 'lorcana'){
+      const r = await fetch(`https://api.lorcast.com/v0/cards/${encodeURIComponent(apiId)}`);
+      if(r.ok){
+        const d = await r.json();
+        url = (d.image_uris && d.image_uris.digital && (d.image_uris.digital.normal || d.image_uris.digital.small)) || null;
+        if(url && typeof smartImg === 'function') url = smartImg(url);
+      }
+    } else if(tcg === 'magic'){
+      const r = await fetch(`https://api.scryfall.com/cards/${encodeURIComponent(apiId)}`);
+      if(r.ok){
+        const d = await r.json();
+        url = (d.image_uris && (d.image_uris.small || d.image_uris.normal)) || (d.card_faces && d.card_faces[0] && d.card_faces[0].image_uris && d.card_faces[0].image_uris.small) || null;
+      }
+    }
+  } catch(e){ /* silencieux */ }
+  cache[k] = url; // mémorise même null pour pas re-tenter
+  _saveImgCache();
+  return url;
+}
+
+function renderMarketOpportunities(data){
+  const oppEl = document.getElementById('marketOppContent');
+  if(!oppEl) return;
+
+  // 3 catégories
+  // 🔵 Plongeons (opportunités) : baisse ≥ 15% + valeur ≥ 1€
+  const opportunities = data
+    .filter(d => d.pct <= -15 && d.avg7 >= 1)
+    .sort((a, b) => a.pct - b.pct)
+    .slice(0, 6);
+  // 🟢 Valeurs sûres : stables (|pct| < 5%) + valeur ≥ 5€
+  const safeBets = data
+    .filter(d => Math.abs(d.pct) < 5 && d.avg7 >= 5)
+    .sort((a, b) => b.avg7 - a.avg7) // les plus chères en premier
+    .slice(0, 6);
+  // 🟠 À éviter : surchauffe > 20%
+  const overheated = data
+    .filter(d => d.pct >= 20 && d.avg7 >= 1)
+    .sort((a, b) => b.pct - a.pct)
+    .slice(0, 6);
+
+  const renderCard = (d, kind) => {
+    const palette = {
+      opportunity: { color: '#60a5fa', label: '🔵', text: 'En plongeon' },
+      safe:        { color: '#4ade80', label: '🟢', text: 'Stable' },
+      avoid:       { color: '#fb923c', label: '🟠', text: 'En surchauffe' }
+    }[kind];
+    const tcgBadge = d.tcg === 'pokemon' ? 'PK' : (d.tcg === 'lorcana' ? 'LC' : 'MG');
+    const tcgColor = d.tcg === 'pokemon' ? '#ffcb05' : (d.tcg === 'lorcana' ? '#a78bfa' : '#fb923c');
+    const pctText = (d.pct > 0 ? '+' : '') + d.pct.toFixed(1) + '%';
+    return `
+      <div class="opp-card" data-tcg="${escapeHtml(d.tcg)}" data-api-id="${escapeHtml(d.apiId)}" style="border:1px solid var(--line);border-radius:10px;padding:10px;background:rgba(212,168,90,.02);cursor:pointer;transition:transform .15s,border-color .15s" onmouseover="this.style.transform='translateY(-2px)';this.style.borderColor='${palette.color}'" onmouseout="this.style.transform='translateY(0)';this.style.borderColor='var(--line)'">
+        <div style="aspect-ratio:5/7;background:var(--line);border-radius:6px;margin-bottom:8px;overflow:hidden;position:relative" data-img-slot="${escapeHtml(d.tcg+':'+d.apiId)}">
+          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--mut);font-size:11px">…</div>
+        </div>
+        <div style="font-weight:600;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px">${escapeHtml(d.name || '—')}</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--mut);margin-bottom:4px">
+          <span style="color:${tcgColor};font-weight:700">${tcgBadge}</span>
+          <span>€${d.current.toFixed(2)}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px">
+          <span style="color:${palette.color};font-weight:600">${palette.label} ${palette.text}</span>
+          <span style="color:${palette.color};font-weight:700">${pctText}</span>
+        </div>
+      </div>
+    `;
+  };
+
+  const renderCategory = (cards, kind, title, subtitle, color) => {
+    if(cards.length === 0){
+      return `
+        <div style="margin-bottom:28px">
+          <h3 style="font-size:16px;margin:0 0 4px;color:${color}">${title}</h3>
+          <p style="color:var(--mut);font-size:12px;margin:0 0 10px">${subtitle}</p>
+          <div style="padding:24px;text-align:center;color:var(--mut);background:rgba(212,168,90,.02);border-radius:10px;font-size:13px">Aucune carte dans cette catégorie pour l'instant.</div>
+        </div>
+      `;
+    }
+    return `
+      <div style="margin-bottom:28px">
+        <h3 style="font-size:16px;margin:0 0 4px;color:${color}">${title}</h3>
+        <p style="color:var(--mut);font-size:12px;margin:0 0 10px">${subtitle}</p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px">
+          ${cards.map(c => renderCard(c, kind)).join('')}
+        </div>
+      </div>
+    `;
+  };
+
+  oppEl.innerHTML = `
+    ${renderCategory(opportunities, 'opportunity',
+      '🔵 Potentielles affaires',
+      'Cartes en forte baisse (-15% ou plus). À regarder de près si tu crois au rebond.',
+      '#60a5fa')}
+    ${renderCategory(safeBets, 'safe',
+      '🟢 Valeurs stables',
+      'Cartes peu volatiles et avec une vraie valeur (≥ 5 €). Profil "achat long terme".',
+      '#4ade80')}
+    ${renderCategory(overheated, 'avoid',
+      '🟠 À surveiller / éviter',
+      'Cartes en forte hausse récente (+20% ou plus). Risque de retour à la moyenne.',
+      '#fb923c')}
+  `;
+
+  // Lazy load images
+  oppEl.querySelectorAll('[data-img-slot]').forEach(slot => {
+    const [tcg, ...rest] = slot.dataset.imgSlot.split(':');
+    const apiId = rest.join(':');
+    fetchCardImage(tcg, apiId).then(url => {
+      if(!url) return;
+      slot.innerHTML = `<img src="${escapeHtml(url)}" alt="" style="width:100%;height:100%;object-fit:cover" loading="lazy">`;
+    });
+  });
+}
+
+// Listener clic sur carte Opportunités → ouvre la fiche
+document.addEventListener('click', (e) => {
+  const card = e.target.closest('.opp-card');
+  if(!card) return;
+  const tcg = card.dataset.tcg;
+  const apiId = card.dataset.apiId;
+  if(typeof openCardDetailModal === 'function' && tcg && apiId){
+    openCardDetailModal({tcg, id: apiId});
+  }
+});
 
 // Listener filtre TCG marché
 document.addEventListener('click', (e) => {
