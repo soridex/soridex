@@ -9497,6 +9497,7 @@ function renderStats(){
       const totalForCard = c.marketPrice * qty;
       const t = c.tcg || c._pfTcg || 'pokemon';
       const displayName = t === 'pokemon' && typeof translateCardNameToFr === 'function' ? translateCardNameToFr(c.name) : c.name;
+      const trend = (typeof getTrendArrow === 'function') ? getTrendArrow(c.apiId, c.marketPrice) : '';
       return `
         <div style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-bottom:1px solid var(--line2)">
           <div style="font-weight:700;color:var(--gold-2);width:28px;text-align:right">#${i+1}</div>
@@ -9505,7 +9506,10 @@ function renderStats(){
             <div style="font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(displayName)}</div>
             <div style="color:var(--mut);font-size:12px">${escapeHtml(c.setName || '')} · ${escapeHtml(c.number || '')}${qty > 1 ? ` · ×${qty}` : ''}</div>
           </div>
-          <div style="font-weight:700;color:var(--gold-2)">€${totalForCard.toFixed(2)}</div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:18px">${trend}</span>
+            <div style="font-weight:700;color:var(--gold-2);min-width:70px;text-align:right">€${totalForCard.toFixed(2)}</div>
+          </div>
         </div>`;
     }).join('');
   }
@@ -9558,25 +9562,31 @@ async function showMarket(){
         .order('updated_at', { ascending: false })
         .limit(2000);
       if(error) throw error;
-      _marketDataCache = (data || []).filter(r => {
-        const p = r.prices || {};
-        return p.avg1 != null && p.avg7 != null && p.avg7 > 0;
-      }).map(r => {
-        const p = r.prices;
-        const pct = ((p.avg1 - p.avg7) / p.avg7) * 100;
-        return {
-          id: r.id,
-          apiId: r.id.split(':').slice(1).join(':'),
-          tcg: r.tcg,
-          name: r.name,
-          avg1: p.avg1,
-          avg7: p.avg7,
-          trend: p.trend,
-          low: p.low,
-          pct: pct,
-          updated_at: r.updated_at
-        };
-      });
+      _marketDataCache = (data || [])
+        // Exclu les rows de test
+        .filter(r => r.id && !r.id.startsWith('test:'))
+        .filter(r => {
+          const p = r.prices || {};
+          // Élargi : avg7 + (avg1 OU trend) suffisent
+          return p.avg7 != null && p.avg7 > 0 && (p.avg1 != null || p.trend != null);
+        }).map(r => {
+          const p = r.prices;
+          const current = p.avg1 != null ? p.avg1 : p.trend;
+          const pct = ((current - p.avg7) / p.avg7) * 100;
+          return {
+            id: r.id,
+            apiId: r.id.split(':').slice(1).join(':'),
+            tcg: r.tcg,
+            name: r.name,
+            avg1: p.avg1,
+            avg7: p.avg7,
+            trend: p.trend,
+            low: p.low,
+            current: current,
+            pct: pct,
+            updated_at: r.updated_at
+          };
+        });
     } catch(e){
       console.error('Market fetch error', e);
       document.getElementById('marketLoading').textContent = '⚠ Erreur de chargement. Réessaie plus tard.';
@@ -9593,10 +9603,12 @@ function renderMarket(){
     ? _marketDataCache
     : _marketDataCache.filter(d => d.tcg === _marketTcgFilter);
 
-  // Filtre minimum : cartes >= 0.50€ et progression >= 1% pour éviter le bruit
-  const significant = data.filter(d => d.avg7 >= 0.5 && Math.abs(d.pct) >= 1);
-  const ups = [...significant].sort((a, b) => b.pct - a.pct).slice(0, 10);
-  const downs = [...significant].sort((a, b) => a.pct - b.pct).slice(0, 10);
+  // Filtre minimum : cartes ≥ 0.30€
+  const significant = data.filter(d => d.avg7 >= 0.3);
+  // Hausses : strictement positives, ≥ 1%
+  const ups = significant.filter(d => d.pct >= 1).sort((a, b) => b.pct - a.pct).slice(0, 10);
+  // Baisses : strictement négatives, ≤ -1%
+  const downs = significant.filter(d => d.pct <= -1).sort((a, b) => a.pct - b.pct).slice(0, 10);
 
   const renderRow = (d, i, isUp) => {
     const color = isUp ? '#4ade80' : '#f87171';
@@ -9611,11 +9623,11 @@ function renderMarket(){
         </div>
         <div style="flex:1;min-width:0">
           <div style="font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(d.name || '—')}</div>
-          <div style="color:var(--mut);font-size:12px">Avg 7j: €${d.avg7.toFixed(2)} · Cote J-1: €${d.avg1.toFixed(2)}</div>
+          <div style="color:var(--mut);font-size:12px">Avg 7j: €${d.avg7.toFixed(2)} · ${d.avg1 != null ? 'Cote J-1' : 'Trend'}: €${d.current.toFixed(2)}</div>
         </div>
         <div style="text-align:right">
-          <div style="font-weight:700;color:${color};font-size:16px">${arrow} ${isUp ? '+' : ''}${d.pct.toFixed(1)}%</div>
-          <div style="font-size:11px;color:var(--mut)">${isUp ? '+' : ''}€${(d.avg1 - d.avg7).toFixed(2)}</div>
+          <div style="font-weight:700;color:${color};font-size:16px">${arrow} ${d.pct > 0 ? '+' : ''}${d.pct.toFixed(1)}%</div>
+          <div style="font-size:11px;color:var(--mut)">${(d.current - d.avg7) > 0 ? '+' : ''}€${(d.current - d.avg7).toFixed(2)}</div>
         </div>
       </div>
     `;
@@ -9623,11 +9635,11 @@ function renderMarket(){
 
   document.getElementById('marketTopUp').innerHTML = ups.length
     ? ups.map((d, i) => renderRow(d, i, true)).join('')
-    : '<div style="padding:32px;text-align:center;color:var(--mut)">Pas encore assez de données pour ce filtre.</div>';
+    : `<div style="padding:32px;text-align:center;color:var(--mut)">Aucune hausse significative pour l'instant. La base se construit au fil des consultations utilisateurs.</div>`;
 
   document.getElementById('marketTopDown').innerHTML = downs.length
     ? downs.map((d, i) => renderRow(d, i, false)).join('')
-    : '<div style="padding:32px;text-align:center;color:var(--mut)">Pas encore assez de données pour ce filtre.</div>';
+    : `<div style="padding:32px;text-align:center;color:var(--mut)">Aucune baisse significative pour l'instant.</div>`;
 }
 
 // Listener filtre TCG marché
