@@ -1787,7 +1787,8 @@
       <a class="navlink active" href="#" data-view="home">Explorateur TCG</a>
       <a class="navlink" href="#" data-nav="subscription">Abonnement</a>
       <a class="navlink" href="#" data-view="shop">Boutique</a>
-      <a class="navlink" href="#" data-view="guide">Guide</a>
+      <a class="navlink" href="#" data-view="guide">Guide collectionneur</a>
+      <a class="navlink" href="#" data-view="guide-investor">Guide investisseur</a>
       <a class="navlink" href="#" data-nav="compte">Compte</a>
     </nav>
   </div>
@@ -2559,8 +2560,22 @@
     <button class="modal-close" id="createWishClose">×</button>
     <h3 class="modal-title">Nouveau dossier wishlist</h3>
     <div class="form-field">
+      <label>Type de wishlist</label>
+      <select id="newWishType" style="width:100%;padding:9px 12px;background:rgba(255,255,255,.04);border:1px solid var(--line2);border-radius:8px;color:var(--tx);font-family:inherit;font-size:14px">
+        <option value="general">Générale (favoris, on aime bien)</option>
+        <option value="brocante">Brocante</option>
+        <option value="salon">Salon / Convention</option>
+        <option value="vide-grenier">Vide-grenier</option>
+        <option value="autre">Autre événement</option>
+      </select>
+    </div>
+    <div class="form-field">
       <label>Nom du dossier</label>
       <input type="text" id="newWishName" placeholder="Ex. Brocante de Vincennes" maxlength="60">
+    </div>
+    <div class="form-field" id="newWishBudgetField" style="display:none">
+      <label>Budget fixé (€) <span style="color:var(--mut);font-weight:400">— optionnel mais recommandé</span></label>
+      <input type="number" id="newWishBudget" placeholder="Ex. 50" min="0" step="0.01">
     </div>
     <div class="form-field">
       <label>Note (lieu, date, contexte…) <span style="color:var(--mut);font-weight:400">— facultatif</span></label>
@@ -3404,6 +3419,162 @@
   </article>
 </section>
 
+<!-- VIEW: GUIDE INVESTISSEUR -->
+<section class="view" id="view-guide-investor" hidden>
+  <div class="breadcrumb">
+    <a data-view="home">← Accueil</a><span>/</span><span>Guide investisseur</span>
+  </div>
+  <div class="sets-head">
+    <div>
+      <h2 class="view-title">📈 Guide investisseur</h2>
+      <p class="view-sub">Lire le marché, évaluer une carte comme un actif, suivre ton portefeuille, repérer les opportunités. Et éviter les pièges. Sans bullshit.</p>
+    </div>
+  </div>
+
+  <div class="guide-toc">
+    <h3 class="guide-toc-title">Sommaire</h3>
+    <div class="guide-toc-grid">
+      <a class="guide-toc-link" href="#gi-market"><span class="num">1</span>Lire le marché</a>
+      <a class="guide-toc-link" href="#gi-eval"><span class="num">2</span>Évaluer une carte</a>
+      <a class="guide-toc-link" href="#gi-portfolio"><span class="num">3</span>Suivre ton portefeuille</a>
+      <a class="guide-toc-link" href="#gi-opportunities"><span class="num">4</span>Identifier des opportunités</a>
+      <a class="guide-toc-link" href="#gi-traps"><span class="num">5</span>Les pièges</a>
+    </div>
+  </div>
+
+  <article class="guide-section" id="gi-market">
+    <h3><span class="ico">📊</span>1. Lire le marché</h3>
+    <p>Le TCG, c'est un marché. Pas un musée. Les prix bougent tous les jours, et la première compétence d'un investisseur, c'est de savoir lire ce qui se passe sans se laisser hypnotiser par la hype.</p>
+
+    <p>La section <strong>Marché</strong> de Soridex te donne deux choses immédiates : les <strong>top hausses 7 jours</strong> et les <strong>top baisses 7 jours</strong>. Une hausse, ce n'est pas forcément un signal d'achat — c'est souvent l'inverse. Une baisse, ce n'est pas forcément un piège — parfois c'est une bonne entrée. Tout dépend du <em>contexte</em>, et c'est là que les badges entrent en jeu.</p>
+
+    <div class="guide-criterion">
+      <h4>Les 4 badges Soridex</h4>
+      <p>Chaque carte affichée dans Marché porte un badge qui résume son comportement récent :</p>
+      <ul>
+        <li><strong style="color:#34d399">Stable</strong> — Variation faible sur 7j. La carte tient son prix. C'est le profil "valeur refuge" : peu de plus-value rapide, mais peu de risque.</li>
+        <li><strong style="color:#fbbf24">Volatile</strong> — Le prix bouge fort dans les deux sens. C'est jouable si tu sais entrer au bon moment, dangereux si tu suis le mouvement après tout le monde.</li>
+        <li><strong style="color:#f87171">Surchauffe</strong> — Hausse rapide récente. Attention : c'est souvent le signal qu'on est en haut du cycle, pas en bas. La hype est déjà passée chez les premiers acheteurs.</li>
+        <li><strong style="color:#60a5fa">Plongeon</strong> — Baisse rapide. Soit la carte est en train de se faire dégager pour de bonnes raisons (fakes en circulation, contre-pied éditorial), soit c'est une opportunité d'achat. Faut creuser.</li>
+      </ul>
+    </div>
+
+    <div class="guide-callout">💡 <strong>La règle</strong> — Une carte en Surchauffe n'est pas un signal d'achat, c'est un signal de prudence. Une carte stable depuis 6 mois avec un pic de demande qui démarre, c'est ça qu'on cherche.</div>
+  </article>
+
+  <article class="guide-section" id="gi-eval">
+    <h3><span class="ico">🔬</span>2. Évaluer une carte (lens investisseur)</h3>
+    <p>Un collectionneur regarde la rareté, l'artwork et le personnage. Un investisseur regarde les mêmes critères, plus quatre autres. Sur Soridex, la fiche détail de chaque carte te les donne :</p>
+
+    <div class="guide-criterion">
+      <h4>① Cote J-1</h4>
+      <p>C'est le prix moyen affiché par le marché hier (champ <code>avg1</code> de notre source de données). Pas le "prix le plus bas listé" qui peut être un fake ou un état Played, pas le "prix le plus haut" qui ne se vend jamais. La cote J-1 = la réalité d'hier.</p>
+    </div>
+
+    <div class="guide-criterion">
+      <h4>② Progression 7 jours</h4>
+      <p>L'écart entre le prix d'aujourd'hui et celui d'il y a 7 jours, en pourcentage. Une carte qui fait +30 % en 7j, c'est pas forcément à acheter. Une carte qui fait -8 % alors que ton thèse fondamentale reste valide, ça peut être ton entrée.</p>
+    </div>
+
+    <div class="guide-criterion">
+      <h4>③ Triangles de tendance</h4>
+      <p>Les petits triangles ▲ verts et ▼ rouges affichés dans Mes Stats et dans les listes du Marché te disent en un coup d'œil si la carte est en mouvement haussier ou baissier. C'est ton scan rapide.</p>
+    </div>
+
+    <div class="guide-criterion">
+      <h4>④ Fiabilité du prix</h4>
+      <p>Toutes les cartes ne sont pas équivalentes côté données. Une carte avec beaucoup de transactions, le prix affiché est fiable. Une variante rare type Iconic Lorcana ou Secret Rare Pokémon avec peu d'historique, prends le prix avec des pincettes — c'est plus une estimation qu'un cours.</p>
+    </div>
+
+    <div class="guide-callout">🎯 <strong>Le réflexe</strong> — Avant d'acheter, ouvre la fiche détail. Si tu vois "Surchauffe" + progression 7j à +40 % + peu de volume, tu paies la dopamine de quelqu'un d'autre. Passe.</div>
+  </article>
+
+  <article class="guide-section" id="gi-portfolio">
+    <h3><span class="ico">💼</span>3. Suivre ton portefeuille</h3>
+    <p>Un portefeuille TCG sans suivi, c'est une boîte à chaussures. La section <strong>Mes Stats</strong> de Soridex transforme ta collection en vraie position d'investissement.</p>
+
+    <div class="guide-criterion">
+      <h4>Les KPIs de base (gratuit)</h4>
+      <p>Valeur totale de ta collection, nombre de cartes, répartition par TCG, top cartes valorisées. C'est ton bilan. Si tu ne sais pas combien vaut ta collection à l'instant T, tu ne peux pas piloter.</p>
+    </div>
+
+    <div class="guide-criterion">
+      <h4>Mes Stats Pro <span style="color:var(--gold-2);font-size:11px;letter-spacing:.1em">★ FEATURE PRO</span></h4>
+      <p>C'est là que ça devient sérieux. Tu débloques :</p>
+      <ul>
+        <li><strong>Plus-values latentes</strong> — Ce que ta collection a gagné (ou perdu) depuis l'achat, carte par carte. C'est ton P&L.</li>
+        <li><strong>Analyse de portefeuille</strong> — Équilibre entre TCGs, concentration sur quelques cartes (signal de risque), signaux globaux (es-tu trop exposé à un set qui vient de baisser ?).</li>
+        <li><strong>Recommandations perso "à viser / à éviter"</strong> — Basé sur ton profil de collection et l'état du marché, Soridex te dit où compléter et où freiner.</li>
+      </ul>
+    </div>
+
+    <div class="guide-callout">💡 <strong>Le réflexe</strong> — Une fois par semaine, ouvre Mes Stats. Pas pour te rassurer, pour identifier les déséquilibres. Une collection à 80 % sur un seul TCG est sur-exposée. Une carte qui pèse 40 % de la valeur totale est une vulnérabilité.</div>
+  </article>
+
+  <article class="guide-section" id="gi-opportunities">
+    <h3><span class="ico">🎯</span>4. Identifier des opportunités</h3>
+    <p>Les meilleures opportunités ne sont jamais celles dont tout le monde parle. Sur Soridex, plusieurs outils te servent à les repérer avant qu'elles deviennent évidentes.</p>
+
+    <div class="guide-criterion">
+      <h4>Top hausses / baisses 7 jours</h4>
+      <p>Les hausses te signalent ce qui bouge — utile pour vendre, dangereux pour acheter. Les baisses te signalent ce qui se déprécie — parfois c'est une opportunité d'entrée si tu crois aux fondamentaux de la carte.</p>
+    </div>
+
+    <div class="guide-criterion">
+      <h4>Module achat-revente Vinted/eBay</h4>
+      <p>Tu vois une carte à 12 € sur Vinted alors que sa cote Cardmarket est à 22 € ? Soridex te le signale. C'est de l'arbitrage classique : tu achètes en dessous de la cote sur les plateformes mal indexées, tu revends à la cote sur Cardmarket. Marge nette si tu vérifies bien l'état.</p>
+    </div>
+
+    <div class="guide-criterion">
+      <h4>Recommandations perso <span style="color:var(--gold-2);font-size:11px;letter-spacing:.1em">★ FEATURE PRO</span></h4>
+      <p>Deux listes adaptées à ton portefeuille :</p>
+      <ul>
+        <li><strong>À viser</strong> — Cartes qui complètent ton portefeuille (réduire concentration, exposer à un set en bas de cycle, opportunités sous-évaluées dans ton profil de collection).</li>
+        <li><strong>À éviter</strong> — Cartes qui surexposent ton portefeuille ou qui présentent des signaux faibles (Surchauffe + low volume, baisse structurelle).</li>
+      </ul>
+    </div>
+
+    <div class="guide-criterion">
+      <h4>Opportunités du moment <span style="color:var(--gold-2);font-size:11px;letter-spacing:.1em">★ FEATURE PRO</span></h4>
+      <p>Une sélection éditoriale + algo des meilleures opportunités du marché à l'instant T, tous TCGs confondus. Mise à jour quotidienne.</p>
+    </div>
+
+    <div class="guide-callout">🎯 <strong>Le réflexe</strong> — Une opportunité "évidente" qui traîne plus de 48h, c'est qu'elle n'en est pas une. Soit elle est déjà partie, soit il y a un problème que tu ne vois pas.</div>
+  </article>
+
+  <article class="guide-section" id="gi-traps">
+    <h3><span class="ico">⚠️</span>5. Les pièges</h3>
+    <p>Avant Soridex, j'ai travaillé dans le recouvrement de créances. C'est un boulot qui apprend à repérer les signaux faibles avant que ça explose : les bulles, les comportements compulsifs, les décisions prises sur l'émotion. Le TCG aujourd'hui coche toutes les cases d'un marché spéculatif jeune. Voilà ce qu'il faut surveiller.</p>
+
+    <div class="guide-criterion">
+      <h4>① Les bulles spéculatives</h4>
+      <p>Quand un set explose en 3 semaines, ça monte vite et ça redescend pareil. Les premiers entrés gagnent, les derniers entrés payent. Le badge <strong>Surchauffe</strong> est ton premier signal. Une hausse de +60 % en 7 jours sans nouvelle fondamentale (sortie de film, événement esport, ré-impression annoncée), c'est une bulle en formation.</p>
+    </div>
+
+    <div class="guide-criterion">
+      <h4>② Le FOMO TikTok Live / Whatnot</h4>
+      <p>Les openings en direct sont un excellent contenu de dopamine et un très mauvais véhicule d'investissement. Les vendeurs vendent au-dessus de la cote, l'audience surenchérit dans l'émotion du live, et tu te retrouves avec une carte payée 40 % au-dessus du marché. <em>Reste lucide</em>. Si tu veux acheter cette carte, ferme le live et va sur Cardmarket.</p>
+    </div>
+
+    <div class="guide-criterion">
+      <h4>③ Le biais d'ancrage</h4>
+      <p>Tu as payé une carte 80 €. Sa cote est tombée à 45 €. Ton cerveau te dit "j'attends qu'elle remonte à 80 € pour vendre". C'est une erreur de raisonnement classique : la cote actuelle est la seule qui compte, pas ton prix d'achat. Si les fondamentaux ont changé, la carte ne reviendra pas à 80 €. Coupe la position.</p>
+    </div>
+
+    <div class="guide-criterion">
+      <h4>④ Confondre passion et investissement</h4>
+      <p>Tu peux collectionner pour le plaisir <em>ou</em> investir. Les deux logiques sont compatibles, mais elles obéissent à des règles différentes. Si tu veux les deux, sépare-les mentalement : "ce dossier est pour le plaisir, ce dossier est pour la perf". Sinon tu finis par justifier des mauvais achats par "mais j'aime la carte".</p>
+    </div>
+
+    <div class="guide-criterion">
+      <h4>⑤ Le piège du "ça va monter"</h4>
+      <p>Personne ne sait. Ni moi, ni les YouTubeurs, ni les algos. Soridex te donne des indicateurs, des grilles de lecture, des signaux. Ça réduit l'incertitude. Ça ne la supprime pas. Si tu cherches une certitude, le TCG n'est pas le bon marché.</p>
+    </div>
+
+    <div class="guide-callout">🎯 <strong>Le mindset gagnant</strong> — Définis ta stratégie <em>avant</em> d'acheter (objectif, horizon, prix de sortie). Tiens-t'en. Le marché TCG punit les gens qui improvisent et récompense les gens qui ont un plan, même imparfait.</div>
+  </article>
+</section>
+
 </main>
 
 <!-- MODAL CRÉATION PORTFOLIO -->
@@ -3497,7 +3668,7 @@
 })();
 
 /* === ROUTING === */
-const ALL_VIEWS = ['home','login','compte','sets-pokemon','sets-lorcana','sets-magic','era-detail','set-detail','pf-detail','wishlist','wish-detail','global-search','shop','guide','guide-article','business','business-folder','parametres','subscription','stats','market'];
+const ALL_VIEWS = ['home','login','compte','sets-pokemon','sets-lorcana','sets-magic','era-detail','set-detail','pf-detail','wishlist','wish-detail','global-search','shop','guide','guide-investor','guide-article','business','business-folder','parametres','subscription','stats','market'];
 function showView(name){
   if(!ALL_VIEWS.includes(name)) name='home';
   document.querySelectorAll('.view').forEach(v => v.hidden = (v.id !== 'view-'+name));
@@ -6192,13 +6363,121 @@ async function showPokemonSetCards(setId){
 }
 
 /* ════════════════════════════════════════════════════════════════
-   SCELLÉS (Sealed products) — TCGCSV via /api/tcgcsv
+   SCELLÉS (Sealed products) — TCGCSV direct (bypass backend)
    ════════════════════════════════════════════════════════════════ */
 const _setSealedCache = {}; // setName → {ts, products}
 const SEALED_TTL_MS = 30 * 60 * 1000;
 let _currentSealedSetName = null;
 let _currentSealedSetId = null;
 let _currentSealedTypeFilter = 'all';
+
+const TCGCSV_BASE = 'https://tcgcsv.com/tcgplayer/3'; // 3 = Pokémon category
+const TCGCSV_GROUPS_TTL = 6 * 60 * 60 * 1000; // 6h
+let _tcgcsvGroupsCache = null;
+let _tcgcsvGroupsCacheTs = 0;
+
+async function _getTCGCSVGroups(){
+  if(_tcgcsvGroupsCache && (Date.now() - _tcgcsvGroupsCacheTs) < TCGCSV_GROUPS_TTL){
+    return _tcgcsvGroupsCache;
+  }
+  try {
+    const raw = localStorage.getItem('sx_tcgcsv_groups');
+    if(raw){
+      const parsed = JSON.parse(raw);
+      if(parsed && parsed.ts && (Date.now() - parsed.ts) < TCGCSV_GROUPS_TTL){
+        _tcgcsvGroupsCache = parsed.groups;
+        _tcgcsvGroupsCacheTs = parsed.ts;
+        return _tcgcsvGroupsCache;
+      }
+    }
+  } catch(e){}
+  const res = await fetch(`${TCGCSV_BASE}/groups`);
+  if(!res.ok) throw new Error('TCGCSV groups HTTP ' + res.status);
+  const data = await res.json();
+  _tcgcsvGroupsCache = data.results || [];
+  _tcgcsvGroupsCacheTs = Date.now();
+  try { localStorage.setItem('sx_tcgcsv_groups', JSON.stringify({ ts: _tcgcsvGroupsCacheTs, groups: _tcgcsvGroupsCache })); } catch(e){}
+  return _tcgcsvGroupsCache;
+}
+
+function _normalizeSetName(name){
+  return (name||'').toLowerCase().replace(/&/g,'and').replace(/[^a-z0-9]/g,'').trim();
+}
+// "SV08: Surging Sparks" → "Surging Sparks" ; "SWSH: Crown Zenith" → "Crown Zenith" ; "Pokemon GO" → "Pokemon GO"
+function _extractCleanGroupName(groupName){
+  const m = (groupName||'').match(/^[A-Z]+\d*:\s*(.+)$/);
+  return m ? m[1] : (groupName||'');
+}
+
+async function findTCGCSVGroupForSet(setName){
+  if(!setName) return null;
+  const groups = await _getTCGCSVGroups();
+  const target = _normalizeSetName(setName);
+  // 1) match exact sur le nom "propre" (après ":")
+  for(const g of groups){
+    if(_normalizeSetName(_extractCleanGroupName(g.name)) === target) return g;
+  }
+  // 2) match exact sur le nom complet
+  for(const g of groups){
+    if(_normalizeSetName(g.name) === target) return g;
+  }
+  // 3) match "contient"
+  for(const g of groups){
+    if(_normalizeSetName(g.name).includes(target) && target.length >= 4) return g;
+  }
+  return null;
+}
+
+function _inferSealedType(name){
+  const n = (name||'').toLowerCase();
+  if(/elite trainer box|\betb\b/.test(n)) return 'ETB';
+  if(/booster bundle/.test(n)) return 'Booster Bundle';
+  if(/booster case|case$/.test(n)) return 'Case';
+  if(/booster box/.test(n)) return 'Booster Box';
+  if(/premium collection|premium ex collection/.test(n)) return 'Premium Collection';
+  if(/build.{0,3}battle/.test(n)) return 'Build & Battle';
+  if(/theme deck|preconstructed/.test(n)) return 'Theme Deck';
+  if(/pin collection/.test(n)) return 'Pin Collection';
+  if(/tin/.test(n)) return 'Tin';
+  if(/blister/.test(n)) return 'Blister';
+  if(/booster\s*pack|^booster$|single booster/.test(n)) return 'Booster';
+  if(/collection box|gift box|holiday calendar/.test(n)) return 'Collection Box';
+  return 'Autre';
+}
+
+async function _fetchTCGCSVSealedForGroup(group){
+  const [pRes, prRes] = await Promise.all([
+    fetch(`${TCGCSV_BASE}/${group.groupId}/products`),
+    fetch(`${TCGCSV_BASE}/${group.groupId}/prices`)
+  ]);
+  if(!pRes.ok) throw new Error('Products HTTP ' + pRes.status);
+  if(!prRes.ok) throw new Error('Prices HTTP ' + prRes.status);
+  const pData = await pRes.json();
+  const prData = await prRes.json();
+  // priceMap : on prend en priorité "Normal", sinon le 1er trouvé
+  const priceMap = {};
+  (prData.results || []).forEach(pr => {
+    if(!priceMap[pr.productId] || pr.subTypeName === 'Normal') priceMap[pr.productId] = pr;
+  });
+  // Filtre sealed = produits SANS Number/Rarity dans extendedData
+  const sealed = (pData.results || []).filter(p => {
+    const ed = p.extendedData || [];
+    return !ed.some(x => ['Number','Rarity','Card Type'].includes(x.name));
+  });
+  return sealed.map(p => {
+    const pr = priceMap[p.productId];
+    const market = pr ? (pr.marketPrice ?? pr.midPrice ?? null) : null;
+    const low = pr ? (pr.lowPrice ?? null) : null;
+    return {
+      productId: p.productId,
+      name: p.name,
+      type: _inferSealedType(p.name),
+      imageUrl: p.imageUrl || `https://tcgplayer-cdn.tcgplayer.com/product/${p.productId}_in_1000x1000.jpg`,
+      url: p.url || `https://www.tcgplayer.com/product/${p.productId}`,
+      prices: { market, low }
+    };
+  }).sort((a,b) => (b.prices.market||0) - (a.prices.market||0));
+}
 
 // Affiche/cache le toggle Cartes/Scellés selon le TCG.
 // Seul Pokémon a des sealed pour l'instant.
@@ -6257,16 +6536,12 @@ async function showPokemonSetSealed(setName, setId){
     grid.innerHTML = '<div class="empty-state"><div class="ico">📦</div><h3>Chargement des scellés…</h3><p>Données TCGplayer (USD)</p></div>';
     filtersBox.innerHTML = '';
     try{
-      const res = await fetch(`/api/tcgcsv?action=sealed&setName=${encodeURIComponent(setName)}`);
-      if(!res.ok){
-        if(res.status === 404){
-          grid.innerHTML = `<div class="empty-state"><div class="ico">🤷</div><h3>Set introuvable côté TCGplayer</h3><p>Le nom du set n'a pas pu être matché. Réessaie plus tard ou contacte le support.</p></div>`;
-          return;
-        }
-        throw new Error('HTTP ' + res.status);
+      const group = await findTCGCSVGroupForSet(setName);
+      if(!group){
+        grid.innerHTML = `<div class="empty-state"><div class="ico">🤷</div><h3>Set introuvable côté TCGplayer</h3><p>Aucun match pour « ${escapeHtml(setName)} ». Il s'agit peut-être d'un set très récent non encore listé.</p></div>`;
+        return;
       }
-      const data = await res.json();
-      products = data.products || [];
+      products = await _fetchTCGCSVSealedForGroup(group);
       _setSealedCache[setName] = { ts: Date.now(), products };
     } catch(e){
       console.error('sealed fetch error:', e);
@@ -7469,12 +7744,14 @@ function favButtonHtml(apiId){
 }
 
 /* --- Opérations sur les dossiers --- */
-function createWishFolder(name, note){
+function createWishFolder(name, note, type, budget){
   const arr = getWishlistFolders();
   const folder = {
     id: 'wf_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
     name: (name||'').trim() || 'Nouveau dossier',
     note: (note||'').trim(),
+    type: type || 'general',
+    budget: (typeof budget === 'number' && budget > 0) ? budget : null,
     createdAt: Date.now(),
     cards: []
   };
@@ -7647,6 +7924,12 @@ function renderWishFolders(){
     return `<div class="pf-card wish-folder-card" data-wish-id="${f.id}">
       ${coverHtml}
       <div class="pf-name">${escapeHtml(f.name)}</div>
+      ${(f.type && f.type !== 'general') ? (() => {
+        const TLBL = {brocante:'🛍 Brocante', salon:'🎪 Salon', 'vide-grenier':'🏕 Vide-grenier', autre:'📅 Événement'};
+        const lbl = TLBL[f.type] || '📅 Événement';
+        const budgetTxt = (f.budget && f.budget > 0) ? ` · Budget €${f.budget.toFixed(2)}` : '';
+        return `<div style="display:inline-block;padding:3px 9px;border-radius:10px;background:rgba(96,165,250,.15);color:#93c5fd;font-size:11px;font-weight:700;letter-spacing:.04em;margin-bottom:6px">${lbl}${budgetTxt}</div>`;
+      })() : ''}
       ${f.note ? `<div class="pf-meta" style="font-style:italic;color:var(--mut);font-size:11px;margin-bottom:4px">${escapeHtml(f.note)}</div>` : ''}
       <div class="pf-meta">
         <span>${found}/${total} trouvées${remaining>0 ? ' · '+remaining+' à dénicher' : ''}</span>
@@ -7684,10 +7967,93 @@ function renderWishFolderDetail(){
   const all = folder.cards || [];
   const foundCount = all.filter(c => c.found).length;
   const totalValue = all.reduce((s,c) => s + (c.marketPrice||0), 0);
-  document.getElementById('wishDetailMeta').textContent = `${all.length} carte${all.length>1?'s':''} · ${foundCount} trouvée${foundCount>1?'s':''} · valeur cumulée €${totalValue.toFixed(2)}`;
+
+  // Type/budget label
+  const TYPE_LABEL = {general:'Générale', brocante:'Brocante', salon:'Salon / Convention', 'vide-grenier':'Vide-grenier', autre:'Autre événement'};
+  const typeLabel = TYPE_LABEL[folder.type || 'general'] || 'Générale';
+  const typeBadge = (folder.type && folder.type !== 'general')
+    ? ` <span style="display:inline-block;margin-left:6px;padding:2px 8px;border-radius:10px;background:rgba(96,165,250,.15);color:#93c5fd;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;vertical-align:middle">${typeLabel}</span>`
+    : '';
+  // Mise à jour du meta dans le header
+  const metaEl = document.getElementById('wishDetailMeta');
+  if(metaEl){
+    metaEl.innerHTML = `${all.length} carte${all.length>1?'s':''} · ${foundCount} trouvée${foundCount>1?'s':''} · valeur cumulée €${totalValue.toFixed(2)}${typeBadge}`;
+  }
+
+  // === WIDGET BUDGET (uniquement si folder.budget existe et type non général) ===
+  // Nettoyage : on retire un éventuel widget précédent
+  const existingWidget = document.getElementById('wishBudgetWidget');
+  if(existingWidget) existingWidget.remove();
+
+  if(folder.budget && folder.budget > 0){
+    // Calcul du pack optimal : tri par prix croissant des cartes NON TROUVÉES, on prend tant qu'on tient
+    const cardsWithPrice = all.filter(c => !c.found && c.marketPrice != null && c.marketPrice > 0);
+    const cardsNoPrice = all.filter(c => !c.found && (c.marketPrice == null || c.marketPrice <= 0));
+    const sorted = cardsWithPrice.slice().sort((a,b) => (a.marketPrice||0) - (b.marketPrice||0));
+    const pack = [];
+    let spent = 0;
+    for(const c of sorted){
+      if(spent + (c.marketPrice||0) <= folder.budget){
+        pack.push(c.apiId);
+        spent += (c.marketPrice||0);
+      }
+    }
+    const packSet = new Set(pack);
+    const reste = folder.budget - spent;
+    const isOver = totalValue > folder.budget;
+
+    // État de filtrage actif
+    if(typeof window._wishBudgetFilter === 'undefined') window._wishBudgetFilter = false;
+    const filterActive = window._wishBudgetFilter;
+
+    const headColor = isOver ? '#fbbf24' : '#34d399';
+    const headIcon = isOver ? '⚠️' : '✓';
+    const headMsg = isOver
+      ? `Ta wishlist (€${totalValue.toFixed(2)}) dépasse ton budget (€${folder.budget.toFixed(2)}).`
+      : `Tout rentre dans ton budget : €${totalValue.toFixed(2)} sur €${folder.budget.toFixed(2)}.`;
+
+    const widget = document.createElement('div');
+    widget.id = 'wishBudgetWidget';
+    widget.style.cssText = 'margin:0 0 18px;padding:14px 16px;background:rgba(96,165,250,.06);border:1px solid rgba(96,165,250,.25);border-radius:12px';
+    widget.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:8px;color:${headColor};font-weight:700;font-size:14px">
+          <span>${headIcon}</span><span>Budget ${typeLabel}</span>
+        </div>
+        <div style="color:var(--mut);font-size:13px">${headMsg}</div>
+      </div>
+      <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:${isOver ? '12px' : '0'};font-size:13px">
+        <div><span style="color:var(--mut)">Budget :</span> <strong style="color:#fff">€${folder.budget.toFixed(2)}</strong></div>
+        <div><span style="color:var(--mut)">Pack optimal :</span> <strong style="color:#93c5fd">${pack.length} carte${pack.length>1?'s':''} pour €${spent.toFixed(2)}</strong></div>
+        <div><span style="color:var(--mut)">Reste :</span> <strong style="color:#34d399">€${reste.toFixed(2)}</strong></div>
+      </div>
+      ${isOver ? `
+        <button id="wishBudgetToggle" style="padding:8px 14px;background:${filterActive ? 'rgba(251,191,36,.18)' : 'transparent'};border:1px solid rgba(251,191,36,.5);border-radius:8px;color:#fbbf24;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit">
+          ${filterActive ? '✓ Voir toutes les cartes' : '💡 Voir mon pack optimal'}
+        </button>
+        ${cardsNoPrice.length > 0 ? `<div style="margin-top:8px;font-size:12px;color:var(--mut)"><em>${cardsNoPrice.length} carte${cardsNoPrice.length>1?'s':''} sans cote → exclue${cardsNoPrice.length>1?'s':''} du calcul</em></div>` : ''}
+      ` : ''}
+    `;
+    grid.parentNode.insertBefore(widget, grid);
+    const toggleBtn = document.getElementById('wishBudgetToggle');
+    if(toggleBtn){
+      toggleBtn.addEventListener('click', () => {
+        window._wishBudgetFilter = !window._wishBudgetFilter;
+        renderWishFolderDetail();
+      });
+    }
+    // Stocker le pack en variable pour le filtre du grid
+    window._wishBudgetPack = packSet;
+  } else {
+    window._wishBudgetFilter = false;
+    window._wishBudgetPack = null;
+  }
 
   let filtered = all.slice();
   if(_wishHideFound) filtered = filtered.filter(c => !c.found);
+  if(window._wishBudgetFilter && window._wishBudgetPack){
+    filtered = filtered.filter(c => window._wishBudgetPack.has(c.apiId));
+  }
   if(_searchState.wish){
     filtered = filtered.filter(c => {
       const fr = c.tcg === 'pokemon' ? translateCardNameToFr(c.name) : c.name;
@@ -7698,7 +8064,7 @@ function renderWishFolderDetail(){
     grid.innerHTML = `<div class="wish-empty" style="grid-column:1/-1">
       <span class="ico">♡</span>
       <h3>${all.length === 0 ? 'Dossier vide' : 'Aucune carte à afficher'}</h3>
-      <p>${all.length === 0 ? 'Va sur un set ou un personnage et clique sur le ♥ pour ajouter des cartes ici.' : 'Change le filtre ou affiche les cartes trouvées.'}</p>
+      <p>${all.length === 0 ? 'Va sur un set ou un personnage et clique sur le ♥ pour ajouter des cartes ici.' : (window._wishBudgetFilter ? 'Aucune carte ne rentre dans ton budget. Augmente-le ou retire des cartes chères.' : 'Change le filtre ou affiche les cartes trouvées.')}</p>
     </div>`;
     return;
   }
@@ -7708,6 +8074,10 @@ function renderWishFolderDetail(){
   });
   const TCG_LABEL = {pokemon:'PKMN', lorcana:'LCA', magic:'MTG'};
   grid.innerHTML = filtered.map(c => {
+    const inPack = window._wishBudgetPack && window._wishBudgetPack.has(c.apiId);
+    const packBadge = (folder.budget && folder.budget > 0 && !c.found && inPack)
+      ? `<div style="position:absolute;top:8px;left:8px;background:rgba(52,211,153,.95);color:#000;font-weight:800;font-size:10px;letter-spacing:.06em;padding:3px 7px;border-radius:6px;z-index:2">DANS BUDGET</div>`
+      : '';
     const displayName = c.tcg === 'pokemon' ? translateCardNameToFr(c.name) : c.name;
     const market = c.marketPrice != null ? `€${c.marketPrice.toFixed(2)}` : '—';
     const imgSrc = smartImg(c.img || '');
@@ -7717,7 +8087,8 @@ function renderWishFolderDetail(){
                 : `https://www.cardmarket.com/fr/Lorcana/Products/Search?searchString=${encodeURIComponent(c.name)}`;
     const ebQuery = `${c.name} ${c.setName||''} ${c.number||''}`;
     const foundCls = c.found ? 'wishcard-found' : '';
-    return `<div class="card-item wishcard ${foundCls}" data-wish-card="${escapeHtml(c.apiId)}">
+    return `<div class="card-item wishcard ${foundCls}" data-wish-card="${escapeHtml(c.apiId)}" style="position:relative">
+      ${packBadge}
       <div class="card-img wishcard-img" title="${c.found?'Cliquer pour remettre comme à trouver':'Cliquer pour marquer trouvée'}">
         <img src="${imgSrc}" data-large="${large}" alt="${escapeHtml(displayName)}" loading="lazy">
         ${c.found ? '<div class="pfcard-owned-badge">✓</div>' : ''}
@@ -7800,6 +8171,9 @@ document.addEventListener('DOMContentLoaded', () => {
 function openCreateWishModal(){
   document.getElementById('newWishName').value = '';
   document.getElementById('newWishNote').value = '';
+  document.getElementById('newWishType').value = 'general';
+  document.getElementById('newWishBudget').value = '';
+  document.getElementById('newWishBudgetField').style.display = 'none';
   document.getElementById('createWishModal').classList.remove('hidden');
   setTimeout(() => document.getElementById('newWishName').focus(), 50);
 }
@@ -7812,11 +8186,19 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('createWishModal').addEventListener('click', (e) => {
     if(e.target.id === 'createWishModal') closeCreateWishModal();
   });
+  // Toggle affichage budget selon le type
+  document.getElementById('newWishType').addEventListener('change', (e) => {
+    const budgetField = document.getElementById('newWishBudgetField');
+    budgetField.style.display = (e.target.value === 'general') ? 'none' : '';
+  });
   document.getElementById('createWishConfirm').addEventListener('click', () => {
     const name = document.getElementById('newWishName').value.trim();
     const note = document.getElementById('newWishNote').value.trim();
+    const type = document.getElementById('newWishType').value;
+    const budgetRaw = document.getElementById('newWishBudget').value;
+    const budget = (type !== 'general' && budgetRaw) ? parseFloat(budgetRaw) : null;
     if(!name){ alert('Donne un nom à ton dossier.'); return; }
-    const folder = createWishFolder(name, note);
+    const folder = createWishFolder(name, note, type, budget);
     closeCreateWishModal();
     if(_pendingPickEntry){
       addCardToWishFolder(folder.id, _pendingPickEntry.entry, _pendingPickEntry.tcg);
