@@ -2518,8 +2518,10 @@
     <button class="sort-btn active" data-filter="all">Toutes</button>
     <button class="sort-btn" data-filter="owned">Possédées</button>
     <button class="sort-btn" data-filter="missing">Manquantes</button>
+    <button class="sort-btn" data-filter="doubles" id="pfFilterDoublesBtn">Doubles</button>
     <span class="pf-sortbar-label" id="pfFilterCount" style="margin-left:auto"></span>
   </div>
+  <div id="pfDoublesBanner" style="margin-bottom:12px"></div>
   <div class="pf-sortbar" id="pfTcgFilterbar" hidden style="margin-bottom:10px">
     <span class="pf-sortbar-label">TCG</span>
     <button class="sort-btn active" data-tcg-filter="all">Tous</button>
@@ -4820,9 +4822,45 @@ function updateFilterBarUI(pf){
   if(countEl && pf){
     const total = (pf.cards||[]).length;
     const owned = (pf.cards||[]).filter(c => !!c.owned || (typeof isOwnedAnywhere === 'function' && isOwnedAnywhere(c.apiId))).length;
+    const doublesCards = (pf.cards||[]).filter(c => (parseInt(c.qty,10)||1) > 1);
+    const doublesCount = doublesCards.length;
     if(pfFilterState === 'owned')      countEl.textContent = `${owned} / ${total} possédées`;
     else if(pfFilterState === 'missing') countEl.textContent = `${total - owned} / ${total} manquantes`;
+    else if(pfFilterState === 'doubles') countEl.textContent = `${doublesCount} en double`;
     else                                  countEl.textContent = `${total} cartes`;
+  }
+  // Mettre à jour le badge "Doubles ×N" sur le bouton
+  const doublesBtn = document.getElementById('pfFilterDoublesBtn');
+  if(doublesBtn && pf){
+    const doublesCount = (pf.cards||[]).filter(c => (parseInt(c.qty,10)||1) > 1).length;
+    doublesBtn.textContent = doublesCount > 0 ? `Doubles ×${doublesCount}` : 'Doubles';
+    doublesBtn.style.opacity = doublesCount > 0 ? '1' : '0.5';
+  }
+  // Bannière "valeur cumulée des exemplaires en surnombre" — visible uniquement en filtre Doubles
+  const banner = document.getElementById('pfDoublesBanner');
+  if(banner && pf){
+    if(pfFilterState === 'doubles'){
+      const doublesCards = (pf.cards||[]).filter(c => (parseInt(c.qty,10)||1) > 1);
+      const extraCount = doublesCards.reduce((s,c) => s + ((parseInt(c.qty,10)||1) - 1), 0);
+      const extraValue = doublesCards.reduce((s,c) => s + (((parseInt(c.qty,10)||1) - 1) * (c.marketPrice||0)), 0);
+      const totalValue = doublesCards.reduce((s,c) => s + ((parseInt(c.qty,10)||1) * (c.marketPrice||0)), 0);
+      if(doublesCards.length === 0){
+        banner.innerHTML = `<div style="padding:14px 16px;background:rgba(255,255,255,.03);border:1px dashed rgba(255,255,255,.12);border-radius:10px;color:var(--mut);font-size:13px;text-align:center">Aucune carte en double pour l'instant. Augmente la quantité (+) sur une carte pour la marquer comme exemplaire multiple.</div>`;
+      } else {
+        banner.innerHTML = `
+          <div style="padding:14px 16px;background:linear-gradient(135deg,rgba(96,165,250,.08),rgba(168,85,247,.08));border:1px solid rgba(96,165,250,.3);border-radius:12px">
+            <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#93c5fd;margin-bottom:8px">📦 Stock en surnombre</div>
+            <div style="display:flex;gap:18px;flex-wrap:wrap;font-size:13px">
+              <div><span style="color:var(--mut)">Cartes en double :</span> <strong style="color:#fff">${doublesCards.length}</strong></div>
+              <div><span style="color:var(--mut)">Exemplaires en surnombre :</span> <strong style="color:#fff">${extraCount}</strong></div>
+              <div><span style="color:var(--mut)">Valeur revendable :</span> <strong style="color:#34d399">€${extraValue.toFixed(2)}</strong></div>
+            </div>
+            <div style="font-size:11px;color:var(--mut);margin-top:8px;font-style:italic">💡 La "valeur revendable" = la cote des exemplaires que tu pourrais revendre en gardant un de chaque pour ta collection.</div>
+          </div>`;
+      }
+    } else {
+      banner.innerHTML = '';
+    }
   }
 }
 
@@ -4990,6 +5028,8 @@ function renderPfCards(pf){
     cardsWithIdx = cardsWithIdx.filter(c => _effectivelyOwned(c));
   } else if(pfFilterState === 'missing'){
     cardsWithIdx = cardsWithIdx.filter(c => !_effectivelyOwned(c));
+  } else if(pfFilterState === 'doubles'){
+    cardsWithIdx = cardsWithIdx.filter(c => (parseInt(c.qty,10)||1) > 1);
   }
   // Filtre TCG (seulement pour portfolios multi-TCG)
   if(_pfTcgFilter !== 'all'){
@@ -5004,6 +5044,11 @@ function renderPfCards(pf){
   }
   const sortedWithIdx = sortPfCards(cardsWithIdx);
   if(sortedWithIdx.length === 0){
+    // En mode Doubles, la bannière au-dessus suffit, on vide juste le grid
+    if(pfFilterState === 'doubles' && !_searchState.pf){
+      grid.innerHTML = '';
+      return;
+    }
     let emptyTitle = 'Aucune carte trouvée';
     let emptyDesc = 'Essaie un autre terme ou efface la recherche.';
     if(!_searchState.pf){
