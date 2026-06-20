@@ -2415,6 +2415,8 @@
     <button class="set-mode-tab active" data-set-mode="cards">🃏 Cartes</button>
     <button class="set-mode-tab" data-set-mode="sealed">📦 Scellés</button>
   </div>
+  <!-- Bandeau indicateurs marché du set (injecté dynamiquement) -->
+  <div id="setIndicatorsBanner" style="margin:14px 0 0"></div>
   <div class="page-search" id="setSearchWrap">
     <input type="search" id="setSearchInput" placeholder="Filtrer les cartes par nom…">
     <button class="clear" id="setSearchClear" aria-label="Effacer">×</button>
@@ -3831,6 +3833,11 @@ async function loadAllUserDataFromSb(){
     typeof loadWishlistsFromSb === 'function' ? loadWishlistsFromSb() : Promise.resolve(),
     typeof loadBusinessFromSb === 'function' ? loadBusinessFromSb() : Promise.resolve()
   ]);
+  // Précharge le cache marché en background pour alimenter les indicateurs par set
+  // (silencieux, non bloquant)
+  if(typeof _ensureMarketCacheLoaded === 'function'){
+    _ensureMarketCacheLoaded().catch(()=>{});
+  }
 }
 
 // Force flush immédiat (utilisé sur beforeunload, visibilitychange, etc.)
@@ -5958,8 +5965,19 @@ function renderSetGrid(id, sets, tcg){
         ownedHtml = `<div class="set-stats"><span>Possédées</span><span class="cote" style="color:var(--gold-2)">${owned}</span></div>`;
       }
     }
+    // Badge état marché du set (si données disponibles via _setCardsCache)
+    let stateBadgeHtml = '';
+    if(tcg){
+      const slugOrId = s.slug || s.lorcastCode || s.code || '';
+      const badge = (typeof getSetBadgeState === 'function') ? getSetBadgeState(s.name, tcg, slugOrId) : null;
+      if(badge){
+        const pctTxt = (badge.pct >= 0 ? '+' : '') + badge.pct.toFixed(1) + '%';
+        stateBadgeHtml = `<div style="position:absolute;top:8px;right:8px;display:flex;align-items:center;gap:4px;padding:3px 8px;border-radius:10px;background:${badge.color}22;border:1px solid ${badge.color}66;color:${badge.color};font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;z-index:2">${badge.emoji} ${escapeHtml(badge.label)} ${pctTxt}</div>`;
+      }
+    }
     return `
-    <div class="set-card" data-set-slug="${s.slug || ''}" data-set-name="${escapeHtml(s.name)}">
+    <div class="set-card" data-set-slug="${s.slug || ''}" data-set-name="${escapeHtml(s.name)}" style="position:relative">
+      ${stateBadgeHtml}
       <div class="set-img">${visual}</div>
       <div class="set-body">
         <div class="set-name">${escapeHtml(s.name)}</div>
@@ -6287,6 +6305,8 @@ async function showPokemonSetCards(setId){
     }catch(err){console.error(err); grid.innerHTML='<div class="empty-state"><h3>Erreur</h3></div>'; return;}
   }
   if(!cards.length){grid.innerHTML='<div class="empty-state"><h3>Aucune carte</h3></div>'; return;}
+  // Bandeau indicateurs marché du set
+  try { renderSetIndicatorsBanner(cards, 'pokemon', setInfo ? setInfo.name : ''); } catch(e){ console.warn('banner err', e); }
   // Bouton "Rafraîchir les cotes" visible pour les sets Pokémon
   const refreshBtn = document.getElementById('setDetailRefreshCmBtn');
   if(refreshBtn){
@@ -6724,6 +6744,7 @@ async function showLorcanaSetCards(slug){
     }catch(err){console.error(err); grid.innerHTML='<div class="empty-state"><h3>Erreur</h3></div>'; return;}
   }
   if(!cards||!cards.length){grid.innerHTML='<div class="empty-state"><h3>Aucune carte</h3></div>'; return;}
+  try { renderSetIndicatorsBanner(cards, 'lorcana', setInfo ? setInfo.name : ''); } catch(e){ console.warn('banner err', e); }
   cards.sort((a,b)=>(parseInt((a.collector_number||'').replace(/[^0-9]/g,''),10)||0) - (parseInt((b.collector_number||'').replace(/[^0-9]/g,''),10)||0));
   const RAR_ORDER=['Common','Uncommon','Rare','Super_rare','Legendary','Enchanted','Special','Promo'];
   const rarities=[...new Set(cards.map(c=>c.rarity).filter(Boolean))].sort((a,b)=>RAR_ORDER.indexOf(a)-RAR_ORDER.indexOf(b));
@@ -6881,6 +6902,7 @@ async function showMagicSetCards(setCode){
     }catch(err){console.error(err); grid.innerHTML='<div class="empty-state"><h3>Erreur</h3></div>'; return;}
   }
   if(!cards.length){grid.innerHTML='<div class="empty-state"><h3>Aucune carte</h3></div>'; return;}
+  try { renderSetIndicatorsBanner(cards, 'magic', setInfo ? setInfo.name : (setCode||'')); } catch(e){ console.warn('banner err', e); }
   cards.sort((a,b)=>(parseInt(String(a.collector_number||'').replace(/[^0-9]/g,''),10)||0) - (parseInt(String(b.collector_number||'').replace(/[^0-9]/g,''),10)||0));
   const RAR_ORDER=['common','uncommon','rare','mythic','special','bonus'];
   const rarities=[...new Set(cards.map(c=>c.rarity).filter(Boolean))].sort((a,b)=>RAR_ORDER.indexOf(a)-RAR_ORDER.indexOf(b));
@@ -10454,6 +10476,162 @@ function renderStats(){
   }
 }
 
+// === INDICATEURS PAR SET ===
+// Calcule un état de marché agrégé pour un set (bandeau page détail + badge liste)
+// Utilise _marketDataCache (chargé via tcg_prices) pour récupérer avg1/avg7/pct par carte.
+
+// Précharge _marketDataCache en background si pas déjà chargé (silencieux, non bloquant)
+async function _ensureMarketCacheLoaded(){
+  if(_marketDataCache) return _marketDataCache;
+  if(!sb) return null;
+  try {
+    const { data, error } = await sb.from('tcg_prices')
+      .select('id, tcg, name, prices, updated_at')
+      .order('updated_at', { ascending: false })
+      .limit(2000);
+    if(error) throw error;
+    _marketDataCache = (data || [])
+      .filter(r => r.id && !r.id.startsWith('test:'))
+      .filter(r => {
+        const p = r.prices || {};
+        return p.avg7 != null && p.avg7 > 0 && (p.avg1 != null || p.trend != null);
+      }).map(r => {
+        const p = r.prices;
+        const current = p.avg1 != null ? p.avg1 : p.trend;
+        const pct = ((current - p.avg7) / p.avg7) * 100;
+        return {
+          id: r.id,
+          apiId: r.id.split(':').slice(1).join(':'),
+          tcg: r.tcg, name: r.name,
+          avg1: p.avg1, avg7: p.avg7, trend: p.trend, low: p.low,
+          current, pct,
+          updated_at: r.updated_at
+        };
+      });
+    return _marketDataCache;
+  } catch(e){
+    console.warn('[Indicators] preload market cache failed:', e);
+    return null;
+  }
+}
+
+// Construit une Map apiId -> entry depuis _marketDataCache pour lookup O(1)
+function _buildMarketApiIdMap(){
+  const map = new Map();
+  if(!_marketDataCache) return map;
+  for(const d of _marketDataCache){
+    map.set(d.apiId, d);
+    // Variante Lorcana foil : on garde aussi la version sans __foil
+    if(d.apiId.endsWith('__foil')) map.set(d.apiId.replace('__foil',''), d);
+  }
+  return map;
+}
+
+// Calcule indicateurs d'un set à partir de sa liste de cartes brutes (format API)
+// cards : array de cartes telles que renvoyées par pokemontcg.io / lorcast / scryfall
+// Retourne null si pas assez de data
+function computeSetIndicators(cards, tcg){
+  if(!Array.isArray(cards) || cards.length === 0) return null;
+  const map = _buildMarketApiIdMap();
+  if(map.size === 0) return null;
+  const matches = [];
+  for(const c of cards){
+    const id = c.id || c.apiId;
+    if(!id) continue;
+    const m = map.get(id);
+    if(m) matches.push(m);
+  }
+  if(matches.length === 0) return null;
+  const totalValue = matches.reduce((s,m) => s + (m.current || 0), 0);
+  const avgValue = totalValue / matches.length;
+  const avgPct = matches.reduce((s,m) => s + (m.pct || 0), 0) / matches.length;
+  let topUp = null, topDown = null;
+  for(const m of matches){
+    if(!topUp || (m.pct||0) > (topUp.pct||0)) topUp = m;
+    if(!topDown || (m.pct||0) < (topDown.pct||0)) topDown = m;
+  }
+  // État : seuils larges pour rester pertinents sur un agrégat de set
+  let state, stateLabel, stateColor, stateEmoji;
+  if(avgPct >= 6){ state='surchauffe'; stateLabel='Surchauffe'; stateColor='#f87171'; stateEmoji='🔥'; }
+  else if(avgPct <= -6){ state='plongeon'; stateLabel='Plongeon'; stateColor='#60a5fa'; stateEmoji='🩹'; }
+  else if(Math.abs(avgPct) >= 2){ state='volatile'; stateLabel='Volatile'; stateColor='#fbbf24'; stateEmoji='⚡'; }
+  else { state='stable'; stateLabel='Stable'; stateColor='#34d399'; stateEmoji='✓'; }
+  // % de cartes en hausse / baisse / stable
+  const upCount = matches.filter(m => (m.pct||0) >= 1).length;
+  const downCount = matches.filter(m => (m.pct||0) <= -1).length;
+  return {
+    nbCards: cards.length,
+    nbWithData: matches.length,
+    totalValue, avgValue, avgPct,
+    topUp, topDown,
+    upCount, downCount,
+    state, stateLabel, stateColor, stateEmoji
+  };
+}
+
+// Affiche le bandeau d'indicateurs dans le container #setIndicatorsBanner
+// Appelé depuis showPokemonSetCards / showLorcanaSetCards / showMagicSetCards
+async function renderSetIndicatorsBanner(cards, tcg, setName){
+  const box = document.getElementById('setIndicatorsBanner');
+  if(!box) return;
+  box.innerHTML = '';
+  // Précharge le cache marché si nécessaire
+  await _ensureMarketCacheLoaded();
+  const ind = computeSetIndicators(cards, tcg);
+  if(!ind){
+    // Lorcana/Magic : pas encore de données avg7 → message discret
+    if(tcg !== 'pokemon'){
+      box.innerHTML = `<div style="padding:10px 14px;background:rgba(255,255,255,.03);border:1px dashed rgba(255,255,255,.12);border-radius:10px;color:var(--mut);font-size:12px;text-align:center">📊 Indicateurs de marché bientôt disponibles pour ce TCG</div>`;
+    }
+    return;
+  }
+  const pctSign = ind.avgPct >= 0 ? '+' : '';
+  const pctColor = ind.avgPct > 0 ? '#34d399' : (ind.avgPct < 0 ? '#f87171' : 'var(--mut)');
+  const topUpHtml = (ind.topUp && ind.topUp.pct > 0)
+    ? `<div style="font-size:12px;color:var(--mut)">Top hausse : <strong style="color:#34d399">${escapeHtml(ind.topUp.name||'')} +${ind.topUp.pct.toFixed(1)}%</strong></div>`
+    : '';
+  const topDownHtml = (ind.topDown && ind.topDown.pct < 0)
+    ? `<div style="font-size:12px;color:var(--mut)">Top baisse : <strong style="color:#f87171">${escapeHtml(ind.topDown.name||'')} ${ind.topDown.pct.toFixed(1)}%</strong></div>`
+    : '';
+  box.innerHTML = `
+    <div style="padding:14px 16px;background:linear-gradient(135deg,rgba(96,165,250,.08),rgba(${ind.state==='surchauffe'?'248,113,113':ind.state==='plongeon'?'96,165,250':ind.state==='volatile'?'251,191,36':'52,211,153'},.08));border:1px solid ${ind.stateColor}40;border-radius:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:22px">${ind.stateEmoji}</span>
+          <div>
+            <div style="font-weight:700;color:${ind.stateColor};font-size:14px;letter-spacing:.04em;text-transform:uppercase">${ind.stateLabel}</div>
+            <div style="color:var(--mut);font-size:11px">${ind.nbWithData}/${ind.nbCards} cartes avec données</div>
+          </div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:11px;color:var(--mut);letter-spacing:.06em;text-transform:uppercase">Variation moy. 7j</div>
+          <div style="font-size:20px;font-weight:800;color:${pctColor}">${pctSign}${ind.avgPct.toFixed(1)}%</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--mut);margin-bottom:8px">
+        <div><span style="color:var(--mut)">Cote moyenne :</span> <strong style="color:#fff">€${ind.avgValue.toFixed(2)}</strong></div>
+        <div><span style="color:var(--mut)">Valeur cumulée :</span> <strong style="color:#fff">€${ind.totalValue.toFixed(2)}</strong></div>
+        <div><span style="color:#34d399">▲ ${ind.upCount}</span> · <span style="color:#f87171">▼ ${ind.downCount}</span> · <span style="color:var(--mut)">= ${ind.nbWithData - ind.upCount - ind.downCount}</span></div>
+      </div>
+      ${topUpHtml}${topDownHtml}
+    </div>
+  `;
+}
+
+// Calcule un état "léger" pour le badge sur la liste de sets, à partir du cache marché
+// Utilise les cartes en cache _setCardsCache si dispo, sinon null
+function getSetBadgeState(setName, tcg, slugOrId){
+  // 1) Cherche les cartes du set dans le cache local
+  const cacheKey = tcg === 'pokemon' ? 'pk_' + slugOrId
+                 : tcg === 'lorcana' ? 'lc_' + slugOrId
+                 : tcg === 'magic'   ? 'mg_' + slugOrId : null;
+  if(!cacheKey || !_setCardsCache[cacheKey]) return null;
+  const cards = _setCardsCache[cacheKey];
+  const ind = computeSetIndicators(cards, tcg);
+  if(!ind) return null;
+  return { state: ind.state, label: ind.stateLabel, color: ind.stateColor, emoji: ind.stateEmoji, pct: ind.avgPct };
+}
+
 // === MARCHÉ : top mouvements de prix (J-1 vs avg 7j) sur la base tcg_prices ===
 let _marketDataCache = null;
 let _marketTcgFilter = 'all';
@@ -10512,8 +10690,8 @@ function renderMarket(){
     ? _marketDataCache
     : _marketDataCache.filter(d => d.tcg === _marketTcgFilter);
 
-  // Filtre minimum : cartes ≥ 0.30€
-  const significant = data.filter(d => d.avg7 >= 0.3);
+  // Filtre minimum : cartes ≥ 0.10€
+  const significant = data.filter(d => d.avg7 >= 0.1);
   // Hausses : strictement positives, ≥ 1%
   const ups = significant.filter(d => d.pct >= 1).sort((a, b) => b.pct - a.pct).slice(0, 10);
   // Baisses : strictement négatives, ≤ -1%
