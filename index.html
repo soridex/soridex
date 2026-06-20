@@ -12372,14 +12372,36 @@ function bizSelectAutocomplete(card){
   if(dd){ dd.classList.add('hidden'); dd.innerHTML=''; }
   // Show cote pill
   const pill = document.getElementById('bizTxCotePill');
+  const srcLabel = card.tcg === 'pokemon' ? 'Cardmarket' : (card.tcg === 'magic' ? 'Scryfall' : 'Lorcast');
   if(pill){
     if(card.trendPrice != null){
       const lowTxt = card.lowPrice != null ? ` · prix bas <span class="value">${card.lowPrice.toFixed(2)} €</span>` : '';
       pill.classList.remove('hidden');
-      pill.innerHTML = `<span class="label">Cote actuelle</span><span class="value">${card.trendPrice.toFixed(2)} €</span>${lowTxt}<span class="src">via ${card.tcg === 'pokemon' ? 'Cardmarket' : (card.tcg === 'magic' ? 'Scryfall' : 'Lorcast')}</span>`;
+      pill.innerHTML = `<span class="label">Cote actuelle</span><span class="value">${card.trendPrice.toFixed(2)} €</span>${lowTxt}<span class="src">via ${srcLabel}</span>`;
     } else {
+      // Pas de cote dans le résultat autocomplete → fallback TCGGO (comme la fiche détaillée)
       pill.classList.remove('hidden');
-      pill.innerHTML = `<span class="label">Cote actuelle</span><span style="color:var(--mut)">non disponible</span><span class="src">via ${card.tcg === 'pokemon' ? 'Cardmarket' : (card.tcg === 'magic' ? 'Scryfall' : 'Lorcast')}</span>`;
+      pill.innerHTML = `<span class="label">Cote actuelle</span><span style="color:var(--mut)">recherche…</span><span class="src">via TCGGO</span>`;
+      (async () => {
+        try {
+          const fresh = await bizRefreshOneCard(card.tcg, card.id);
+          // L'utilisateur a peut-être changé de carte entre-temps → ignore si stale
+          if(!bizSelectedCard || bizSelectedCard.id !== card.id) return;
+          if(fresh && fresh.trendPrice != null){
+            bizSelectedCard.trendPrice = fresh.trendPrice;
+            bizSelectedCard.lowPrice = fresh.lowPrice;
+            const lowTxt = fresh.lowPrice != null ? ` · prix bas <span class="value">${fresh.lowPrice.toFixed(2)} €</span>` : '';
+            const srcShort = fresh.source && fresh.source.startsWith('tcggo') ? 'TCGGO' : srcLabel;
+            pill.innerHTML = `<span class="label">Cote actuelle</span><span class="value">${fresh.trendPrice.toFixed(2)} €</span>${lowTxt}<span class="src">via ${srcShort}</span>`;
+            if(typeof updateBizTxNetPreview === 'function') updateBizTxNetPreview();
+          } else {
+            pill.innerHTML = `<span class="label">Cote actuelle</span><span style="color:var(--mut)">non disponible</span><span class="src">via ${srcLabel}</span>`;
+          }
+        } catch(e){
+          console.warn('biz cote fallback err', e);
+          pill.innerHTML = `<span class="label">Cote actuelle</span><span style="color:var(--mut)">non disponible</span><span class="src">via ${srcLabel}</span>`;
+        }
+      })();
     }
   }
   updateBizTxNetPreview();
