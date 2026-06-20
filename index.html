@@ -7830,7 +7830,7 @@ if(!window._lcVarListenerInit){
     const action = btn.dataset.lcAction;
     const apiId = btn.dataset.lcApiid;
     const cardId = btn.dataset.lcCardid;
-    const meta = window._visibleCards && window._visibleCards[cardId];
+    const meta = _visibleCards[cardId];
     if(!meta || !meta.rawCard){
       alert('Erreur : carte introuvable. Recharge la page.');
       return;
@@ -7854,7 +7854,7 @@ if(!window._lcVarListenerInit){
 
 // Fonctions globales conservées pour compatibilité (au cas où appelées ailleurs)
 window._lcVarBtn = function(apiId, cardId, delta){
-  const meta = window._visibleCards && window._visibleCards[cardId];
+  const meta = _visibleCards[cardId];
   if(!meta) return;
   const variant = apiId.endsWith('__foil') ? 'foil' : 'normal';
   const newQty = _lcAdjustVariantQty(apiId, delta, meta.rawCard, meta.setInfo, variant);
@@ -7865,7 +7865,7 @@ window._lcVarPrompt = function(apiId, cardId){
   const input = prompt('Combien d\'exemplaires ?', current);
   if(input === null) return;
   const target = Math.max(0, parseInt(input,10) || 0);
-  const meta = window._visibleCards && window._visibleCards[cardId];
+  const meta = _visibleCards[cardId];
   if(!meta) return;
   _lcSetVariantQty(apiId, target, meta.rawCard, meta.setInfo);
   _lcUpdateVarRow(apiId, cardId, target);
