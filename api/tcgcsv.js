@@ -17,6 +17,21 @@ const POKEMON_CATEGORY_ID = 3;
 const BASE = `https://tcgcsv.com/tcgplayer/${POKEMON_CATEGORY_ID}`;
 
 // ───────────────────────────────────────────────────────────
+// Helper fetch — TCGCSV exige un User-Agent custom sinon HTTP 401
+// Doc: https://tcgcsv.com/docs ("Requests with generic or missing User-Agents may be blocked")
+// ───────────────────────────────────────────────────────────
+const TCGCSV_UA = 'Soridex/1.0 (+https://soridex.fr)';
+
+async function fetchTCG(url){
+  return fetch(url, {
+    headers: {
+      'User-Agent': TCGCSV_UA,
+      'Accept': 'application/json'
+    }
+  });
+}
+
+// ───────────────────────────────────────────────────────────
 // Normalisation pour matcher les noms de set
 // ───────────────────────────────────────────────────────────
 function norm(s){
@@ -54,7 +69,7 @@ async function fetchGroups(){
   if(_groupsCache && (Date.now() - _groupsCacheTs) < GROUPS_TTL_MS){
     return _groupsCache;
   }
-  const res = await fetch(`${BASE}/groups`);
+  const res = await fetchTCG(`${BASE}/groups`);
   if(!res.ok) throw new Error(`TCGCSV groups HTTP ${res.status}`);
   const data = await res.json();
   _groupsCache = data.results || [];
@@ -153,8 +168,8 @@ async function fetchSealedForGroup(groupId){
   }
 
   const [prodRes, priceRes] = await Promise.all([
-    fetch(`${BASE}/${groupId}/products`),
-    fetch(`${BASE}/${groupId}/prices`)
+    fetchTCG(`${BASE}/${groupId}/products`),
+    fetchTCG(`${BASE}/${groupId}/prices`)
   ]);
   if(!prodRes.ok) throw new Error(`TCGCSV products HTTP ${prodRes.status}`);
 
