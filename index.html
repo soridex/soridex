@@ -6959,8 +6959,14 @@ async function showLorcanaSetCards(slug){
       _visibleCards[c.id] = {entry: lcCardToPfEntry(c, setInfo), rawCard: c, setInfo: setInfo, tcg: 'lorcana'};
       const imgProxy = smartImg(img);
       const largeProxy = smartImg(large);
+      // Badge ✓ possédée si au moins un variant (Normal ou Foil) > 0
+      const lcOwnsAny = (_lcVariantQty(c.id) > 0) || (_lcVariantQty(c.id + '__foil') > 0);
+      const lcOwnedBadgeHtml = lcOwnsAny
+        ? `<div class="lc-owned-badge" style="position:absolute;top:8px;left:8px;width:30px;height:30px;border-radius:50%;background:#34d399;color:#000;font-weight:800;font-size:16px;display:flex;align-items:center;justify-content:center;z-index:3;box-shadow:0 2px 8px rgba(52,211,153,.5)">✓</div>`
+        : '';
       return `<div class="card-item" data-card-id="${c.id}">
-        <div class="card-img">
+        <div class="card-img" style="position:relative">
+          ${lcOwnedBadgeHtml}
           ${imgProxy?`<img src="${imgProxy}" data-large="${largeProxy}" alt="${escapeHtml(full)}" loading="lazy">`:''}
           ${favButtonHtml(c.id)}
         </div>
@@ -7731,26 +7737,67 @@ function _lcVariantControlsHtml(c){
   const hasFoil = pF != null && !isNaN(pF);
   const normalQty = _lcVariantQty(c.id);
   const foilQty = _lcVariantQty(c.id + '__foil');
-  const baseStyle = 'display:flex;align-items:center;gap:0;border-radius:8px;overflow:hidden;border:1px solid var(--line2);background:rgba(255,255,255,.03);font-size:12px;flex:1;min-width:0';
-  const btnStyle = 'background:rgba(212,168,90,.08);border:none;color:var(--gold-2);width:26px;height:28px;cursor:pointer;font-size:14px;font-weight:700;flex-shrink:0;padding:0;display:flex;align-items:center;justify-content:center;font-family:inherit';
-  const labelStyle = 'flex:1;text-align:center;padding:0 4px;color:var(--tx);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
-  const ownedBg = (qty) => qty > 0 ? 'background:rgba(52,211,153,.12);border-color:rgba(52,211,153,.35)' : '';
+  const rowStyle = (qty) => `display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:8px;border:1px solid ${qty>0?'rgba(52,211,153,.4)':'var(--line2)'};background:${qty>0?'rgba(52,211,153,.10)':'rgba(255,255,255,.03)'};font-size:13px;margin-top:4px`;
+  const labelStyle = 'flex:1;font-weight:600;color:var(--tx);min-width:0';
+  const btnStyle = (disabled) => `background:rgba(212,168,90,.10);border:1px solid rgba(212,168,90,.3);color:var(--gold-2);width:30px;height:30px;cursor:pointer;font-size:16px;font-weight:700;border-radius:6px;padding:0;display:flex;align-items:center;justify-content:center;font-family:inherit;flex-shrink:0;${disabled?'opacity:.3;cursor:not-allowed':''}`;
+  const qtyStyle = 'min-width:36px;text-align:center;font-weight:700;color:#fff;font-size:14px;padding:4px 8px;background:rgba(0,0,0,.25);border-radius:6px;cursor:pointer;user-select:none;flex-shrink:0';
   const rowHtml = (apiId, label, qty, available) => {
     if(!available) return '';
-    return `<div class="lc-var-row" data-lc-apiid="${escapeHtml(apiId)}" data-lc-cardid="${escapeHtml(c.id)}" style="${baseStyle};${ownedBg(qty)}">
-      <button class="lc-var-btn" data-lc-delta="-1" style="${btnStyle}" ${qty===0?'disabled style="'+btnStyle+';opacity:.35"':''} aria-label="Retirer un">−</button>
-      <span style="${labelStyle}">${label}${qty > 0 ? ' <strong style="color:#34d399">×'+qty+'</strong>' : ''}</span>
-      <button class="lc-var-btn" data-lc-delta="+1" style="${btnStyle}" aria-label="Ajouter un">+</button>
+    return `<div class="lc-var-row" data-lc-apiid="${escapeHtml(apiId)}" data-lc-cardid="${escapeHtml(c.id)}" style="${rowStyle(qty)}">
+      <span style="${labelStyle}">${label}</span>
+      <button class="lc-var-btn" data-lc-delta="-1" style="${btnStyle(qty===0)}" ${qty===0?'disabled':''} aria-label="Retirer un">−</button>
+      <span class="lc-var-qty" data-lc-action="edit" style="${qtyStyle}" title="Tap pour saisir une quantité">${qty}</span>
+      <button class="lc-var-btn" data-lc-delta="+1" style="${btnStyle(false)}" aria-label="Ajouter un">+</button>
     </div>`;
   };
-  if(!hasNormal && !hasFoil){
-    return '';
-  }
-  return `<div style="display:flex;gap:6px;margin-top:6px">${rowHtml(c.id,'Normal',normalQty,hasNormal)}${rowHtml(c.id+'__foil','Foil',foilQty,hasFoil)}</div>`;
+  if(!hasNormal && !hasFoil) return '';
+  return `<div style="margin-top:8px">${rowHtml(c.id,'Normal',normalQty,hasNormal)}${rowHtml(c.id+'__foil','Cold Foil',foilQty,hasFoil)}</div>`;
 }
 
-// Event delegation pour les boutons +/- des variants Lorcana
+// Event delegation pour les boutons +/- ET la qty cliquable
 document.addEventListener('click', (e) => {
+  // Tap sur la qty → saisie directe via prompt
+  const qtyEl = e.target.closest('.lc-var-qty[data-lc-action="edit"]');
+  if(qtyEl){
+    e.preventDefault();
+    e.stopPropagation();
+    if(!getUser()){
+      if(confirm('Connecte-toi pour marquer tes cartes possédées. Aller à la connexion ?')) goToAccount();
+      return;
+    }
+    const row = qtyEl.closest('.lc-var-row');
+    if(!row) return;
+    const apiId = row.dataset.lcApiid;
+    const cardId = row.dataset.lcCardid;
+    const current = _lcVariantQty(apiId);
+    const input = prompt('Combien d\'exemplaires ?\n(0 pour retirer)', current);
+    if(input === null) return;
+    const target = Math.max(0, parseInt(input,10) || 0);
+    if(target === current) return;
+    const meta = window._visibleCards && window._visibleCards[cardId];
+    if(!meta){ console.warn('LC meta missing'); return; }
+    const rawCard = meta.rawCard;
+    const setInfo = meta.setInfo;
+    // Définir directement la qty (delta = target - current)
+    const delta = target - current;
+    // Si target=0 et current>0 : on supprime
+    // Sinon on adjust progressivement (mais ici on veut SET, pas adjust)
+    _lcSetVariantQty(apiId, target, rawCard, setInfo);
+    // Update DOM
+    qtyEl.textContent = target;
+    row.style.background = target > 0 ? 'rgba(52,211,153,.10)' : 'rgba(255,255,255,.03)';
+    row.style.borderColor = target > 0 ? 'rgba(52,211,153,.4)' : 'var(--line2)';
+    const minusBtn = row.querySelector('[data-lc-delta="-1"]');
+    if(minusBtn){
+      minusBtn.disabled = (target === 0);
+      minusBtn.style.opacity = target === 0 ? '.3' : '1';
+      minusBtn.style.cursor = target === 0 ? 'not-allowed' : 'pointer';
+    }
+    // Update badge ✓ global sur l'image (top-left)
+    _lcUpdateOwnedBadge(cardId);
+    return;
+  }
+  // Tap sur +/- → ajustement de 1
   const btn = e.target.closest('.lc-var-btn');
   if(!btn) return;
   e.preventDefault();
@@ -7760,29 +7807,68 @@ document.addEventListener('click', (e) => {
   const apiId = row.dataset.lcApiid;
   const cardId = row.dataset.lcCardid;
   const delta = parseInt(btn.dataset.lcDelta, 10) || 0;
-  // Récupère la carte brute depuis _visibleCards (rempli lors du rendu set)
   const meta = window._visibleCards && window._visibleCards[cardId];
-  if(!meta){
-    console.warn('Lorcana variant: card meta not found for', cardId);
-    return;
-  }
-  // Pour _lcAdjustVariantQty il faut la carte BRUTE Lorcast et le setInfo, pas l'entry.
-  // On reconstruit minimalement depuis l'entry stockée (apiId, prices etc. sont déjà calculés)
-  // Mais le mieux est d'avoir gardé la carte brute. Stockons-la aussi dans _visibleCards.
-  const rawCard = meta.rawCard || meta.entry;
-  const setInfo = meta.setInfo || null;
-  const newQty = _lcAdjustVariantQty(apiId, delta, rawCard, setInfo, apiId.endsWith('__foil') ? 'foil' : 'normal');
-  // Mise à jour ciblée du DOM (sans tout re-render)
-  const labelEl = row.querySelector('span');
-  const variantLabel = apiId.endsWith('__foil') ? 'Foil' : 'Normal';
-  if(labelEl) labelEl.innerHTML = `${variantLabel}${newQty > 0 ? ' <strong style="color:#34d399">×'+newQty+'</strong>' : ''}`;
-  // Mise à jour du fond (vert si possédé)
-  row.style.background = newQty > 0 ? 'rgba(52,211,153,.12)' : 'rgba(255,255,255,.03)';
-  row.style.borderColor = newQty > 0 ? 'rgba(52,211,153,.35)' : 'var(--line2)';
-  // Désactiver le bouton − si qty=0
+  if(!meta){ console.warn('LC meta missing'); return; }
+  const newQty = _lcAdjustVariantQty(apiId, delta, meta.rawCard, meta.setInfo, apiId.endsWith('__foil') ? 'foil' : 'normal');
+  // Mise à jour DOM
+  const qtyDisplay = row.querySelector('.lc-var-qty');
+  if(qtyDisplay) qtyDisplay.textContent = newQty;
+  row.style.background = newQty > 0 ? 'rgba(52,211,153,.10)' : 'rgba(255,255,255,.03)';
+  row.style.borderColor = newQty > 0 ? 'rgba(52,211,153,.4)' : 'var(--line2)';
   const minusBtn = row.querySelector('[data-lc-delta="-1"]');
-  if(minusBtn) minusBtn.disabled = (newQty === 0);
+  if(minusBtn){
+    minusBtn.disabled = (newQty === 0);
+    minusBtn.style.opacity = newQty === 0 ? '.3' : '1';
+    minusBtn.style.cursor = newQty === 0 ? 'not-allowed' : 'pointer';
+  }
+  _lcUpdateOwnedBadge(cardId);
 });
+
+// Définit directement une qty cible (utilisé par la saisie prompt)
+function _lcSetVariantQty(apiId, target, cardData, setInfo){
+  if(!getUser()) return 0;
+  const arr = getPortfolios();
+  let pf = arr.find(p => p.id === QUICK_OWNED_PF_ID);
+  if(!pf){
+    pf = {id: QUICK_OWNED_PF_ID, name: 'Mes cartes possédées', tcg: 'mixed', isQuickOwned: true, createdAt: Date.now(), cards: []};
+    arr.push(pf);
+  }
+  pf.cards = pf.cards || [];
+  const idx = pf.cards.findIndex(c => c.apiId === apiId);
+  if(target <= 0){
+    if(idx >= 0) pf.cards.splice(idx, 1);
+  } else if(idx < 0){
+    // Création
+    const entries = lcCardToPfEntries(cardData, setInfo);
+    const matched = entries.find(e => e.apiId === apiId) || entries[0];
+    pf.cards.push({...matched, tcg: 'lorcana', owned: true, qty: target, pricePaid: 0, addedAt: Date.now()});
+  } else {
+    pf.cards[idx].qty = target;
+    pf.cards[idx].owned = true;
+  }
+  savePortfolios(arr);
+  return target;
+}
+
+// Met à jour le badge ✓ possédée sur l'image de la carte (top-left)
+function _lcUpdateOwnedBadge(cardId){
+  const cardEl = document.querySelector(`.card-item[data-card-id="${CSS.escape(cardId)}"] .card-img`);
+  if(!cardEl) return;
+  const ownsAny = _lcVariantQty(cardId) > 0 || _lcVariantQty(cardId + '__foil') > 0;
+  let badge = cardEl.querySelector('.lc-owned-badge');
+  if(ownsAny){
+    if(!badge){
+      badge = document.createElement('div');
+      badge.className = 'lc-owned-badge';
+      badge.innerHTML = '✓';
+      badge.style.cssText = 'position:absolute;top:8px;left:8px;width:30px;height:30px;border-radius:50%;background:#34d399;color:#000;font-weight:800;font-size:16px;display:flex;align-items:center;justify-content:center;z-index:3;box-shadow:0 2px 8px rgba(52,211,153,.5)';
+      cardEl.style.position = 'relative';
+      cardEl.appendChild(badge);
+    }
+  } else if(badge){
+    badge.remove();
+  }
+}
 
 // Listener ✓ (délégation) — gère 3 cas selon où la carte est possédée
 document.addEventListener('click', (e) => {
