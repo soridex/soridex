@@ -5114,6 +5114,25 @@ function renderPfCards(pf){
       arr[pfIdx].cards[idx].owned = willBeOwned;
       savePortfolios(arr);
       const nowOwned = willBeOwned;
+
+      // SYNC : propager dans le portfolio "Mes cartes possédées" (QUICK_OWNED)
+      // - Si on coche → ajouter à QO (si pas déjà dedans)
+      // - Si on décoche → retirer de QO uniquement si plus possédée ailleurs
+      if(arr[pfIdx].id !== QUICK_OWNED_PF_ID){
+        try {
+          const c = arr[pfIdx].cards[idx];
+          const tcg = c.tcg || arr[pfIdx].tcg || 'pokemon';
+          const refreshed = getPortfolios();
+          const qoPf = refreshed.find(p => p.id === QUICK_OWNED_PF_ID);
+          const inQO = qoPf && (qoPf.cards||[]).some(qc => qc.apiId === c.apiId);
+          if(nowOwned && !inQO){
+            toggleOwnedQuick({...c, owned: true}, tcg);
+          } else if(!nowOwned && inQO && !isOwnedAnywhere(c.apiId)){
+            toggleOwnedQuick(c, tcg);
+          }
+        } catch(syncErr){ console.warn('QO sync error:', syncErr); }
+      }
+
       card.classList.toggle('owned', nowOwned);
 
       // Mettre à jour l'input de prix dans le DOM
