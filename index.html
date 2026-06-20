@@ -6956,13 +6956,13 @@ async function showLorcanaSetCards(slug){
       const large = (c.image_uris && c.image_uris.digital && (c.image_uris.digital.large || c.image_uris.digital.normal)) || img;
       const cmUrl = cardmarketUrlLorcana(c);
       const ebQuery = `${c.name} ${c.version||''} Lorcana ${setInfo.name} ${c.collector_number}`;
-      _visibleCards[c.id] = {entry: lcCardToPfEntry(c, setInfo), tcg: 'lorcana'};
+      _visibleCards[c.id] = {entry: lcCardToPfEntry(c, setInfo), rawCard: c, setInfo: setInfo, tcg: 'lorcana'};
       const imgProxy = smartImg(img);
       const largeProxy = smartImg(large);
       return `<div class="card-item" data-card-id="${c.id}">
         <div class="card-img">
           ${imgProxy?`<img src="${imgProxy}" data-large="${largeProxy}" alt="${escapeHtml(full)}" loading="lazy">`:''}
-          ${favButtonHtml(c.id)}${ownButtonHtml(c.id)}
+          ${favButtonHtml(c.id)}
         </div>
         <div class="card-info">
           <div class="card-name">${escapeHtml(full)}</div>
@@ -6970,6 +6970,7 @@ async function showLorcanaSetCards(slug){
           <div class="card-rarity">${escapeHtml((c.rarity||'—').replace('_',' '))}</div>
           <div class="card-variants">${variants.map(v=>`<span class="var-pill ${v.key}">${v.label}${v.price!=null?' €'+v.price.toFixed(2):''}</span>`).join('')}</div>
           ${priceStr}
+          ${_lcVariantControlsHtml(c)}
           <div class="card-actions">
             <button class="card-btn cd" data-detail-tcg="lorcana" data-detail-id="${escapeHtml(c.id)}" data-detail-name="${escapeHtml(full)}" data-detail-set="${escapeHtml(setInfo.name||'')}" data-detail-num="${escapeHtml(num)}" data-detail-img="${escapeHtml(large||img||'')}" data-detail-rarity="${escapeHtml((c.rarity||'').replace('_',' '))}" title="Voir détails + cote">🔍 Détails</button>
           </div>
@@ -7670,6 +7671,118 @@ function ownButtonHtml(apiId){
   const active = isOwnedAnywhere(apiId);
   return `<button class="own-btn ${active?'active':''}" data-own-id="${escapeHtml(apiId)}" title="${active?'Carte possédée — clique pour gérer':'J\'ai cette carte'}" aria-label="Possédée">✓</button>`;
 }
+
+// === LORCANA VARIANTS (Normal / Cold Foil) — qty par variant ===
+// Cherche la qty d'un variant Lorcana dans QUICK_OWNED (apiId = c.id pour Normal, c.id+'__foil' pour Foil)
+function _lcVariantQty(apiId){
+  const pf = getPortfolios().find(p => p.id === QUICK_OWNED_PF_ID);
+  if(!pf) return 0;
+  const card = (pf.cards||[]).find(c => c.apiId === apiId && c.owned !== false);
+  return card ? Math.max(1, parseInt(card.qty,10)||1) : 0;
+}
+
+// Ajuste la qty d'un variant Lorcana (delta: +1 ou -1).
+// - Si entry n'existe pas et delta>0 : la crée
+// - Si qty atteint 0 : la retire
+// `cardData` est la carte brute Lorcast (pour reconstruire l'entry si besoin)
+function _lcAdjustVariantQty(apiId, delta, cardData, setInfo, variant){
+  if(!getUser()){
+    if(confirm('Connecte-toi pour marquer tes cartes possédées. Aller à la connexion ?')) goToAccount();
+    return 0;
+  }
+  const arr = getPortfolios();
+  let pf = arr.find(p => p.id === QUICK_OWNED_PF_ID);
+  if(!pf){
+    pf = {id: QUICK_OWNED_PF_ID, name: 'Mes cartes possédées', tcg: 'mixed', isQuickOwned: true, createdAt: Date.now(), cards: []};
+    arr.push(pf);
+  }
+  pf.cards = pf.cards || [];
+  const idx = pf.cards.findIndex(c => c.apiId === apiId);
+  if(idx < 0 && delta > 0){
+    // Création d'une nouvelle entry pour ce variant
+    const entries = lcCardToPfEntries(cardData, setInfo);
+    const matched = entries.find(e => e.apiId === apiId) || entries[0];
+    pf.cards.push({...matched, tcg: 'lorcana', owned: true, qty: 1, pricePaid: 0, addedAt: Date.now()});
+    savePortfolios(arr);
+    return 1;
+  }
+  if(idx >= 0){
+    const card = pf.cards[idx];
+    const current = Math.max(1, parseInt(card.qty,10) || 1);
+    const next = current + delta;
+    if(next <= 0){
+      pf.cards.splice(idx, 1);
+      savePortfolios(arr);
+      return 0;
+    }
+    card.qty = next;
+    card.owned = true;
+    savePortfolios(arr);
+    return next;
+  }
+  return 0;
+}
+
+// Génère le HTML du panneau de contrôles variants (Normal/Foil) pour une carte Lorcana
+function _lcVariantControlsHtml(c){
+  const pN = c.prices && c.prices.usd ? parseFloat(c.prices.usd) * USD_TO_EUR : null;
+  const pF = c.prices && c.prices.usd_foil ? parseFloat(c.prices.usd_foil) * USD_TO_EUR : null;
+  const hasNormal = pN != null && !isNaN(pN);
+  const hasFoil = pF != null && !isNaN(pF);
+  const normalQty = _lcVariantQty(c.id);
+  const foilQty = _lcVariantQty(c.id + '__foil');
+  const baseStyle = 'display:flex;align-items:center;gap:0;border-radius:8px;overflow:hidden;border:1px solid var(--line2);background:rgba(255,255,255,.03);font-size:12px;flex:1;min-width:0';
+  const btnStyle = 'background:rgba(212,168,90,.08);border:none;color:var(--gold-2);width:26px;height:28px;cursor:pointer;font-size:14px;font-weight:700;flex-shrink:0;padding:0;display:flex;align-items:center;justify-content:center;font-family:inherit';
+  const labelStyle = 'flex:1;text-align:center;padding:0 4px;color:var(--tx);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
+  const ownedBg = (qty) => qty > 0 ? 'background:rgba(52,211,153,.12);border-color:rgba(52,211,153,.35)' : '';
+  const rowHtml = (apiId, label, qty, available) => {
+    if(!available) return '';
+    return `<div class="lc-var-row" data-lc-apiid="${escapeHtml(apiId)}" data-lc-cardid="${escapeHtml(c.id)}" style="${baseStyle};${ownedBg(qty)}">
+      <button class="lc-var-btn" data-lc-delta="-1" style="${btnStyle}" ${qty===0?'disabled style="'+btnStyle+';opacity:.35"':''} aria-label="Retirer un">−</button>
+      <span style="${labelStyle}">${label}${qty > 0 ? ' <strong style="color:#34d399">×'+qty+'</strong>' : ''}</span>
+      <button class="lc-var-btn" data-lc-delta="+1" style="${btnStyle}" aria-label="Ajouter un">+</button>
+    </div>`;
+  };
+  if(!hasNormal && !hasFoil){
+    return '';
+  }
+  return `<div style="display:flex;gap:6px;margin-top:6px">${rowHtml(c.id,'Normal',normalQty,hasNormal)}${rowHtml(c.id+'__foil','Foil',foilQty,hasFoil)}</div>`;
+}
+
+// Event delegation pour les boutons +/- des variants Lorcana
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('.lc-var-btn');
+  if(!btn) return;
+  e.preventDefault();
+  e.stopPropagation();
+  const row = btn.closest('.lc-var-row');
+  if(!row) return;
+  const apiId = row.dataset.lcApiid;
+  const cardId = row.dataset.lcCardid;
+  const delta = parseInt(btn.dataset.lcDelta, 10) || 0;
+  // Récupère la carte brute depuis _visibleCards (rempli lors du rendu set)
+  const meta = window._visibleCards && window._visibleCards[cardId];
+  if(!meta){
+    console.warn('Lorcana variant: card meta not found for', cardId);
+    return;
+  }
+  // Pour _lcAdjustVariantQty il faut la carte BRUTE Lorcast et le setInfo, pas l'entry.
+  // On reconstruit minimalement depuis l'entry stockée (apiId, prices etc. sont déjà calculés)
+  // Mais le mieux est d'avoir gardé la carte brute. Stockons-la aussi dans _visibleCards.
+  const rawCard = meta.rawCard || meta.entry;
+  const setInfo = meta.setInfo || null;
+  const newQty = _lcAdjustVariantQty(apiId, delta, rawCard, setInfo, apiId.endsWith('__foil') ? 'foil' : 'normal');
+  // Mise à jour ciblée du DOM (sans tout re-render)
+  const labelEl = row.querySelector('span');
+  const variantLabel = apiId.endsWith('__foil') ? 'Foil' : 'Normal';
+  if(labelEl) labelEl.innerHTML = `${variantLabel}${newQty > 0 ? ' <strong style="color:#34d399">×'+newQty+'</strong>' : ''}`;
+  // Mise à jour du fond (vert si possédé)
+  row.style.background = newQty > 0 ? 'rgba(52,211,153,.12)' : 'rgba(255,255,255,.03)';
+  row.style.borderColor = newQty > 0 ? 'rgba(52,211,153,.35)' : 'var(--line2)';
+  // Désactiver le bouton − si qty=0
+  const minusBtn = row.querySelector('[data-lc-delta="-1"]');
+  if(minusBtn) minusBtn.disabled = (newQty === 0);
+});
 
 // Listener ✓ (délégation) — gère 3 cas selon où la carte est possédée
 document.addEventListener('click', (e) => {
