@@ -4227,6 +4227,7 @@ function getPortfolios(){ return _pfCache; }
 function savePortfolios(a, opts){
   _pfCache = a || [];
   _pfDirty = true;
+  if(typeof invalidateOwnedSetIndex === 'function') invalidateOwnedSetIndex();
   // Cache local (offline fallback / boot speed)
   try { localStorage.setItem(PF_KEY, JSON.stringify(_pfCache)); } catch(e){}
   if(_pfSyncTimer){ clearTimeout(_pfSyncTimer); _pfSyncTimer = null; }
@@ -4317,6 +4318,7 @@ async function loadPortfoliosFromSb(){
     } else {
       _pfCache = remote;
     }
+    if(typeof invalidateOwnedSetIndex === 'function') invalidateOwnedSetIndex();
     // Initialise le set "synced" avec les IDs remote (utile au tout premier load)
     remote.forEach(p => syncedIds.add(p.id));
     _setSyncedIds(syncedIds);
@@ -4325,6 +4327,7 @@ async function loadPortfoliosFromSb(){
     console.error('loadPortfoliosFromSb:', e);
     // Fallback : cache local
     try { _pfCache = JSON.parse(localStorage.getItem(PF_KEY) || '[]'); } catch(_){ _pfCache = []; }
+    if(typeof invalidateOwnedSetIndex === 'function') invalidateOwnedSetIndex();
   }
 }
 const PF_ICONS={pokemon:'⚡',lorcana:'✨',magic:'🔥'};
@@ -4872,7 +4875,10 @@ function getEffectiveQty(card, pfId){
 // Construit un index { 'tcg|setName' → Set d'IDs uniques de cartes possédées }
 // Utilisé pour afficher la progression "X/Y possédées" sur les grilles de sets.
 // Dédoublonne les variantes (Normal/Foil) par "nom|numéro" → 1 carte unique.
+let _ownedSetIndexCache = null;
+function invalidateOwnedSetIndex(){ _ownedSetIndexCache = null; }
 function getOwnedCardsBySetIndex(){
+  if(_ownedSetIndexCache) return _ownedSetIndexCache;
   const idx = {};
   const portfolios = getPortfolios();
   for(const p of portfolios){
@@ -4897,6 +4903,7 @@ function getOwnedCardsBySetIndex(){
       }
     }
   }
+  _ownedSetIndexCache = idx;
   return idx;
 }
 function countOwnedInSet(idx, tcg, setName, setCode){
