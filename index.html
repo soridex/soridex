@@ -4391,6 +4391,25 @@ document.getElementById('setDetailCreatePfBtn').addEventListener('click', () => 
   openCreatePfModalForSet(_currentSetContext.tcg, _currentSetContext.setId, _currentSetContext.setName);
 });
 
+/* === Compteur "X/Y possédées" dans le sous-titre du set === */
+let _currentSetProgress = null; // {tcg, setName, total, subtitleBase}
+function setCurrentSetProgress(tcg, setName, total, subtitleBase){
+  _currentSetProgress = (tcg && setName) ? {tcg, setName, total: total||0, subtitleBase: subtitleBase||''} : null;
+  refreshSetDetailProgress();
+}
+function refreshSetDetailProgress(){
+  const sub = document.getElementById('setDetailSub');
+  if(!sub || !_currentSetProgress) return;
+  const {tcg, setName, total, subtitleBase} = _currentSetProgress;
+  let owned = 0;
+  try {
+    const ownedIdx = getOwnedCardsBySetIndex();
+    owned = countOwnedInSet(ownedIdx, tcg, setName);
+  } catch(e){ console.warn('progress err', e); }
+  const progress = (owned > 0 && total > 0) ? ` · ${owned}/${total} possédées` : '';
+  sub.textContent = subtitleBase + progress;
+}
+
 async function openCreatePfModalForSet(tcg, setId, setName){
   // Ouvre la modal et pré-remplit pour ce set
   document.getElementById('createPfModal').classList.remove('hidden');
@@ -6512,7 +6531,12 @@ async function showPokemonSetCards(setId){
   _currentSealedSetName = setInfo ? setInfo.name : null;
   _currentSealedSetId = setId;
   document.getElementById('setDetailTitle').textContent=setInfo?setInfo.name:'—';
-  document.getElementById('setDetailSub').textContent=setInfo?`${(setInfo.releaseDate||'').slice(0,4)} · ${setInfo.printedTotal||setInfo.total} cartes · ${setInfo.series}`:'';
+  if(setInfo){
+    setCurrentSetProgress('pokemon', setInfo.name, setInfo.printedTotal||setInfo.total, `${(setInfo.releaseDate||'').slice(0,4)} · ${setInfo.printedTotal||setInfo.total} cartes · ${setInfo.series}`);
+  } else {
+    setCurrentSetProgress(null);
+    document.getElementById('setDetailSub').textContent='—';
+  }
   document.getElementById('setDetailBreadcrumb').textContent=setInfo?setInfo.name:'—';
   setCurrentSetContext(setInfo ? 'pokemon' : null, setId, setInfo ? setInfo.name : '');
   const links=document.querySelectorAll('#view-set-detail .breadcrumb a');
@@ -6942,12 +6966,7 @@ async function showLorcanaSetCards(slug){
   grid.innerHTML='<div class="empty-state"><div class="ico">…</div><h3>Chargement…</h3></div>';
   filtersBox.innerHTML='';
   document.getElementById('setDetailTitle').textContent=setInfo.name;
-  {
-    const ownedIdx = getOwnedCardsBySetIndex();
-    const owned = countOwnedInSet(ownedIdx, 'lorcana', setInfo.name);
-    const progress = owned > 0 ? ` · ${owned}/${setInfo.count} possédées` : '';
-    document.getElementById('setDetailSub').textContent = `${setInfo.year} · Chapitre ${setInfo.lorcastCode} · ${setInfo.count} cartes${progress}`;
-  }
+  setCurrentSetProgress('lorcana', setInfo.name, setInfo.count, `${setInfo.year} · Chapitre ${setInfo.lorcastCode} · ${setInfo.count} cartes`);
   document.getElementById('setDetailBreadcrumb').textContent=setInfo.name;
   setCurrentSetContext('lorcana', setInfo.lorcastCode, setInfo.name);
   const links=document.querySelectorAll('#view-set-detail .breadcrumb a');
@@ -7102,7 +7121,12 @@ async function showMagicSetCards(setCode){
   filtersBox.innerHTML='';
   const setInfo=MAGIC_SETS.find(s=>s.code===setCode);
   document.getElementById('setDetailTitle').textContent=setInfo?setInfo.name:setCode;
-  document.getElementById('setDetailSub').textContent=setInfo?`${setInfo.year} · ${setInfo.card_count} cartes · code ${setInfo.code.toUpperCase()}`:'';
+  if(setInfo){
+    setCurrentSetProgress('magic', setInfo.name, setInfo.card_count, `${setInfo.year} · ${setInfo.card_count} cartes · code ${setInfo.code.toUpperCase()}`);
+  } else {
+    setCurrentSetProgress(null);
+    document.getElementById('setDetailSub').textContent='';
+  }
   document.getElementById('setDetailBreadcrumb').textContent=setInfo?setInfo.name:setCode;
   setCurrentSetContext('magic', setCode, setInfo ? setInfo.name : setCode);
   const links=document.querySelectorAll('#view-set-detail .breadcrumb a');
@@ -7785,6 +7809,7 @@ function _lcAdjustVariantQty(apiId, delta, cardData, setInfo, variant){
     const matched = entries.find(e => e.apiId === apiId) || entries[0];
     pf.cards.push({...matched, tcg: 'lorcana', owned: true, qty: 1, pricePaid: 0, addedAt: Date.now()});
     savePortfolios(arr);
+    if(typeof refreshSetDetailProgress === 'function') refreshSetDetailProgress();
     return 1;
   }
   if(idx >= 0){
@@ -7794,6 +7819,7 @@ function _lcAdjustVariantQty(apiId, delta, cardData, setInfo, variant){
     if(next <= 0){
       pf.cards.splice(idx, 1);
       savePortfolios(arr);
+      if(typeof refreshSetDetailProgress === 'function') refreshSetDetailProgress();
       return 0;
     }
     card.qty = next;
@@ -7984,6 +8010,7 @@ document.addEventListener('click', (e) => {
       if(existing) toggleOwnedQuick(existing, existing.tcg);
     }
     refreshOwnedButtons(apiId);
+    if(typeof refreshSetDetailProgress === 'function') refreshSetDetailProgress();
     return;
   }
 
@@ -7992,6 +8019,7 @@ document.addEventListener('click', (e) => {
   if(!meta){ console.warn('Carte non trouvée dans _visibleCards', apiId); return; }
   toggleOwnedQuick(meta.entry, meta.tcg);
   refreshOwnedButtons(apiId);
+  if(typeof refreshSetDetailProgress === 'function') refreshSetDetailProgress();
 });
 
 /* --- Modal "Cette carte est déjà possédée" --- */
@@ -8107,6 +8135,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const stillOwned = isOwnedAnywhere(apiId);
     btn.classList.toggle('active', stillOwned);
     btn.title = stillOwned ? 'Carte possédée — clique pour gérer' : "J'ai cette carte";
+    if(typeof refreshSetDetailProgress === 'function') refreshSetDetailProgress();
     if(count > 0){
       const t = document.createElement('div');
       t.className = 'wish-toast';
