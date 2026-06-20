@@ -2499,12 +2499,18 @@
     <button class="sort-btn" data-filter="missing">Manquantes</button>
     <span class="pf-sortbar-label" id="pfFilterCount" style="margin-left:auto"></span>
   </div>
+  <div class="pf-sortbar" id="pfTcgFilterbar" hidden style="margin-bottom:10px">
+    <span class="pf-sortbar-label">TCG</span>
+    <button class="sort-btn active" data-tcg-filter="all">Tous</button>
+    <button class="sort-btn" data-tcg-filter="pokemon">Pokémon</button>
+    <button class="sort-btn" data-tcg-filter="lorcana">Lorcana</button>
+    <button class="sort-btn" data-tcg-filter="magic">Magic</button>
+  </div>
   <div class="pf-sortbar" id="pfSortbar" hidden>
     <span class="pf-sortbar-label">Trier par</span>
-    <button class="sort-btn" data-sort="number">Numéro <span class="arrow">↓</span></button>
-    <button class="sort-btn" data-sort="date">Date <span class="arrow">↓</span></button>
-    <button class="sort-btn" data-sort="set">Set <span class="arrow">↓</span></button>
-    <button class="sort-btn active" data-sort="price">Prix <span class="arrow">↓</span></button>
+    <button class="sort-btn active" data-sort="price">Valeur <span class="arrow">↓</span></button>
+    <button class="sort-btn" data-sort="name">Nom <span class="arrow">↓</span></button>
+    <button class="sort-btn" data-sort="added">Récente <span class="arrow">↓</span></button>
   </div>
   <div class="pfcard-grid" id="pfCardGrid"></div>
 </section>
@@ -4690,6 +4696,7 @@ function computePfTotals(pf){
 // État de tri par portfolio (en mémoire seulement)
 let pfSortState = { key: 'price', dir: 'desc' };
 let pfFilterState = 'all'; // 'all' | 'owned' | 'missing'
+let _pfTcgFilter = 'all'; // 'all' | 'pokemon' | 'lorcana' | 'magic' (uniquement pour multi-TCG)
 
 // Construit un index { 'tcg|setName' → Set d'IDs uniques de cartes possédées }
 // Utilisé pour afficher la progression "X/Y possédées" sur les grilles de sets.
@@ -4750,6 +4757,14 @@ function showPortfolioDetail(pfId){
   }
   document.getElementById('pfSortbar').hidden = ((pf.cards||[]).length === 0);
   document.getElementById('pfFilterbar').hidden = ((pf.cards||[]).length === 0);
+  // Barre filtre TCG : visible uniquement pour les portfolios multi-TCG (Mes cartes possédées, etc.)
+  const isMulti = pf.isQuickOwned || pf.tcg === 'mixed';
+  document.getElementById('pfTcgFilterbar').hidden = !isMulti || ((pf.cards||[]).length === 0);
+  // Reset systématique à 'all' à l'entrée d'un portfolio (état visuel + variable)
+  _pfTcgFilter = 'all';
+  document.querySelectorAll('#pfTcgFilterbar .sort-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.tcgFilter === 'all');
+  });
   // Reset visuel des boutons selon l'état
   updateSortBarUI();
   updateFilterBarUI(pf);
@@ -4816,19 +4831,45 @@ document.addEventListener('click', (e) => {
   if(pf) renderPfCards(pf);
 });
 
+// Listener TCG filter bar (delegate, ne s'applique qu'aux portfolios multi-TCG)
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('#pfTcgFilterbar .sort-btn');
+  if(!btn) return;
+  _pfTcgFilter = btn.dataset.tcgFilter || 'all';
+  document.querySelectorAll('#pfTcgFilterbar .sort-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.tcgFilter === _pfTcgFilter);
+  });
+  const pf = getPortfolios().find(p => p.id === currentPfId);
+  if(pf) renderPfCards(pf);
+});
+
 function sortPfCards(cards){
   const sorted = [...cards];
   const dir = pfSortState.dir === 'desc' ? -1 : 1;
-  if(pfSortState.key === 'number'){
+  if(pfSortState.key === 'price'){
+    sorted.sort((a,b) => dir * (((b.marketPrice||0) - (a.marketPrice||0))));
+  } else if(pfSortState.key === 'name'){
+    sorted.sort((a,b) => {
+      const na = (a.name || '').toLowerCase();
+      const nb = (b.name || '').toLowerCase();
+      // Pour 'name' la direction "desc" = Z-A, "asc" = A-Z
+      // On inverse le signe pour que ↓ (desc) corresponde à A-Z par défaut (plus naturel)
+      return -dir * na.localeCompare(nb);
+    });
+  } else if(pfSortState.key === 'added'){
+    sorted.sort((a,b) => {
+      const ta = a.addedAt || a.added_at || 0;
+      const tb = b.addedAt || b.added_at || 0;
+      // Si pas de timestamp, utilise l'index original (carte plus tard dans le tableau = ajoutée plus récemment)
+      if(!ta && !tb) return dir * ((b._idx||0) - (a._idx||0));
+      return dir * (tb - ta);
+    });
+  } else if(pfSortState.key === 'number'){
     sorted.sort((a,b) => {
       const na = parseInt(String(a.number || '').replace(/[^0-9]/g,''),10) || 0;
       const nb = parseInt(String(b.number || '').replace(/[^0-9]/g,''),10) || 0;
       return dir * (nb - na);
     });
-    return sorted;
-  }
-  if(pfSortState.key === 'price'){
-    sorted.sort((a,b) => dir * (((b.marketPrice||0) - (a.marketPrice||0))));
   } else if(pfSortState.key === 'date'){
     sorted.sort((a,b) => {
       const da = a.setReleaseDate || '0000', db = b.setReleaseDate || '0000';
@@ -4928,6 +4969,10 @@ function renderPfCards(pf){
     cardsWithIdx = cardsWithIdx.filter(c => _effectivelyOwned(c));
   } else if(pfFilterState === 'missing'){
     cardsWithIdx = cardsWithIdx.filter(c => !_effectivelyOwned(c));
+  }
+  // Filtre TCG (seulement pour portfolios multi-TCG)
+  if(_pfTcgFilter !== 'all'){
+    cardsWithIdx = cardsWithIdx.filter(c => (c.tcg || pf.tcg) === _pfTcgFilter);
   }
   if(_searchState.pf){
     cardsWithIdx = cardsWithIdx.filter(c => {
