@@ -4410,9 +4410,6 @@ document.getElementById('setDetailCreatePfBtn').addEventListener('click', () => 
   openCreatePfModalForSet(_currentSetContext.tcg, _currentSetContext.setId, _currentSetContext.setName);
 });
 
-/* === Compteur "X/Y possédées" dans le sous-titre du set === */
-let _currentSetProgress = null; // {tcg, setName, setCode, total, subtitleBase}
-
 /* === État filtre possession / tri sur la page détail du set === */
 let _setListState = {ownFilter: 'all', sortMode: 'number', renderFn: null};
 function setSetListRenderFn(fn){
@@ -4461,6 +4458,25 @@ document.addEventListener('click', (e) => {
     if(_setListState.renderFn) _setListState.renderFn();
   }
 });
+
+/* === Compteur "X/Y possédées" dans le sous-titre du set === */
+let _currentSetProgress = null; // {tcg, setName, setCode, total, subtitleBase}
+function setCurrentSetProgress(tcg, setName, total, subtitleBase, setCode){
+  _currentSetProgress = (tcg && setName) ? {tcg, setName, setCode: setCode||'', total: total||0, subtitleBase: subtitleBase||''} : null;
+  refreshSetDetailProgress();
+}
+function refreshSetDetailProgress(){
+  const sub = document.getElementById('setDetailSub');
+  if(!sub || !_currentSetProgress) return;
+  const {tcg, setName, setCode, total, subtitleBase} = _currentSetProgress;
+  let owned = 0;
+  try {
+    const ownedIdx = getOwnedCardsBySetIndex();
+    owned = countOwnedInSet(ownedIdx, tcg, setName, setCode);
+  } catch(e){ console.warn('progress err', e); }
+  const progress = (owned > 0 && total > 0) ? ` · ${owned}/${total} possédées` : '';
+  sub.textContent = subtitleBase + progress;
+}
 
 async function openCreatePfModalForSet(tcg, setId, setName){
   // Ouvre la modal et pré-remplit pour ce set
