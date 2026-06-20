@@ -8117,6 +8117,8 @@ function _lcSetVariantQty(apiId, target, cardData, setInfo){
     pf.cards[idx].owned = true;
   }
   savePortfolios(arr);
+  if(typeof refreshSetDetailProgress === 'function') refreshSetDetailProgress();
+  if(typeof _setListState !== 'undefined' && _setListState && _setListState.renderFn && _setListState.ownFilter !== 'all') _setListState.renderFn();
   return target;
 }
 
