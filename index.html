@@ -7616,7 +7616,7 @@ async function showGlobalSearchResults(query){
         marketPrice: market,
         pricePaid: 0, qty: 1, owned: false, addedAt: Date.now()
       };
-      _globSearchData.push({tcg:'lorcana', entry, displayName: name});
+      _globSearchData.push({tcg:'lorcana', entry, displayName: name, rawCard: c, setInfo: c.set ? {name: c.set.name, lorcastCode: c.set.code} : {name:'', lorcastCode:''}});
     });
   }
 
@@ -7635,7 +7635,12 @@ function renderGlobalSearchResults(){
   const TCG_LABEL = {pokemon:'PKMN', lorcana:'LCA', magic:'MTG'};
   grid.innerHTML = filtered.map(r => {
     const c = r.entry;
-    _visibleCards[c.apiId] = {entry: c, tcg: r.tcg};
+    const isLorcana = r.tcg === 'lorcana' && r.rawCard;
+    if(isLorcana){
+      _visibleCards[c.apiId] = {entry: c, tcg: 'lorcana', rawCard: r.rawCard, setInfo: r.setInfo};
+    } else {
+      _visibleCards[c.apiId] = {entry: c, tcg: r.tcg};
+    }
     const market = c.marketPrice != null ? `€${c.marketPrice.toFixed(2)}` : '—';
     const imgSrc = smartImg(c.img || '');
     const large = smartImg(c.largeImg || c.img || '');
@@ -7643,16 +7648,27 @@ function renderGlobalSearchResults(){
                 : r.tcg === 'magic' ? `https://www.cardmarket.com/fr/Magic/Products/Search?searchString=${encodeURIComponent(c.name)}`
                 : `https://www.cardmarket.com/fr/Lorcana/Products/Search?searchString=${encodeURIComponent(c.name)}`;
     const ebQuery = `${c.name} ${c.setName||''} ${c.number||''}`;
+    let lcBadge = '';
+    if(isLorcana){
+      const ownsAny = _lcVariantQty(c.apiId) > 0 || _lcVariantQty(c.apiId + '__foil') > 0;
+      if(ownsAny){
+        lcBadge = `<div class="lc-owned-badge" style="position:absolute;top:8px;left:8px;width:30px;height:30px;border-radius:50%;background:#34d399;color:#000;font-weight:800;font-size:16px;display:flex;align-items:center;justify-content:center;z-index:3;box-shadow:0 2px 8px rgba(52,211,153,.5)">✓</div>`;
+      }
+    }
+    const ownBtn = isLorcana ? '' : ownButtonHtml(c.apiId);
+    const variantControls = isLorcana ? _lcVariantControlsHtml(r.rawCard) : '';
     return `<div class="card-item" data-card-id="${escapeHtml(c.apiId)}">
-      <div class="card-img">
+      <div class="card-img" style="position:relative">
+        ${lcBadge}
         <img src="${imgSrc}" data-large="${large}" alt="${escapeHtml(r.displayName)}" loading="lazy">
-        ${favButtonHtml(c.apiId)}${ownButtonHtml(c.apiId)}
+        ${favButtonHtml(c.apiId)}${ownBtn}
       </div>
       <div class="card-info">
         <div class="card-name">${escapeHtml(r.displayName)}</div>
         <div class="card-num">${escapeHtml(c.setName||'')} · ${escapeHtml(c.number||'')}</div>
         <div class="card-rarity">${escapeHtml(c.rarity||'')} · <span style="color:var(--mut)">${TCG_LABEL[r.tcg]||r.tcg}</span></div>
         <div class="card-price" data-card-id="${escapeHtml(r.tcg+':'+(c.apiId||''))}" data-tcg="${escapeHtml(r.tcg||'')}" data-card-name="${escapeHtml(c.name||'')}" data-expected-num="${escapeHtml((c.number||'').split('/')[0])}" data-tcggo-q="${escapeHtml((c.name||'')+' '+((c.number||'').split('/')[0]))}">${market !== '—' ? 'Cote estimée ' + market : '— pas de cote —'}</div>
+        ${variantControls}
         <div class="card-actions">
           <button class="card-btn cd" data-detail-tcg="${escapeHtml(r.tcg)}" data-detail-id="${escapeHtml(c.apiId||'')}" data-detail-name="${escapeHtml(r.displayName||c.name||'')}" data-detail-set="${escapeHtml(c.setName||'')}" data-detail-num="${escapeHtml(c.number||'')}" data-detail-img="${escapeHtml(c.largeImg||c.img||'')}" data-detail-rarity="${escapeHtml(c.rarity||'')}" title="Voir détails + cote">🔍 Détails</button>
         </div>
