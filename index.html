@@ -7136,6 +7136,28 @@ async function showLorcanaSetCards(slug){
     }catch(err){console.error(err); grid.innerHTML='<div class="empty-state"><h3>Erreur</h3></div>'; return;}
   }
   if(!cards||!cards.length){grid.innerHTML='<div class="empty-state"><h3>Aucune carte</h3></div>'; return;}
+  // Migration silencieuse : pour chaque carte de ce set présente dans QUICK_OWNED,
+  // s'assurer que setName / setCode / tcg sont à jour (anciennes entries pré-fix peuvent les avoir vides)
+  try {
+    const _pfs = getPortfolios();
+    const _qo = _pfs.find(p => p.id === QUICK_OWNED_PF_ID);
+    if(_qo && _qo.cards && _qo.cards.length){
+      let _migDirty = false;
+      const _byId = {};
+      for(const c of cards){ _byId[c.id] = c; _byId[c.id + '__foil'] = c; }
+      for(const stored of _qo.cards){
+        if(!stored.apiId) continue;
+        if(!_byId[stored.apiId]) continue;
+        if(stored.setName !== setInfo.name){ stored.setName = setInfo.name; _migDirty = true; }
+        if(stored.setCode !== setInfo.lorcastCode){ stored.setCode = setInfo.lorcastCode; _migDirty = true; }
+        if(stored.tcg !== 'lorcana'){ stored.tcg = 'lorcana'; _migDirty = true; }
+      }
+      if(_migDirty){
+        savePortfolios(_pfs);
+        if(typeof refreshSetDetailProgress === 'function') refreshSetDetailProgress();
+      }
+    }
+  } catch(e){ console.warn('migration lorcana err', e); }
   try { renderSetIndicatorsBanner(cards, 'lorcana', setInfo ? setInfo.name : ''); } catch(e){ console.warn('banner err', e); }
   cards.sort((a,b)=>(parseInt((a.collector_number||'').replace(/[^0-9]/g,''),10)||0) - (parseInt((b.collector_number||'').replace(/[^0-9]/g,''),10)||0));
   const RAR_ORDER=['Common','Uncommon','Rare','Super_rare','Legendary','Enchanted','Special','Promo'];
