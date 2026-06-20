@@ -6019,11 +6019,15 @@ async function loadCardDetail(tcg, id, fallback){
   const tcgLabel = tcg === 'pokemon' ? 'pokemon' : (tcg === 'lorcana' ? 'lorcana' : (tcg === 'magic' ? 'magic' : ''));
   const buyQueryShort = `${buyCardName} ${buyNumShort}`.trim();
   const buyQueryWithTcg = `${buyCardName} ${buyNumShort} ${tcgLabel}`.trim();
+  // Pour Vinted / Leboncoin Pokémon : les vendeurs FR utilisent le nom français → on traduit
+  const buyCardNameFr = (tcg === 'pokemon' && typeof translateCardNameToFr === 'function')
+    ? translateCardNameToFr(buyCardName) : buyCardName;
+  const buyQueryShortFr = `${buyCardNameFr} ${buyNumShort}`.trim();
 
   document.getElementById('cardDetailBuyCm').href = cardmarketUrl || '#';
   document.getElementById('cardDetailBuyEb').href = `https://www.ebay.fr/sch/i.html?_nkw=${encodeURIComponent(buyQueryWithTcg)}`;
-  document.getElementById('cardDetailBuyVt').href = `https://www.vinted.fr/catalog?search_text=${encodeURIComponent(buyQueryShort)}`;
-  document.getElementById('cardDetailBuyLbc').href = `https://www.leboncoin.fr/recherche?text=${encodeURIComponent(buyQueryShort)}`;
+  document.getElementById('cardDetailBuyVt').href = `https://www.vinted.fr/catalog?search_text=${encodeURIComponent(buyQueryShortFr)}`;
+  document.getElementById('cardDetailBuyLbc').href = `https://www.leboncoin.fr/recherche?text=${encodeURIComponent(buyQueryShortFr)}`;
 
   // === TCGGO API : récupère les prix Cardmarket à jour ===
   // Pokémon uniquement : l'API RapidAPI utilisée (pokemon-tcg-api) ne contient
