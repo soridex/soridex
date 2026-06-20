@@ -2459,6 +2459,20 @@
     <button class="clear" id="setSearchClear" aria-label="Effacer">×</button>
   </div>
   <div class="rarity-filters" id="rarityFilters"></div>
+  <div id="setCardControls" hidden style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0 14px;font-size:12px">
+    <div style="display:flex;gap:4px;align-items:center">
+      <span style="color:var(--mut);font-size:11px;text-transform:uppercase;letter-spacing:.05em;margin-right:4px">Possession</span>
+      <button class="own-filter-btn active" data-own="all" style="padding:5px 10px;border-radius:6px;border:1px solid var(--line);background:rgba(212,168,90,.15);color:var(--gold-2);font-weight:600;cursor:pointer;font-size:12px">Toutes</button>
+      <button class="own-filter-btn" data-own="owned" style="padding:5px 10px;border-radius:6px;border:1px solid var(--line);background:transparent;color:var(--tx2);font-weight:600;cursor:pointer;font-size:12px">✓ Possédées</button>
+      <button class="own-filter-btn" data-own="missing" style="padding:5px 10px;border-radius:6px;border:1px solid var(--line);background:transparent;color:var(--tx2);font-weight:600;cursor:pointer;font-size:12px">Non possédées</button>
+    </div>
+    <div style="display:flex;gap:4px;align-items:center;margin-left:auto">
+      <span style="color:var(--mut);font-size:11px;text-transform:uppercase;letter-spacing:.05em;margin-right:4px">Tri</span>
+      <button class="sort-btn-set active" data-sort="number" style="padding:5px 10px;border-radius:6px;border:1px solid var(--line);background:rgba(212,168,90,.15);color:var(--gold-2);font-weight:600;cursor:pointer;font-size:12px">N°</button>
+      <button class="sort-btn-set" data-sort="price-desc" style="padding:5px 10px;border-radius:6px;border:1px solid var(--line);background:transparent;color:var(--tx2);font-weight:600;cursor:pointer;font-size:12px">Prix ↓</button>
+      <button class="sort-btn-set" data-sort="price-asc" style="padding:5px 10px;border-radius:6px;border:1px solid var(--line);background:transparent;color:var(--tx2);font-weight:600;cursor:pointer;font-size:12px">Prix ↑</button>
+    </div>
+  </div>
   <div class="card-grid" id="setCardGrid"></div>
   <!-- Vue Scellés (cachée par défaut) -->
   <div class="sealed-type-filters" id="sealedTypeFilters" hidden></div>
@@ -3762,6 +3776,8 @@ document.addEventListener('click', (e) => {
 const ALL_VIEWS = ['home','login','compte','sets-pokemon','sets-lorcana','sets-magic','era-detail','set-detail','pf-detail','wishlist','wish-detail','global-search','shop','about','guide','guide-investor','guide-article','business','business-folder','parametres','subscription','stats','market'];
 function showView(name){
   if(!ALL_VIEWS.includes(name)) name='home';
+  // Décrocher la barre filtre/tri du détail set si on quitte cette vue
+  if(name !== 'set-detail' && typeof setSetListRenderFn === 'function') setSetListRenderFn(null);
   document.querySelectorAll('.view').forEach(v => v.hidden = (v.id !== 'view-'+name));
   document.querySelectorAll('.navlink').forEach(l => l.classList.toggle('active', l.dataset.view === name));
   if(name==='home') document.querySelector('.navlink[data-view="home"]').classList.add('active');
@@ -4392,23 +4408,56 @@ document.getElementById('setDetailCreatePfBtn').addEventListener('click', () => 
 });
 
 /* === Compteur "X/Y possédées" dans le sous-titre du set === */
-let _currentSetProgress = null; // {tcg, setName, total, subtitleBase}
-function setCurrentSetProgress(tcg, setName, total, subtitleBase){
-  _currentSetProgress = (tcg && setName) ? {tcg, setName, total: total||0, subtitleBase: subtitleBase||''} : null;
-  refreshSetDetailProgress();
+let _currentSetProgress = null; // {tcg, setName, setCode, total, subtitleBase}
+
+/* === État filtre possession / tri sur la page détail du set === */
+let _setListState = {ownFilter: 'all', sortMode: 'number', renderFn: null};
+function setSetListRenderFn(fn){
+  _setListState.renderFn = fn;
+  // Show controls only if a render fn is registered
+  const ctl = document.getElementById('setCardControls');
+  if(ctl) ctl.hidden = !fn;
 }
-function refreshSetDetailProgress(){
-  const sub = document.getElementById('setDetailSub');
-  if(!sub || !_currentSetProgress) return;
-  const {tcg, setName, total, subtitleBase} = _currentSetProgress;
-  let owned = 0;
-  try {
-    const ownedIdx = getOwnedCardsBySetIndex();
-    owned = countOwnedInSet(ownedIdx, tcg, setName);
-  } catch(e){ console.warn('progress err', e); }
-  const progress = (owned > 0 && total > 0) ? ` · ${owned}/${total} possédées` : '';
-  sub.textContent = subtitleBase + progress;
+function applySetListPipeline(cards, ownsCardFn, priceOfCardFn){
+  // cards: array of raw cards. ownsCardFn(c)->bool. priceOfCardFn(c)->number|null
+  let list = cards;
+  if(_setListState.ownFilter === 'owned')   list = list.filter(c => ownsCardFn(c));
+  else if(_setListState.ownFilter === 'missing') list = list.filter(c => !ownsCardFn(c));
+  if(_setListState.sortMode === 'price-desc'){
+    list = [...list].sort((a,b) => (priceOfCardFn(b) ?? -Infinity) - (priceOfCardFn(a) ?? -Infinity));
+  } else if(_setListState.sortMode === 'price-asc'){
+    list = [...list].sort((a,b) => (priceOfCardFn(a) ?? Infinity) - (priceOfCardFn(b) ?? Infinity));
+  }
+  return list;
 }
+// Listeners délégués (une seule fois)
+document.addEventListener('click', (e) => {
+  const ownBtn = e.target.closest('.own-filter-btn');
+  if(ownBtn){
+    e.preventDefault();
+    _setListState.ownFilter = ownBtn.dataset.own;
+    document.querySelectorAll('.own-filter-btn').forEach(b => {
+      const active = b.dataset.own === _setListState.ownFilter;
+      b.classList.toggle('active', active);
+      b.style.background = active ? 'rgba(212,168,90,.15)' : 'transparent';
+      b.style.color = active ? 'var(--gold-2)' : 'var(--tx2)';
+    });
+    if(_setListState.renderFn) _setListState.renderFn();
+    return;
+  }
+  const sortBtn = e.target.closest('.sort-btn-set');
+  if(sortBtn){
+    e.preventDefault();
+    _setListState.sortMode = sortBtn.dataset.sort;
+    document.querySelectorAll('.sort-btn-set').forEach(b => {
+      const active = b.dataset.sort === _setListState.sortMode;
+      b.classList.toggle('active', active);
+      b.style.background = active ? 'rgba(212,168,90,.15)' : 'transparent';
+      b.style.color = active ? 'var(--gold-2)' : 'var(--tx2)';
+    });
+    if(_setListState.renderFn) _setListState.renderFn();
+  }
+});
 
 async function openCreatePfModalForSet(tcg, setId, setName){
   // Ouvre la modal et pré-remplit pour ce set
@@ -4831,18 +4880,33 @@ function getOwnedCardsBySetIndex(){
     for(const c of (p.cards||[])){
       if(c.owned === false) continue;
       const cardTcg = c.tcg || pfTcg;
+      if(!cardTcg) continue;
+      const uniq = (c.name||'') + '|' + (c.number||'');
       const setKey = (c.setName||'').toLowerCase().trim();
-      if(!setKey || !cardTcg) continue;
-      const key = cardTcg + '|' + setKey;
-      if(!idx[key]) idx[key] = new Set();
-      idx[key].add((c.name||'') + '|' + (c.number||''));
+      if(setKey){
+        const key = cardTcg + '|' + setKey;
+        if(!idx[key]) idx[key] = new Set();
+        idx[key].add(uniq);
+      }
+      // Indexation secondaire par setCode (fallback si setName diverge: langue, casse, accents)
+      const setCode = (c.setCode||'').toString().toLowerCase().trim();
+      if(setCode){
+        const keyC = cardTcg + '|code|' + setCode;
+        if(!idx[keyC]) idx[keyC] = new Set();
+        idx[keyC].add(uniq);
+      }
     }
   }
   return idx;
 }
-function countOwnedInSet(idx, tcg, setName){
+function countOwnedInSet(idx, tcg, setName, setCode){
   const key = tcg + '|' + (setName||'').toLowerCase().trim();
-  return idx[key] ? idx[key].size : 0;
+  if(idx[key]) return idx[key].size;
+  if(setCode){
+    const keyC = tcg + '|code|' + String(setCode).toLowerCase().trim();
+    if(idx[keyC]) return idx[keyC].size;
+  }
+  return 0;
 }
 
 function showPortfolioDetail(pfId){
@@ -6200,7 +6264,8 @@ function renderSetGrid(id, sets, tcg){
     // Ligne progression si tcg fourni
     let ownedHtml = '';
     if(ownedIdx && tcg){
-      const owned = countOwnedInSet(ownedIdx, tcg, s.name);
+      const setCodeForCount = s.lorcastCode || s.code || s.slug || '';
+      const owned = countOwnedInSet(ownedIdx, tcg, s.name, setCodeForCount);
       if(s.count){
         const pct = Math.round((owned/s.count)*100);
         const color = owned === 0 ? 'var(--mut)' : (owned >= s.count ? 'var(--green)' : 'var(--gold-2)');
@@ -6521,6 +6586,7 @@ function priceDateBadgeHtml(c, tcg, setCacheKey){
 }
 async function showPokemonSetCards(setId){
   showView('set-detail');
+  if(typeof setSetListRenderFn === 'function') setSetListRenderFn(null);
   setupSetModeUI('pokemon');
   const grid=document.getElementById('setCardGrid'), filtersBox=document.getElementById('rarityFilters');
   grid.innerHTML='<div class="empty-state"><div class="ico">…</div><h3>Chargement…</h3></div>';
@@ -6532,7 +6598,7 @@ async function showPokemonSetCards(setId){
   _currentSealedSetId = setId;
   document.getElementById('setDetailTitle').textContent=setInfo?setInfo.name:'—';
   if(setInfo){
-    setCurrentSetProgress('pokemon', setInfo.name, setInfo.printedTotal||setInfo.total, `${(setInfo.releaseDate||'').slice(0,4)} · ${setInfo.printedTotal||setInfo.total} cartes · ${setInfo.series}`);
+    setCurrentSetProgress('pokemon', setInfo.name, setInfo.printedTotal||setInfo.total, `${(setInfo.releaseDate||'').slice(0,4)} · ${setInfo.printedTotal||setInfo.total} cartes · ${setInfo.series}`, setInfo.id);
   } else {
     setCurrentSetProgress(null);
     document.getElementById('setDetailSub').textContent='—';
@@ -6966,7 +7032,7 @@ async function showLorcanaSetCards(slug){
   grid.innerHTML='<div class="empty-state"><div class="ico">…</div><h3>Chargement…</h3></div>';
   filtersBox.innerHTML='';
   document.getElementById('setDetailTitle').textContent=setInfo.name;
-  setCurrentSetProgress('lorcana', setInfo.name, setInfo.count, `${setInfo.year} · Chapitre ${setInfo.lorcastCode} · ${setInfo.count} cartes`);
+  setCurrentSetProgress('lorcana', setInfo.name, setInfo.count, `${setInfo.year} · Chapitre ${setInfo.lorcastCode} · ${setInfo.count} cartes`, setInfo.lorcastCode);
   document.getElementById('setDetailBreadcrumb').textContent=setInfo.name;
   setCurrentSetContext('lorcana', setInfo.lorcastCode, setInfo.name);
   const links=document.querySelectorAll('#view-set-detail .breadcrumb a');
@@ -6994,6 +7060,14 @@ async function showLorcanaSetCards(slug){
   const rarities=[...new Set(cards.map(c=>c.rarity).filter(Boolean))].sort((a,b)=>RAR_ORDER.indexOf(a)-RAR_ORDER.indexOf(b));
   filtersBox.innerHTML=`<button class="rar-tab active" data-rar="all">Toutes (${cards.length})</button>`+rarities.map(r=>`<button class="rar-tab" data-rar="${escapeHtml(r)}">${escapeHtml(r.replace('_',' '))} (${cards.filter(c=>c.rarity===r).length})</button>`).join('');
   let _currentRarFilter = 'all';
+  // Helpers pour pipeline filtre possession + tri prix
+  const _lcOwnsCard = (c) => (typeof _lcVariantQty === 'function') && (_lcVariantQty(c.id) > 0 || _lcVariantQty(c.id + '__foil') > 0);
+  const _lcPriceOf = (c) => {
+    const pN = c.prices && c.prices.usd ? parseFloat(c.prices.usd) * USD_TO_EUR : null;
+    const pF = c.prices && c.prices.usd_foil ? parseFloat(c.prices.usd_foil) * USD_TO_EUR : null;
+    if(pN == null && pF == null) return null;
+    return Math.max(pN ?? -Infinity, pF ?? -Infinity);
+  };
   window._setSearchCallback = () => render(_currentRarFilter);
   function render(filter){
     _currentRarFilter = filter;
@@ -7009,6 +7083,7 @@ async function showLorcanaSetCards(slug){
         return names.some(n => matchesSearch(n, q));
       });
     }
+    list = applySetListPipeline(list, _lcOwnsCard, _lcPriceOf);
     grid.innerHTML=list.map(c=>{
       const img=(c.image_uris&&c.image_uris.digital&&(c.image_uris.digital.normal||c.image_uris.digital.small))||'';
       const full=c.version?`${c.name} — ${c.version}`:c.name;
@@ -7061,6 +7136,7 @@ async function showLorcanaSetCards(slug){
         </div></div>`;
     }).join('');
   }
+  setSetListRenderFn(() => render(_currentRarFilter));
   render('all');
   filtersBox.querySelectorAll('.rar-tab').forEach(btn=>btn.addEventListener('click',()=>{filtersBox.querySelectorAll('.rar-tab').forEach(b=>b.classList.toggle('active',b===btn)); render(btn.dataset.rar);}));
 }
@@ -7114,6 +7190,7 @@ function renderMagicSetsGrid(){
 
 async function showMagicSetCards(setCode){
   showView('set-detail');
+  if(typeof setSetListRenderFn === 'function') setSetListRenderFn(null);
   { const b = document.getElementById('setDetailRefreshCmBtn'); if(b) b.hidden = true; }
   setupSetModeUI('magic');
   const grid=document.getElementById('setCardGrid'), filtersBox=document.getElementById('rarityFilters');
@@ -7122,7 +7199,7 @@ async function showMagicSetCards(setCode){
   const setInfo=MAGIC_SETS.find(s=>s.code===setCode);
   document.getElementById('setDetailTitle').textContent=setInfo?setInfo.name:setCode;
   if(setInfo){
-    setCurrentSetProgress('magic', setInfo.name, setInfo.card_count, `${setInfo.year} · ${setInfo.card_count} cartes · code ${setInfo.code.toUpperCase()}`);
+    setCurrentSetProgress('magic', setInfo.name, setInfo.card_count, `${setInfo.year} · ${setInfo.card_count} cartes · code ${setInfo.code.toUpperCase()}`, setInfo.code);
   } else {
     setCurrentSetProgress(null);
     document.getElementById('setDetailSub').textContent='';
@@ -7810,6 +7887,7 @@ function _lcAdjustVariantQty(apiId, delta, cardData, setInfo, variant){
     pf.cards.push({...matched, tcg: 'lorcana', owned: true, qty: 1, pricePaid: 0, addedAt: Date.now()});
     savePortfolios(arr);
     if(typeof refreshSetDetailProgress === 'function') refreshSetDetailProgress();
+    if(_setListState && _setListState.renderFn && _setListState.ownFilter !== 'all') _setListState.renderFn();
     return 1;
   }
   if(idx >= 0){
@@ -7820,6 +7898,7 @@ function _lcAdjustVariantQty(apiId, delta, cardData, setInfo, variant){
       pf.cards.splice(idx, 1);
       savePortfolios(arr);
       if(typeof refreshSetDetailProgress === 'function') refreshSetDetailProgress();
+      if(_setListState && _setListState.renderFn && _setListState.ownFilter !== 'all') _setListState.renderFn();
       return 0;
     }
     card.qty = next;
@@ -8011,6 +8090,7 @@ document.addEventListener('click', (e) => {
     }
     refreshOwnedButtons(apiId);
     if(typeof refreshSetDetailProgress === 'function') refreshSetDetailProgress();
+    if(_setListState && _setListState.renderFn && _setListState.ownFilter !== 'all') _setListState.renderFn();
     return;
   }
 
@@ -8020,6 +8100,7 @@ document.addEventListener('click', (e) => {
   toggleOwnedQuick(meta.entry, meta.tcg);
   refreshOwnedButtons(apiId);
   if(typeof refreshSetDetailProgress === 'function') refreshSetDetailProgress();
+  if(_setListState && _setListState.renderFn && _setListState.ownFilter !== 'all') _setListState.renderFn();
 });
 
 /* --- Modal "Cette carte est déjà possédée" --- */
