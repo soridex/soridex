@@ -6536,12 +6536,28 @@ async function showPokemonSetSealed(setName, setId){
     grid.innerHTML = '<div class="empty-state"><div class="ico">📦</div><h3>Chargement des scellés…</h3><p>Données TCGplayer (USD)</p></div>';
     filtersBox.innerHTML = '';
     try{
-      const group = await findTCGCSVGroupForSet(setName);
-      if(!group){
-        grid.innerHTML = `<div class="empty-state"><div class="ico">🤷</div><h3>Set introuvable côté TCGplayer</h3><p>Aucun match pour « ${escapeHtml(setName)} ». Il s'agit peut-être d'un set très récent non encore listé.</p></div>`;
-        return;
+      // CORS bloque les appels directs à tcgcsv.com depuis le navigateur.
+      // On passe donc par le backend Vercel /api/tcgcsv qui sert de proxy.
+      const res = await fetch(`/api/tcgcsv?action=sealed&setName=${encodeURIComponent(setName)}`);
+      if(!res.ok){
+        if(res.status === 404){
+          grid.innerHTML = `<div class="empty-state"><div class="ico">🤷</div><h3>Set introuvable côté TCGplayer</h3><p>Aucun match pour « ${escapeHtml(setName)} ». Il s'agit peut-être d'un set très récent non encore listé, ou d'un mismatch de nom côté backend.</p></div>`;
+          return;
+        }
+        throw new Error('Backend HTTP ' + res.status);
       }
-      products = await _fetchTCGCSVSealedForGroup(group);
+      const data = await res.json();
+      // Tolérance de format : tableau direct, ou {products:[...]}, ou {sealed:[...]}, ou {results:[...]}
+      products = Array.isArray(data) ? data
+               : Array.isArray(data.products) ? data.products
+               : Array.isArray(data.sealed) ? data.sealed
+               : Array.isArray(data.results) ? data.results
+               : null;
+      if(!products){
+        throw new Error('Réponse backend au format inattendu');
+      }
+      // Si le backend ne renseigne pas `type`, on l'infère côté front
+      products.forEach(p => { if(!p.type && p.name) p.type = _inferSealedType(p.name); });
       _setSealedCache[setName] = { ts: Date.now(), products };
     } catch(e){
       console.error('sealed fetch error:', e);
