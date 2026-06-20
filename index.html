@@ -11301,9 +11301,15 @@ function renderBusinessFolder(){
       }
     }
     return `<div class="biz-tx-row">
-      <div class="biz-tx-card">
-        <div class="biz-tx-cardname">${escapeHtml(tx.cardName||'Sans nom')}${tx.cardId ? ' <span style="color:#10b981;font-size:10px" title="Carte liée à l\'API">●</span>' : ''}</div>
-        <div class="biz-tx-cardmeta">${escapeHtml(tx.cardNumber||'')}${tx.cardNumber && tx.tcg ? ' · ' : ''}${tx.tcg ? tcgLabel(tx.tcg) : ''}${tx.purchaseDate ? ' · '+tx.purchaseDate : ''}</div>
+      <div class="biz-tx-card" style="flex-direction:row;align-items:center;gap:10px">
+        ${tx.imageUrl
+          ? `<img src="${escapeHtml(tx.imageUrl)}" alt="${escapeHtml(tx.cardName||'')}" loading="lazy" style="width:46px;height:64px;object-fit:contain;border-radius:4px;flex-shrink:0;background:rgba(255,255,255,.04)">`
+          : `<div style="width:46px;height:64px;background:rgba(255,255,255,.04);border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--mut);font-size:18px">🃏</div>`
+        }
+        <div style="display:flex;flex-direction:column;gap:3px;min-width:0;flex:1">
+          <div class="biz-tx-cardname">${escapeHtml(tx.cardName||'Sans nom')}${tx.cardId ? ' <span style="color:#10b981;font-size:10px" title="Carte liée à l\'API">●</span>' : ''}</div>
+          <div class="biz-tx-cardmeta">${escapeHtml(tx.cardNumber||'')}${tx.cardNumber && tx.tcg ? ' · ' : ''}${tx.tcg ? tcgLabel(tx.tcg) : ''}${tx.purchaseDate ? ' · '+tx.purchaseDate : ''}</div>
+        </div>
       </div>
       <div>
         <div class="biz-tx-col-label">Achat</div>
