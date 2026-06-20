@@ -4721,6 +4721,27 @@ let pfSortState = { key: 'price', dir: 'desc' };
 let pfFilterState = 'all'; // 'all' | 'owned' | 'missing'
 let _pfTcgFilter = 'all'; // 'all' | 'pokemon' | 'lorcana' | 'magic' (uniquement pour multi-TCG)
 
+// Helper : qty effective d'une carte. Dans QUICK_OWNED (inventaire global),
+// on agrège la qty MAX à travers tous les portfolios (le user a peut-être
+// incrémenté qty dans un portfolio thématique sans toucher au QUICK_OWNED).
+// Dans un portfolio thématique, on garde la qty locale du portfolio.
+function getEffectiveQty(card, pfId){
+  const localQty = Math.max(1, parseInt(card.qty,10) || 1);
+  if(pfId !== QUICK_OWNED_PF_ID) return localQty;
+  // QUICK_OWNED : scanner tous les portfolios pour l'apiId
+  let maxQty = localQty;
+  for(const pf of getPortfolios()){
+    if(pf.id === QUICK_OWNED_PF_ID) continue;
+    for(const c of (pf.cards||[])){
+      if(c.apiId === card.apiId && c.owned !== false){
+        const q = Math.max(1, parseInt(c.qty,10) || 1);
+        if(q > maxQty) maxQty = q;
+      }
+    }
+  }
+  return maxQty;
+}
+
 // Construit un index { 'tcg|setName' → Set d'IDs uniques de cartes possédées }
 // Utilisé pour afficher la progression "X/Y possédées" sur les grilles de sets.
 // Dédoublonne les variantes (Normal/Foil) par "nom|numéro" → 1 carte unique.
@@ -4822,7 +4843,7 @@ function updateFilterBarUI(pf){
   if(countEl && pf){
     const total = (pf.cards||[]).length;
     const owned = (pf.cards||[]).filter(c => !!c.owned || (typeof isOwnedAnywhere === 'function' && isOwnedAnywhere(c.apiId))).length;
-    const doublesCards = (pf.cards||[]).filter(c => (parseInt(c.qty,10)||1) > 1);
+    const doublesCards = (pf.cards||[]).filter(c => getEffectiveQty(c, pf.id) > 1);
     const doublesCount = doublesCards.length;
     if(pfFilterState === 'owned')      countEl.textContent = `${owned} / ${total} possédées`;
     else if(pfFilterState === 'missing') countEl.textContent = `${total - owned} / ${total} manquantes`;
@@ -4832,7 +4853,7 @@ function updateFilterBarUI(pf){
   // Mettre à jour le badge "Doubles ×N" sur le bouton
   const doublesBtn = document.getElementById('pfFilterDoublesBtn');
   if(doublesBtn && pf){
-    const doublesCount = (pf.cards||[]).filter(c => (parseInt(c.qty,10)||1) > 1).length;
+    const doublesCount = (pf.cards||[]).filter(c => getEffectiveQty(c, pf.id) > 1).length;
     doublesBtn.textContent = doublesCount > 0 ? `Doubles ×${doublesCount}` : 'Doubles';
     doublesBtn.style.opacity = doublesCount > 0 ? '1' : '0.5';
   }
@@ -4840,10 +4861,9 @@ function updateFilterBarUI(pf){
   const banner = document.getElementById('pfDoublesBanner');
   if(banner && pf){
     if(pfFilterState === 'doubles'){
-      const doublesCards = (pf.cards||[]).filter(c => (parseInt(c.qty,10)||1) > 1);
-      const extraCount = doublesCards.reduce((s,c) => s + ((parseInt(c.qty,10)||1) - 1), 0);
-      const extraValue = doublesCards.reduce((s,c) => s + (((parseInt(c.qty,10)||1) - 1) * (c.marketPrice||0)), 0);
-      const totalValue = doublesCards.reduce((s,c) => s + ((parseInt(c.qty,10)||1) * (c.marketPrice||0)), 0);
+      const doublesCards = (pf.cards||[]).filter(c => getEffectiveQty(c, pf.id) > 1);
+      const extraCount = doublesCards.reduce((s,c) => s + (getEffectiveQty(c, pf.id) - 1), 0);
+      const extraValue = doublesCards.reduce((s,c) => s + ((getEffectiveQty(c, pf.id) - 1) * (c.marketPrice||0)), 0);
       if(doublesCards.length === 0){
         banner.innerHTML = `<div style="padding:14px 16px;background:rgba(255,255,255,.03);border:1px dashed rgba(255,255,255,.12);border-radius:10px;color:var(--mut);font-size:13px;text-align:center">Aucune carte en double pour l'instant. Augmente la quantité (+) sur une carte pour la marquer comme exemplaire multiple.</div>`;
       } else {
@@ -5029,7 +5049,7 @@ function renderPfCards(pf){
   } else if(pfFilterState === 'missing'){
     cardsWithIdx = cardsWithIdx.filter(c => !_effectivelyOwned(c));
   } else if(pfFilterState === 'doubles'){
-    cardsWithIdx = cardsWithIdx.filter(c => (parseInt(c.qty,10)||1) > 1);
+    cardsWithIdx = cardsWithIdx.filter(c => getEffectiveQty(c, pf.id) > 1);
   }
   // Filtre TCG (seulement pour portfolios multi-TCG)
   if(_pfTcgFilter !== 'all'){
