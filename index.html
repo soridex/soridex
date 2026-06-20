@@ -1633,6 +1633,19 @@
 
   /* ============ SUBSCRIPTION / PRO ============ */
   .sub-pricing-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:22px;margin:30px 0}
+  .sub-audience-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px;margin:24px 0 8px}
+  .sub-audience-card{background:rgba(212,168,90,.04);border:1px solid var(--line);border-radius:14px;padding:22px 24px;position:relative;overflow:hidden}
+  .sub-audience-card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px}
+  .sub-audience-collector::before{background:linear-gradient(180deg,#a78bfa,#7c3aed)}
+  .sub-audience-investor::before{background:linear-gradient(180deg,#fde68a,#d4a857)}
+  .sub-audience-icon{font-size:32px;margin-bottom:8px}
+  .sub-audience-name{font-family:'Cinzel',serif;font-weight:700;font-size:20px;color:var(--gold-2);margin-bottom:14px}
+  .sub-audience-collector .sub-audience-name{color:#a78bfa}
+  .sub-audience-investor .sub-audience-name{color:var(--gold-2)}
+  .sub-audience-features{list-style:none;padding:0;margin:0}
+  .sub-audience-features li{font-size:14px;color:#cbc9e0;padding:6px 0;padding-left:18px;position:relative;line-height:1.4}
+  .sub-audience-features li::before{content:"✓";position:absolute;left:0;color:var(--gold-2);font-weight:700}
+  .sub-audience-collector .sub-audience-features li::before{color:#a78bfa}
   .sub-card{background:var(--surf);border:1px solid var(--line2);border-radius:18px;padding:28px;position:relative;display:flex;flex-direction:column;gap:18px}
   .sub-card-pro{border:2px solid var(--gold-deep);background:linear-gradient(180deg,rgba(212,168,90,.06),var(--surf) 40%);box-shadow:0 12px 40px rgba(212,168,90,.12)}
   .sub-pro-ribbon{position:absolute;top:-12px;right:20px;background:linear-gradient(135deg,var(--gold-2),var(--gold-deep));color:#1a1208;font-size:10px;font-weight:700;letter-spacing:.12em;padding:6px 12px;border-radius:6px}
@@ -2062,9 +2075,35 @@
   <div class="sets-head">
     <div>
       <h2 class="view-title">Soridex Pro</h2>
-      <p class="view-sub">Passe ton portefeuille TCG au niveau supérieur. Pour les investisseurs sérieux et les traders actifs.</p>
+      <p class="view-sub">Un seul outil, deux usages. Que tu collectionnes par passion ou que tu investisses sérieusement, Soridex est pensé pour toi.</p>
     </div>
     <div id="subCurrentBadge"></div>
+  </div>
+
+  <!-- Double audience : pour qui ? -->
+  <div class="sub-audience-grid">
+    <div class="sub-audience-card sub-audience-collector">
+      <div class="sub-audience-icon">🎴</div>
+      <div class="sub-audience-name">Pour le collectionneur</div>
+      <ul class="sub-audience-features">
+        <li>Suis l'évolution de la valeur de ta collec</li>
+        <li>Marque tes cartes possédées en 1 clic</li>
+        <li>Crée des portefeuilles par thème ou TCG</li>
+        <li>Vois ce qu'il te manque pour compléter un set</li>
+        <li>Saisis tes prix d'achat (brocantes, swaps...)</li>
+      </ul>
+    </div>
+    <div class="sub-audience-card sub-audience-investor">
+      <div class="sub-audience-icon">📈</div>
+      <div class="sub-audience-name">Pour l'investisseur</div>
+      <ul class="sub-audience-features">
+        <li>Top mouvements de marché chaque jour</li>
+        <li>Repère les cartes à viser et à éviter</li>
+        <li>Analyse l'équilibre et la concentration de ton portefeuille</li>
+        <li>Calcule tes plus-values par TCG</li>
+        <li>Indicateurs factuels : stable / volatile / surchauffe / plongeon</li>
+      </ul>
+    </div>
   </div>
 
   <div class="sub-pricing-grid">
@@ -4834,10 +4873,31 @@ function renderPfCards(pf){
       const pfIdx = arr.findIndex(p => p.id === currentPfId);
       if(pfIdx < 0) return;
       const wasOwned = arr[pfIdx].cards[idx].owned !== false;
-      arr[pfIdx].cards[idx].owned = !wasOwned;
+      const willBeOwned = !wasOwned;
+
+      // Si on marque comme POSSÉDÉE → demander prix d'achat
+      if(willBeOwned){
+        const currentPaid = arr[pfIdx].cards[idx].pricePaid || '';
+        const cardName = arr[pfIdx].cards[idx].name || 'cette carte';
+        const userInput = prompt(`Prix payé pour "${cardName}" en € ?\n(Laisse vide ou 0 si tu ne sais pas)`, currentPaid);
+        // L'utilisateur a annulé → ne rien faire
+        if(userInput === null) return;
+        // Parser la valeur (accepter virgule ou point)
+        const parsed = parseFloat(String(userInput).replace(',', '.'));
+        arr[pfIdx].cards[idx].pricePaid = isNaN(parsed) ? 0 : Math.max(0, parsed);
+      }
+
+      arr[pfIdx].cards[idx].owned = willBeOwned;
       savePortfolios(arr);
-      const nowOwned = !wasOwned;
+      const nowOwned = willBeOwned;
       card.classList.toggle('owned', nowOwned);
+
+      // Mettre à jour l'input de prix dans le DOM
+      const priceInput = card.querySelector('.pfcard-price-input');
+      if(priceInput && nowOwned){
+        priceInput.value = arr[pfIdx].cards[idx].pricePaid || '';
+      }
+
       // Mise à jour du badge dans l'image
       const oldBadge = imgEl.querySelector('.pfcard-owned-badge, .pfcard-acquire-badge');
       if(oldBadge){
