@@ -6924,7 +6924,9 @@ async function showLorcanaSetCards(slug){
     if(q){
       list = list.filter(c => {
         // Construire le nom selon le TCG (Pokémon a c.name simple, Lorcana version, Magic printed_name)
-        const names = [c.name, c.printed_name, c.version, (c.version?c.name+' '+c.version:''), c.number || ''];
+        // Pour Lorcana : c.collector_number (pas c.number). Pour Magic : idem.
+        const fullName = c.version ? `${c.name} — ${c.version}` : c.name;
+        const names = [c.name, c.printed_name, c.version, fullName, c.number || '', c.collector_number || ''];
         if(typeof translateCardNameToFr === 'function') names.push(translateCardNameToFr(c.name));
         return names.some(n => matchesSearch(n, q));
       });
@@ -7083,7 +7085,9 @@ async function showMagicSetCards(setCode){
     if(q){
       list = list.filter(c => {
         // Construire le nom selon le TCG (Pokémon a c.name simple, Lorcana version, Magic printed_name)
-        const names = [c.name, c.printed_name, c.version, (c.version?c.name+' '+c.version:''), c.number || ''];
+        // Pour Lorcana/Magic : c.collector_number (pas c.number).
+        const fullName = c.version ? `${c.name} — ${c.version}` : c.name;
+        const names = [c.name, c.printed_name, c.version, fullName, c.number || '', c.collector_number || ''];
         if(typeof translateCardNameToFr === 'function') names.push(translateCardNameToFr(c.name));
         return names.some(n => matchesSearch(n, q));
       });
@@ -11147,6 +11151,12 @@ async function confirmProWaitlist(){
     };
     const { error } = await sb.from('pro_waitlist').upsert(row, { onConflict: 'email' });
     if(error) throw error;
+    // Notif email à Soso (non-bloquant : si la notif fail, l'user voit quand même le succès)
+    fetch('/api/waitlist-notify', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ email, source: 'webapp' })
+    }).catch(err => console.warn('waitlist notify failed:', err));
     msgEl.innerHTML = '<span style="color:#10b981">🎉 Tu es inscrite ! On te prévient dès le lancement Pro.</span>';
     setTimeout(closeProWaitlistModal, 1800);
   } catch(e){
