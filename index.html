@@ -72,6 +72,15 @@
   .navlink:hover{color:var(--gold-2)}
   .navlink.active{color:#fff}
   .navlink.active::after{content:"";position:absolute;left:0;right:0;bottom:-2px;height:2px;background:linear-gradient(90deg,var(--gold-deep),var(--gold-2),var(--gold-deep));border-radius:2px;box-shadow:0 0 12px var(--gold-glow)}
+  .nav-dropdown{position:relative;display:inline-block}
+  .nav-dropdown-menu{position:absolute;top:calc(100% + 8px);left:50%;transform:translateX(-50%);background:var(--surf,#1a1530);border:1px solid var(--gold-deep);border-radius:10px;min-width:240px;box-shadow:0 12px 32px rgba(0,0,0,.6);z-index:1000;padding:6px 0;display:flex;flex-direction:column}
+  .nav-dropdown-menu[hidden]{display:none}
+  .dropdown-item{padding:10px 16px;color:var(--tx);font-size:13px;font-weight:600;text-decoration:none;letter-spacing:.08em;text-transform:uppercase;transition:background .15s,color .15s;white-space:nowrap}
+  .dropdown-item:hover{background:rgba(212,168,90,.10);color:var(--gold-2)}
+  @media(max-width:760px){
+    .nav-dropdown-menu{position:static;transform:none;margin-top:6px;width:100%;box-shadow:none}
+    .dropdown-item{padding:8px 12px;font-size:12px}
+  }
   .search-row{max-width:1280px;margin:0 auto;padding:14px 0 20px;display:flex;justify-content:flex-end}
   .search-box{width:min(720px,70%);position:relative}
   .search-box input{width:100%;background:rgba(255,255,255,.04);border:1px solid var(--line2);border-radius:24px;padding:13px 20px 13px 48px;color:var(--tx);font-family:"Outfit";font-size:14px;outline:none;transition:.2s}
@@ -110,7 +119,7 @@
   .tcg-tile{background:radial-gradient(circle at 50% 30%, rgba(212,168,90,.10), transparent 60%),var(--surf);border:1.5px solid var(--gold-deep);border-radius:18px;padding:30px 24px 22px;display:flex;flex-direction:column;align-items:center;gap:18px;position:relative;height:100%;min-height:260px;box-shadow:0 0 0 1px rgba(212,168,90,.1) inset,0 8px 32px rgba(212,168,90,.08),0 0 40px rgba(212,168,90,.06);transition:transform .25s,box-shadow .25s}
   .tcg-tile:hover{transform:translateY(-3px);box-shadow:0 0 0 1px rgba(212,168,90,.25) inset,0 14px 44px rgba(212,168,90,.18),0 0 55px rgba(212,168,90,.12)}
   .tcg-logo-wrap{flex:1;width:100%;display:flex;align-items:center;justify-content:center;padding:6px 12px;min-height:170px;position:relative;overflow:hidden;border-radius:12px}
-  .tcg-logo-wrap img{max-width:100%;max-height:190px;width:auto;height:auto;object-fit:contain;filter:drop-shadow(0 4px 16px rgba(0,0,0,.4))}
+  .tcg-logo-wrap img{max-width:100%;max-height:190px;width:auto;height:auto;object-fit:contain;filter:drop-shadow(0 4px 16px rgba(0,0,0,.4));mix-blend-mode:screen}
   .tcg-actions{display:flex;flex-direction:column;gap:8px;width:100%;max-width:240px}
   .btn-gold{background:linear-gradient(180deg,var(--gold-2),var(--gold),var(--gold-deep));color:#1a1430;border:1px solid var(--gold-deep);border-radius:8px;padding:11px 18px;font-family:"Outfit";font-size:13px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;box-shadow:0 2px 8px rgba(212,168,90,.25),inset 0 1px 0 rgba(255,255,255,.3);transition:.15s}
   .btn-gold:hover{transform:translateY(-1px)}
@@ -1787,8 +1796,14 @@
       <a class="navlink active" href="#" data-view="home">Explorateur TCG</a>
       <a class="navlink" href="#" data-nav="subscription">Abonnement</a>
       <a class="navlink" href="#" data-view="shop">Boutique</a>
-      <a class="navlink" href="#" data-view="guide">Guide collectionneur</a>
-      <a class="navlink" href="#" data-view="guide-investor">Guide investisseur</a>
+      <div class="nav-dropdown">
+        <a class="navlink" href="#" data-toggle-dropdown="guide">Guide ▾</a>
+        <div class="nav-dropdown-menu" id="dropdown-guide" hidden>
+          <a class="dropdown-item" href="#" data-view="about">Soridex c'est quoi ?</a>
+          <a class="dropdown-item" href="#" data-view="guide">Guide du collectionneur</a>
+          <a class="dropdown-item" href="#" data-view="guide-investor">Guide de l'investisseur</a>
+        </div>
+      </div>
       <a class="navlink" href="#" data-nav="compte">Compte</a>
     </nav>
   </div>
@@ -2996,6 +3011,43 @@
   <div class="shop-grid" id="shopGrid"></div>
 </section>
 
+<!-- VIEW: ABOUT (Soridex c'est quoi ?) -->
+<section class="view" id="view-about" hidden>
+  <div class="breadcrumb">
+    <a data-view="home">← Accueil</a><span>/</span><span>Soridex c'est quoi ?</span>
+  </div>
+  <div style="max-width:780px;margin:0 auto;padding:24px 16px">
+    <h1 style="font-family:'Cinzel',serif;color:var(--gold-2);margin-bottom:8px">Soridex c'est quoi ?</h1>
+    <p style="color:var(--tx-soft);font-size:15px;line-height:1.6;margin-bottom:24px"><strong>La bourse TCG</strong> — un dashboard d'investissement intelligent pour cartes et scellés Lorcana, Pokémon et Magic.</p>
+
+    <div style="background:rgba(212,168,90,.06);border:1px solid rgba(212,168,90,.25);border-radius:12px;padding:18px;margin-bottom:20px">
+      <h2 style="color:var(--gold-2);font-size:18px;margin-bottom:10px">🎯 L'idée</h2>
+      <p style="line-height:1.6">Les autres apps TCG sont pensées pour les <em>collectionneurs-fans</em> : montre tes trésors, classe ta collection. Soridex est pensé pour ceux qui veulent <strong>analyser le marché</strong> : repérer les bulles, suivre les hausses/baisses, savoir quand acheter ou revendre, traiter sa collection comme un portefeuille.</p>
+    </div>
+
+    <div style="background:rgba(255,255,255,.03);border:1px solid var(--line2);border-radius:12px;padding:18px;margin-bottom:20px">
+      <h2 style="color:var(--gold-2);font-size:18px;margin-bottom:10px">⚡ Ce qu'on fait différemment</h2>
+      <ul style="line-height:1.8;padding-left:20px">
+        <li><strong>Multi-TCG</strong> : Lorcana, Pokémon, Magic (et bientôt plus)</li>
+        <li><strong>Web-first</strong> : pas besoin d'app, ça tourne partout</li>
+        <li><strong>Angle bourse</strong> : top hausses/baisses, badges Stable/Volatile/Surchauffe/Plongeon, recommandations à viser / à éviter</li>
+        <li><strong>Voix éditoriale</strong> : sélections perso, analyses motivées, pas du contenu IA générique</li>
+        <li><strong>Suivi achat-revente</strong> : module Vinted/eBay intégré pour tracker tes plus-values réelles</li>
+      </ul>
+    </div>
+
+    <div style="background:rgba(255,255,255,.03);border:1px solid var(--line2);border-radius:12px;padding:18px;margin-bottom:20px">
+      <h2 style="color:var(--gold-2);font-size:18px;margin-bottom:10px">👋 Qui est derrière</h2>
+      <p style="line-height:1.6">Soridex est dev par <strong>Soso</strong>, dev solo et collectionneuse. Mon vrai métier : recouvrement de créances. Ça veut dire : analyse de risque, lecture de comportements financiers, détection des achats irrationnels. C'est exactement ce qui manquait dans les apps TCG.</p>
+    </div>
+
+    <div style="text-align:center;margin-top:32px">
+      <a data-view="guide" class="btn-gold" style="display:inline-block;margin-right:10px">📚 Guide du collectionneur</a>
+      <a data-view="guide-investor" class="btn-gold" style="display:inline-block">📈 Guide de l'investisseur</a>
+    </div>
+  </div>
+</section>
+
 <!-- VIEW: GUIDE -->
 <section class="view" id="view-guide" hidden>
   <div class="breadcrumb">
@@ -3699,8 +3751,15 @@
   start();
 })();
 
+// Fermer dropdown si click en dehors
+document.addEventListener('click', (e) => {
+  if(!e.target.closest('.nav-dropdown')){
+    document.querySelectorAll('.nav-dropdown-menu').forEach(m => m.hidden = true);
+  }
+});
+
 /* === ROUTING === */
-const ALL_VIEWS = ['home','login','compte','sets-pokemon','sets-lorcana','sets-magic','era-detail','set-detail','pf-detail','wishlist','wish-detail','global-search','shop','guide','guide-investor','guide-article','business','business-folder','parametres','subscription','stats','market'];
+const ALL_VIEWS = ['home','login','compte','sets-pokemon','sets-lorcana','sets-magic','era-detail','set-detail','pf-detail','wishlist','wish-detail','global-search','shop','about','guide','guide-investor','guide-article','business','business-folder','parametres','subscription','stats','market'];
 function showView(name){
   if(!ALL_VIEWS.includes(name)) name='home';
   document.querySelectorAll('.view').forEach(v => v.hidden = (v.id !== 'view-'+name));
@@ -7743,86 +7802,94 @@ function _lcVariantControlsHtml(c){
   const qtyStyle = 'min-width:36px;text-align:center;font-weight:700;color:#fff;font-size:14px;padding:4px 8px;background:rgba(0,0,0,.25);border-radius:6px;cursor:pointer;user-select:none;flex-shrink:0';
   const rowHtml = (apiId, label, qty, available) => {
     if(!available) return '';
-    return `<div class="lc-var-row" data-lc-apiid="${escapeHtml(apiId)}" data-lc-cardid="${escapeHtml(c.id)}" style="${rowStyle(qty)}">
+    const sa = escapeHtml(apiId);
+    const sc = escapeHtml(c.id);
+    return `<div class="lc-var-row" id="lcrow-${sa}" data-lc-apiid="${sa}" data-lc-cardid="${sc}" style="${rowStyle(qty)}">
       <span style="${labelStyle}">${label}</span>
-      <button class="lc-var-btn" data-lc-delta="-1" style="${btnStyle(qty===0)}" ${qty===0?'disabled':''} aria-label="Retirer un">−</button>
-      <span class="lc-var-qty" data-lc-action="edit" style="${qtyStyle}" title="Tap pour saisir une quantité">${qty}</span>
-      <button class="lc-var-btn" data-lc-delta="+1" style="${btnStyle(false)}" aria-label="Ajouter un">+</button>
+      <button type="button" class="lc-var-action" data-lc-action="dec" data-lc-apiid="${sa}" data-lc-cardid="${sc}" ${qty===0?'disabled':''} style="${btnStyle(qty===0)}" aria-label="Retirer un">−</button>
+      <span class="lc-var-action lc-var-qty" data-lc-action="edit" data-lc-apiid="${sa}" data-lc-cardid="${sc}" style="${qtyStyle}" title="Tap pour saisir une quantité">${qty}</span>
+      <button type="button" class="lc-var-action" data-lc-action="inc" data-lc-apiid="${sa}" data-lc-cardid="${sc}" style="${btnStyle(false)}" aria-label="Ajouter un">+</button>
     </div>`;
   };
   if(!hasNormal && !hasFoil) return '';
   return `<div style="margin-top:8px">${rowHtml(c.id,'Normal',normalQty,hasNormal)}${rowHtml(c.id+'__foil','Cold Foil',foilQty,hasFoil)}</div>`;
 }
 
-// Event delegation pour les boutons +/- ET la qty cliquable
-document.addEventListener('click', (e) => {
-  // Tap sur la qty → saisie directe via prompt
-  const qtyEl = e.target.closest('.lc-var-qty[data-lc-action="edit"]');
-  if(qtyEl){
+// Listener UNIQUE pour les variants Lorcana (attaché une seule fois au document)
+if(!window._lcVarListenerInit){
+  window._lcVarListenerInit = true;
+  document.addEventListener('click', function(e){
+    const btn = e.target.closest('.lc-var-action');
+    if(!btn) return;
     e.preventDefault();
     e.stopPropagation();
     if(!getUser()){
       if(confirm('Connecte-toi pour marquer tes cartes possédées. Aller à la connexion ?')) goToAccount();
       return;
     }
-    const row = qtyEl.closest('.lc-var-row');
-    if(!row) return;
-    const apiId = row.dataset.lcApiid;
-    const cardId = row.dataset.lcCardid;
-    const current = _lcVariantQty(apiId);
-    const input = prompt('Combien d\'exemplaires ?\n(0 pour retirer)', current);
-    if(input === null) return;
-    const target = Math.max(0, parseInt(input,10) || 0);
-    if(target === current) return;
+    const action = btn.dataset.lcAction;
+    const apiId = btn.dataset.lcApiid;
+    const cardId = btn.dataset.lcCardid;
     const meta = window._visibleCards && window._visibleCards[cardId];
-    if(!meta){ console.warn('LC meta missing'); return; }
-    const rawCard = meta.rawCard;
-    const setInfo = meta.setInfo;
-    // Définir directement la qty (delta = target - current)
-    const delta = target - current;
-    // Si target=0 et current>0 : on supprime
-    // Sinon on adjust progressivement (mais ici on veut SET, pas adjust)
-    _lcSetVariantQty(apiId, target, rawCard, setInfo);
-    // Update DOM
-    qtyEl.textContent = target;
-    row.style.background = target > 0 ? 'rgba(52,211,153,.10)' : 'rgba(255,255,255,.03)';
-    row.style.borderColor = target > 0 ? 'rgba(52,211,153,.4)' : 'var(--line2)';
-    const minusBtn = row.querySelector('[data-lc-delta="-1"]');
-    if(minusBtn){
-      minusBtn.disabled = (target === 0);
-      minusBtn.style.opacity = target === 0 ? '.3' : '1';
-      minusBtn.style.cursor = target === 0 ? 'not-allowed' : 'pointer';
+    if(!meta || !meta.rawCard){
+      alert('Erreur : carte introuvable. Recharge la page.');
+      return;
     }
-    // Update badge ✓ global sur l'image (top-left)
-    _lcUpdateOwnedBadge(cardId);
-    return;
-  }
-  // Tap sur +/- → ajustement de 1
-  const btn = e.target.closest('.lc-var-btn');
-  if(!btn) return;
-  e.preventDefault();
-  e.stopPropagation();
-  const row = btn.closest('.lc-var-row');
-  if(!row) return;
-  const apiId = row.dataset.lcApiid;
-  const cardId = row.dataset.lcCardid;
-  const delta = parseInt(btn.dataset.lcDelta, 10) || 0;
+    let newQty;
+    if(action === 'edit'){
+      const current = _lcVariantQty(apiId);
+      const input = prompt('Combien d\'exemplaires ?\n(0 pour retirer)', current);
+      if(input === null) return;
+      newQty = Math.max(0, parseInt(input,10) || 0);
+      if(newQty === current) return;
+      _lcSetVariantQty(apiId, newQty, meta.rawCard, meta.setInfo);
+    } else {
+      const delta = action === 'inc' ? 1 : -1;
+      const variant = apiId.endsWith('__foil') ? 'foil' : 'normal';
+      newQty = _lcAdjustVariantQty(apiId, delta, meta.rawCard, meta.setInfo, variant);
+    }
+    _lcUpdateVarRow(apiId, cardId, newQty);
+  });
+}
+
+// Fonctions globales conservées pour compatibilité (au cas où appelées ailleurs)
+window._lcVarBtn = function(apiId, cardId, delta){
   const meta = window._visibleCards && window._visibleCards[cardId];
-  if(!meta){ console.warn('LC meta missing'); return; }
-  const newQty = _lcAdjustVariantQty(apiId, delta, meta.rawCard, meta.setInfo, apiId.endsWith('__foil') ? 'foil' : 'normal');
-  // Mise à jour DOM
-  const qtyDisplay = row.querySelector('.lc-var-qty');
-  if(qtyDisplay) qtyDisplay.textContent = newQty;
-  row.style.background = newQty > 0 ? 'rgba(52,211,153,.10)' : 'rgba(255,255,255,.03)';
-  row.style.borderColor = newQty > 0 ? 'rgba(52,211,153,.4)' : 'var(--line2)';
-  const minusBtn = row.querySelector('[data-lc-delta="-1"]');
-  if(minusBtn){
-    minusBtn.disabled = (newQty === 0);
-    minusBtn.style.opacity = newQty === 0 ? '.3' : '1';
-    minusBtn.style.cursor = newQty === 0 ? 'not-allowed' : 'pointer';
+  if(!meta) return;
+  const variant = apiId.endsWith('__foil') ? 'foil' : 'normal';
+  const newQty = _lcAdjustVariantQty(apiId, delta, meta.rawCard, meta.setInfo, variant);
+  _lcUpdateVarRow(apiId, cardId, newQty);
+};
+window._lcVarPrompt = function(apiId, cardId){
+  const current = _lcVariantQty(apiId);
+  const input = prompt('Combien d\'exemplaires ?', current);
+  if(input === null) return;
+  const target = Math.max(0, parseInt(input,10) || 0);
+  const meta = window._visibleCards && window._visibleCards[cardId];
+  if(!meta) return;
+  _lcSetVariantQty(apiId, target, meta.rawCard, meta.setInfo);
+  _lcUpdateVarRow(apiId, cardId, target);
+};
+
+// Met à jour visuellement une ligne variant (qty affichée, couleur, bouton − dis/enabled)
+function _lcUpdateVarRow(apiId, cardId, newQty){
+  const row = document.getElementById('lcrow-' + apiId);
+  if(row){
+    const qtyDisplay = row.querySelector('.lc-var-qty, span[onclick*="_lcVarPrompt"]');
+    // fallback : second span dans la row
+    const spans = row.querySelectorAll('span');
+    if(spans.length >= 2) spans[1].textContent = newQty;
+    row.style.background = newQty > 0 ? 'rgba(52,211,153,.10)' : 'rgba(255,255,255,.03)';
+    row.style.borderColor = newQty > 0 ? 'rgba(52,211,153,.4)' : 'var(--line2)';
+    const minusBtn = row.querySelector('button[onclick*=",-1)"]');
+    if(minusBtn){
+      minusBtn.disabled = (newQty === 0);
+      minusBtn.style.opacity = newQty === 0 ? '.3' : '1';
+      minusBtn.style.cursor = newQty === 0 ? 'not-allowed' : 'pointer';
+    }
   }
   _lcUpdateOwnedBadge(cardId);
-});
+}
 
 // Définit directement une qty cible (utilisé par la saisie prompt)
 function _lcSetVariantQty(apiId, target, cardData, setInfo){
@@ -10096,9 +10163,29 @@ document.addEventListener('click', (e)=>{
     return;
   }
 
+  // Toggle dropdown menu (Guide)
+  const ddToggle = e.target.closest('[data-toggle-dropdown]');
+  if(ddToggle){
+    e.preventDefault();
+    e.stopPropagation();
+    const menuId = 'dropdown-' + ddToggle.dataset.toggleDropdown;
+    const menu = document.getElementById(menuId);
+    if(menu){
+      const isOpen = !menu.hidden;
+      document.querySelectorAll('.nav-dropdown-menu').forEach(m => m.hidden = true);
+      menu.hidden = isOpen;
+    }
+    return;
+  }
+
   // Liens vue directe
   const viewLink=e.target.closest('[data-view]');
-  if(viewLink){e.preventDefault(); showView(viewLink.dataset.view); return;}
+  if(viewLink){
+    e.preventDefault();
+    document.querySelectorAll('.nav-dropdown-menu').forEach(m => m.hidden = true);
+    showView(viewLink.dataset.view);
+    return;
+  }
 
   // Boutons d'action du carousel
   const action=e.target.closest('[data-action]');
