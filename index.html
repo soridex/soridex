@@ -2233,6 +2233,27 @@
             </a>
           </div>
 
+          <div class="card-detail-buy" style="margin-top:14px;padding:12px;background:rgba(96,165,250,.06);border:1px solid rgba(96,165,250,.2);border-radius:10px">
+            <div style="font-size:12px;font-weight:700;color:#93c5fd;letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:6px">
+              <span>🛒</span><span>Acheter cette carte</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <a id="cardDetailBuyCm" href="#" target="_blank" rel="noopener noreferrer" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 10px;background:rgba(255,255,255,.04);border:1px solid var(--line2);border-radius:8px;color:var(--tx);text-decoration:none;font-size:13px;font-weight:600">
+                <span>🃏</span> Cardmarket
+              </a>
+              <a id="cardDetailBuyEb" href="#" target="_blank" rel="noopener noreferrer" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 10px;background:rgba(255,255,255,.04);border:1px solid var(--line2);border-radius:8px;color:var(--tx);text-decoration:none;font-size:13px;font-weight:600">
+                <span>🏷️</span> eBay
+              </a>
+              <a id="cardDetailBuyVt" href="#" target="_blank" rel="noopener noreferrer" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 10px;background:rgba(255,255,255,.04);border:1px solid var(--line2);border-radius:8px;color:var(--tx);text-decoration:none;font-size:13px;font-weight:600">
+                <span>👕</span> Vinted
+              </a>
+              <a id="cardDetailBuyLbc" href="#" target="_blank" rel="noopener noreferrer" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 10px;background:rgba(255,255,255,.04);border:1px solid var(--line2);border-radius:8px;color:var(--tx);text-decoration:none;font-size:13px;font-weight:600">
+                <span>📦</span> Leboncoin
+              </a>
+            </div>
+            <div style="font-size:11px;color:var(--mut);margin-top:10px;text-align:center;font-style:italic">💡 Vérifie toujours l'état et la note du vendeur</div>
+          </div>
+
           <div class="card-detail-divider"></div>
 
           <div class="card-detail-actions-row" id="cardDetailUserActions"></div>
@@ -5774,6 +5795,21 @@ async function loadCardDetail(tcg, id, fallback){
   }
   document.getElementById('cardDetailCm').href = cardmarketUrl || '#';
   document.getElementById('cardDetailEbay').href = `https://www.ebay.fr/sch/i.html?_nkw=${encodeURIComponent(ebayQuery.trim())}&LH_Sold=1&LH_Complete=1`;
+
+  // === Bloc "Acheter cette carte" — 4 destinations ===
+  // Pour Vinted/Leboncoin (audiences moins techniques), on garde une query lisible : nom + numéro
+  // Pour eBay actif, on ajoute le TCG pour mieux cibler
+  const buyCardName = (card && card.name) || (fallback && fallback.name) || '';
+  const buyCardNum = (card && (card.number || card.collector_number)) || (fallback && fallback.number) || '';
+  const buyNumShort = String(buyCardNum).split('/')[0]; // "125/204" → "125"
+  const tcgLabel = tcg === 'pokemon' ? 'pokemon' : (tcg === 'lorcana' ? 'lorcana' : (tcg === 'magic' ? 'magic' : ''));
+  const buyQueryShort = `${buyCardName} ${buyNumShort}`.trim();
+  const buyQueryWithTcg = `${buyCardName} ${buyNumShort} ${tcgLabel}`.trim();
+
+  document.getElementById('cardDetailBuyCm').href = cardmarketUrl || '#';
+  document.getElementById('cardDetailBuyEb').href = `https://www.ebay.fr/sch/i.html?_nkw=${encodeURIComponent(buyQueryWithTcg)}`;
+  document.getElementById('cardDetailBuyVt').href = `https://www.vinted.fr/catalog?search_text=${encodeURIComponent(buyQueryShort)}`;
+  document.getElementById('cardDetailBuyLbc').href = `https://www.leboncoin.fr/recherche?text=${encodeURIComponent(buyQueryShort)}`;
 
   // === TCGGO API : récupère les prix Cardmarket à jour ===
   // Pokémon uniquement : l'API RapidAPI utilisée (pokemon-tcg-api) ne contient
