@@ -2398,7 +2398,7 @@
   <div class="sets-head">
     <div>
       <h2 class="view-title">Disney Lorcana</h2>
-      <p class="view-sub">Les 13 chapitres du plus récent au plus ancien.</p>
+      <p class="view-sub" id="lorcanaSub">Les 13 chapitres du plus récent au plus ancien.</p>
     </div>
   </div>
   <div class="set-grid" id="setGridLorcana"></div>
@@ -2410,7 +2410,7 @@
   <div class="sets-head">
     <div>
       <h2 class="view-title">Magic: The Gathering</h2>
-      <p class="view-sub">Tous les sets (core, expansion, masters) du plus récent au plus ancien.</p>
+      <p class="view-sub" id="magicSub">Tous les sets (core, expansion, masters) du plus récent au plus ancien.</p>
     </div>
   </div>
   <div class="set-grid" id="setGridMagic"></div>
@@ -4473,6 +4473,43 @@ function setSetListRenderFn(fn){
   const ctl = document.getElementById('setCardControls');
   if(ctl) ctl.hidden = !fn;
 }
+/* === Stats d'en-tête sur les vues "tous les sets" === */
+async function updateTcgSetsHeaderStats(tcg){
+  if(tcg === 'lorcana'){
+    const sub = document.getElementById('lorcanaSub');
+    if(!sub || typeof LORCANA_SETS === 'undefined') return;
+    const totalCards = LORCANA_SETS.reduce((acc, s) => acc + (s.count || 0), 0);
+    let ownedCount = 0;
+    try {
+      const idx = getOwnedCardsBySetIndex();
+      for(const s of LORCANA_SETS){
+        ownedCount += countOwnedInSet(idx, 'lorcana', s.name, s.lorcastCode);
+      }
+    } catch(e){ console.warn('lorcana stats err', e); }
+    sub.innerHTML = `Les ${LORCANA_SETS.length} chapitres du plus récent au plus ancien. <span style="color:var(--gold-2);font-weight:600">${ownedCount}</span> / ${totalCards.toLocaleString('fr-FR')} cartes possédées.`;
+    return;
+  }
+  if(tcg === 'magic'){
+    const sub = document.getElementById('magicSub');
+    if(!sub) return;
+    // Magic est chargé async : si vide, on tente le load
+    if(typeof MAGIC_SETS === 'undefined' || !MAGIC_SETS.length){
+      try { if(typeof loadMagicSets === 'function') await loadMagicSets(); } catch(e){}
+    }
+    if(!MAGIC_SETS || !MAGIC_SETS.length) return;
+    const totalCards = MAGIC_SETS.reduce((acc, s) => acc + (s.card_count || 0), 0);
+    let ownedCount = 0;
+    try {
+      const idx = getOwnedCardsBySetIndex();
+      for(const s of MAGIC_SETS){
+        ownedCount += countOwnedInSet(idx, 'magic', s.name, s.code);
+      }
+    } catch(e){ console.warn('magic stats err', e); }
+    sub.innerHTML = `Tous les sets (core, expansion, masters) du plus récent au plus ancien. <span style="color:var(--gold-2);font-weight:600">${ownedCount.toLocaleString('fr-FR')}</span> / ${totalCards.toLocaleString('fr-FR')} cartes possédées.`;
+    return;
+  }
+}
+
 function applySetListPipeline(cards, ownsCardFn, priceOfCardFn){
   // cards: array of raw cards. ownsCardFn(c)->bool. priceOfCardFn(c)->number|null
   let list = cards;
@@ -10425,8 +10462,8 @@ document.addEventListener('click', (e)=>{
     e.preventDefault();
     const a=action.dataset.action;
     if(a==='sets-pokemon'){showView('sets-pokemon');}
-    else if(a==='sets-lorcana'){showView('sets-lorcana');}
-    else if(a==='sets-magic'){showView('sets-magic'); loadMagicSets();}
+    else if(a==='sets-lorcana'){showView('sets-lorcana'); updateTcgSetsHeaderStats('lorcana');}
+    else if(a==='sets-magic'){showView('sets-magic'); loadMagicSets().then(()=>updateTcgSetsHeaderStats('magic'));}
     else if(a.startsWith('manage-')) goToAccount();
     return;
   }
