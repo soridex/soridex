@@ -4984,7 +4984,19 @@ function getEffectiveQty(card, pfId){
 // Utilisé pour afficher la progression "X/Y possédées" sur les grilles de sets.
 // Dédoublonne les variantes (Normal/Foil) par "nom|numéro" → 1 carte unique.
 let _ownedSetIndexCache = null;
-function invalidateOwnedSetIndex(){ _ownedSetIndexCache = null; }
+let _ownedApiIdSetCache = null; // Set des apiId possédés à travers TOUS les portfolios
+function invalidateOwnedSetIndex(){ _ownedSetIndexCache = null; _ownedApiIdSetCache = null; }
+function getOwnedApiIdSet(){
+  if(_ownedApiIdSetCache) return _ownedApiIdSetCache;
+  const set = new Set();
+  for(const p of getPortfolios()){
+    for(const c of (p.cards || [])){
+      if(c.apiId && c.owned !== false) set.add(c.apiId);
+    }
+  }
+  _ownedApiIdSetCache = set;
+  return set;
+}
 function getOwnedCardsBySetIndex(){
   if(_ownedSetIndexCache) return _ownedSetIndexCache;
   const idx = {};
@@ -7173,26 +7185,26 @@ async function showLorcanaSetCards(slug){
     }catch(err){console.error(err); grid.innerHTML='<div class="empty-state"><h3>Erreur</h3></div>'; return;}
   }
   if(!cards||!cards.length){grid.innerHTML='<div class="empty-state"><h3>Aucune carte</h3></div>'; return;}
-  // Migration silencieuse : pour chaque carte de ce set présente dans QUICK_OWNED,
+  // Migration silencieuse : pour chaque carte de ce set présente dans N'IMPORTE QUEL portfolio,
   // s'assurer que setName / setCode / tcg sont à jour (anciennes entries pré-fix peuvent les avoir vides)
   try {
     const _pfs = getPortfolios();
-    const _qo = _pfs.find(p => p.id === QUICK_OWNED_PF_ID);
-    if(_qo && _qo.cards && _qo.cards.length){
-      let _migDirty = false;
-      const _byId = {};
-      for(const c of cards){ _byId[c.id] = c; _byId[c.id + '__foil'] = c; }
-      for(const stored of _qo.cards){
+    let _migDirty = false;
+    const _byId = {};
+    for(const c of cards){ _byId[c.id] = c; _byId[c.id + '__foil'] = c; }
+    for(const _pf of _pfs){
+      if(!_pf || !_pf.cards || !_pf.cards.length) continue;
+      for(const stored of _pf.cards){
         if(!stored.apiId) continue;
         if(!_byId[stored.apiId]) continue;
         if(stored.setName !== setInfo.name){ stored.setName = setInfo.name; _migDirty = true; }
         if(stored.setCode !== setInfo.lorcastCode){ stored.setCode = setInfo.lorcastCode; _migDirty = true; }
         if(stored.tcg !== 'lorcana'){ stored.tcg = 'lorcana'; _migDirty = true; }
       }
-      if(_migDirty){
-        savePortfolios(_pfs);
-        if(typeof refreshSetDetailProgress === 'function') refreshSetDetailProgress();
-      }
+    }
+    if(_migDirty){
+      savePortfolios(_pfs);
+      if(typeof refreshSetDetailProgress === 'function') refreshSetDetailProgress();
     }
   } catch(e){ console.warn('migration lorcana err', e); }
   try { renderSetIndicatorsBanner(cards, 'lorcana', setInfo ? setInfo.name : ''); } catch(e){ console.warn('banner err', e); }
@@ -7202,7 +7214,11 @@ async function showLorcanaSetCards(slug){
   filtersBox.innerHTML=`<button class="rar-tab active" data-rar="all">Toutes (${cards.length})</button>`+rarities.map(r=>`<button class="rar-tab" data-rar="${escapeHtml(r)}">${escapeHtml(r.replace('_',' '))} (${cards.filter(c=>c.rarity===r).length})</button>`).join('');
   let _currentRarFilter = 'all';
   // Helpers pour pipeline filtre possession + tri prix
-  const _lcOwnsCard = (c) => (typeof _lcVariantQty === 'function') && (_lcVariantQty(c.id) > 0 || _lcVariantQty(c.id + '__foil') > 0);
+  const _lcOwnsCard = (c) => {
+    // Carte "possédée" si elle existe dans n'importe quel portfolio (pas que QUICK_OWNED)
+    const set = getOwnedApiIdSet();
+    return set.has(c.id) || set.has(c.id + '__foil');
+  };
   const _lcPriceOf = (c) => {
     const pN = c.prices && c.prices.usd ? parseFloat(c.prices.usd) * USD_TO_EUR : null;
     const pF = c.prices && c.prices.usd_foil ? parseFloat(c.prices.usd_foil) * USD_TO_EUR : null;
@@ -7253,8 +7269,9 @@ async function showLorcanaSetCards(slug){
       _visibleCards[c.id] = {entry: lcCardToPfEntry(c, setInfo), rawCard: c, setInfo: setInfo, tcg: 'lorcana'};
       const imgProxy = smartImg(img);
       const largeProxy = smartImg(large);
-      // Badge ✓ possédée si au moins un variant (Normal ou Foil) > 0
-      const lcOwnsAny = (_lcVariantQty(c.id) > 0) || (_lcVariantQty(c.id + '__foil') > 0);
+      // Badge ✓ possédée si la carte (ou son variant foil) est dans N'IMPORTE QUEL portfolio
+      const _ownedSet = getOwnedApiIdSet();
+      const lcOwnsAny = _ownedSet.has(c.id) || _ownedSet.has(c.id + '__foil');
       const lcOwnedBadgeHtml = lcOwnsAny
         ? `<div class="lc-owned-badge" style="position:absolute;top:8px;left:8px;width:30px;height:30px;border-radius:50%;background:#34d399;color:#000;font-weight:800;font-size:16px;display:flex;align-items:center;justify-content:center;z-index:3;box-shadow:0 2px 8px rgba(52,211,153,.5)">✓</div>`
         : '';
@@ -11451,7 +11468,14 @@ function renderMarket(){
     const arrow = isUp ? '↑' : '↓';
     const tcgBadge = d.tcg === 'pokemon' ? 'PK' : (d.tcg === 'lorcana' ? 'LC' : 'MG');
     const tcgColor = d.tcg === 'pokemon' ? '#ffcb05' : (d.tcg === 'lorcana' ? '#a78bfa' : '#fb923c');
-    // Indicateur de stabilité factuel (basé sur amplitude J-1 vs avg7)
+    // Labels et deltas adaptés au mode de calcul (avg1/trend vs fallback avg30)
+    const isFallback = (d.avg1 == null && d.trend == null);
+    const referenceLabel = d.avg1 != null ? 'Cote J-1' : (d.trend != null ? 'Trend' : 'Avg 30j');
+    const referenceValue = isFallback ? (d.avg30 != null ? d.avg30 : d.avg7) : d.current;
+    const delta = isFallback
+      ? ((d.avg30 != null) ? (d.avg7 - d.avg30) : 0)
+      : (d.current - d.avg7);
+    // Indicateur de stabilité factuel
     const absPct = Math.abs(d.pct);
     let sLabel, sColor, sTitle;
     if(absPct < 5){
@@ -11470,17 +11494,17 @@ function renderMarket(){
     return `
       <div class="market-row" data-market-card-id="${escapeHtml(d.id)}" data-tcg="${escapeHtml(d.tcg)}" data-api-id="${escapeHtml(d.apiId)}" style="display:flex;align-items:center;gap:12px;padding:12px;border-bottom:1px solid var(--line2);cursor:pointer;transition:background .15s" onmouseover="this.style.background='rgba(212,168,90,.05)'" onmouseout="this.style.background='transparent'">
         <div style="font-weight:700;color:${color};width:32px;text-align:right">#${i+1}</div>
-        <div style="width:36px;height:50px;background:var(--line);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700">
+        <div style="width:36px;height:50px;background:var(--line);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;overflow:hidden;flex-shrink:0" data-img-slot="${escapeHtml(d.tcg+':'+d.apiId)}">
           <span style="color:${tcgColor}">${tcgBadge}</span>
         </div>
         <div style="flex:1;min-width:0">
           <div style="font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(d.name || '—')}</div>
-          <div style="color:var(--mut);font-size:12px">Avg 7j: €${d.avg7.toFixed(2)} · ${d.avg1 != null ? 'Cote J-1' : 'Trend'}: €${d.current.toFixed(2)}</div>
+          <div style="color:var(--mut);font-size:12px">Avg 7j: €${d.avg7.toFixed(2)} · ${referenceLabel}: €${referenceValue.toFixed(2)}</div>
           <div style="font-size:11px;margin-top:3px" title="${sTitle}"><span style="color:${sColor};font-weight:600">${sLabel}</span></div>
         </div>
         <div style="text-align:right">
           <div style="font-weight:700;color:${color};font-size:16px">${arrow} ${d.pct > 0 ? '+' : ''}${d.pct.toFixed(1)}%</div>
-          <div style="font-size:11px;color:var(--mut)">${(d.current - d.avg7) > 0 ? '+' : ''}€${(d.current - d.avg7).toFixed(2)}</div>
+          <div style="font-size:11px;color:var(--mut)">${delta > 0 ? '+' : ''}€${delta.toFixed(2)}</div>
         </div>
       </div>
     `;
@@ -11493,6 +11517,17 @@ function renderMarket(){
   document.getElementById('marketTopDown').innerHTML = downs.length
     ? downs.map((d, i) => renderRow(d, i, false)).join('')
     : `<div style="padding:32px;text-align:center;color:var(--mut)">Aucune baisse significative pour l'instant.</div>`;
+
+  // Lazy load images Top 10 (hausses + baisses) via API officielles
+  document.querySelectorAll('#marketTopUp [data-img-slot], #marketTopDown [data-img-slot]').forEach(slot => {
+    const [tcg, ...rest] = slot.dataset.imgSlot.split(':');
+    const apiId = rest.join(':');
+    if(!tcg || !apiId) return;
+    fetchCardImage(tcg, apiId).then(url => {
+      if(!url) return;
+      slot.innerHTML = `<img src="${escapeHtml(url)}" alt="" style="width:100%;height:100%;object-fit:cover" loading="lazy">`;
+    });
+  });
 
   // Render section Opportunités
   renderMarketOpportunities(data);
