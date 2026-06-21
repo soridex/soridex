@@ -9184,11 +9184,21 @@ if(document.readyState !== 'loading') initPageSearches();
 /* === BOUTIQUE === */
 // IMPORTANT : remplace "fausse-calme-21" par ton vrai tag Amazon Affiliate quand tu auras le compte
 const AMZ_TAG = 'faussecalme04-21';
-function amzLink(searchQuery){
-  return `https://www.amazon.fr/s?k=${encodeURIComponent(searchQuery)}&tag=${AMZ_TAG}`;
+function amzLink(p){
+  // p peut être un objet produit (avec p.link direct prioritaire, sinon p.search), ou une string (search legacy)
+  if(p && typeof p === 'object'){
+    if(p.link) return p.link; // lien affilié pré-fait — utilisé tel quel
+    if(p.search) return `https://www.amazon.fr/s?k=${encodeURIComponent(p.search)}&tag=${AMZ_TAG}`;
+  }
+  if(typeof p === 'string') return `https://www.amazon.fr/s?k=${encodeURIComponent(p)}&tag=${AMZ_TAG}`;
+  return 'https://www.amazon.fr/';
 }
 
 const SHOP_PRODUCTS = [
+  { cat:'portfolio', icon:'🗂', name:'MOXYOY Classeur 630 pochettes double-face', brand:'MOXYOY',
+    desc:'Très grosse capacité (35 pages × 18 cartes), pages double-face, idéal pour ranger une grosse collection à petit prix. Bon point d\'entrée si tu débutes ou si tu veux centraliser un set complet.',
+    price:'~15 - 25 €',
+    link:'https://www.amazon.fr/dp/B0DRFH75BR?&linkCode=ll2&tag=faussecalme03-21&linkId=bc40fa12771c3b337ee6be4c5047693a&ref_=as_li_ss_tl' },
   { cat:'portfolio', icon:'📒', name:'Ultra Pro PRO-Binder Eclipse 9-pocket', brand:'Ultra Pro',
     desc:'La référence pour les collectionneurs. Pochettes side-load (ne rayent pas), 360 cartes, finition mate.',
     price:'18 - 22 €', search:'Ultra Pro Eclipse 9-pocket Pro Binder Black' },
@@ -9250,7 +9260,7 @@ function renderShop(){
           <span class="from">À partir de</span>
           ${escapeHtml(p.price)}
         </div>
-        <a class="shop-product-btn" href="${amzLink(p.search)}" target="_blank" rel="noopener noreferrer sponsored">Voir sur Amazon</a>
+        <a class="shop-product-btn" href="${amzLink(p)}" target="_blank" rel="noopener noreferrer sponsored">Voir sur Amazon</a>
       </div>
     </div>
   `).join('');
@@ -11379,12 +11389,23 @@ async function showMarket(){
         .filter(r => r.id && !r.id.startsWith('test:'))
         .filter(r => {
           const p = r.prices || {};
-          // Élargi : avg7 + (avg1 OU trend) suffisent
-          return p.avg7 != null && p.avg7 > 0 && (p.avg1 != null || p.trend != null);
+          // Élargi : avg7 + (avg1 OU trend OU avg30) suffisent
+          return p.avg7 != null && p.avg7 > 0 && (p.avg1 != null || p.trend != null || p.avg30 != null);
         }).map(r => {
           const p = r.prices;
-          const current = p.avg1 != null ? p.avg1 : p.trend;
-          const pct = ((current - p.avg7) / p.avg7) * 100;
+          // Priorité : avg1 (le plus récent) > trend > avg30 (fallback : compare avg7 vs avg30)
+          let current, pct;
+          if(p.avg1 != null){
+            current = p.avg1;
+            pct = ((current - p.avg7) / p.avg7) * 100;
+          } else if(p.trend != null){
+            current = p.trend;
+            pct = ((current - p.avg7) / p.avg7) * 100;
+          } else {
+            // avg30 disponible : on compare avg7 (récent) vs avg30 (référence)
+            current = p.avg7;
+            pct = p.avg30 > 0 ? ((p.avg7 - p.avg30) / p.avg30) * 100 : 0;
+          }
           return {
             id: r.id,
             apiId: r.id.split(':').slice(1).join(':'),
@@ -11392,6 +11413,7 @@ async function showMarket(){
             name: r.name,
             avg1: p.avg1,
             avg7: p.avg7,
+            avg30: p.avg30,
             trend: p.trend,
             low: p.low,
             current: current,
