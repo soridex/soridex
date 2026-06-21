@@ -11376,13 +11376,14 @@ async function showMarket(){
   document.getElementById('marketLoading').hidden = false;
   document.getElementById('marketContent').hidden = true;
 
-  if(!_marketDataCache){
+  // Re-fetch si cache vide (peut arriver si la première visite avait des rows toutes vides)
+  if(!_marketDataCache || !_marketDataCache.length){
     try {
-      // Récupère toutes les lignes tcg_prices avec un prix valide
+      // Supabase limit() plafonne à 1000 par défaut → on utilise range pour aller plus haut
       const { data, error } = await sb.from('tcg_prices')
         .select('id, tcg, name, prices, updated_at')
         .order('updated_at', { ascending: false })
-        .limit(2000);
+        .range(0, 4999);
       if(error) throw error;
       _marketDataCache = (data || [])
         // Exclu les rows de test
