@@ -3985,6 +3985,11 @@ async function hydrateSession(){
           pseudo = profile.pseudo || profile.username || null;
           isPro = !!profile.is_pro || (profile.pro_until && new Date(profile.pro_until) > new Date());
         }
+        // Whitelist Pro gratuit (early supporters, beta, ami·e·s) — bypass DB
+        const PRO_WHITELIST = ['amzaouri.riad@gmail.com'];
+        if(session.user.email && PRO_WHITELIST.includes(session.user.email.toLowerCase().trim())){
+          isPro = true;
+        }
       } catch(e){ console.warn('profile fetch err', e); }
       if(!pseudo){
         pseudo = (session.user.user_metadata && (session.user.user_metadata.pseudo || session.user.user_metadata.username))
@@ -5014,7 +5019,9 @@ async function importCardsFromClassification(classif){
   const MAX_PAGES = 10; // safety
   try{
     while(page <= MAX_PAGES){
-      const url = `https://api.lorcast.com/v0/cards/search?q=${encodeURIComponent('c:'+classif)}&unique=prints&page=${page}`;
+      // NB: sur Lorcast, `c:` = cost (shorthand). Les classifications (Villain, Hero, Princess...)
+      // se cherchent avec `type:` (qui couvre types ET classifications d'après la doc).
+      const url = `https://api.lorcast.com/v0/cards/search?q=${encodeURIComponent('type:'+classif)}&unique=prints&page=${page}`;
       const res = await fetch(url);
       if(!res.ok) break;
       const data = await res.json();
