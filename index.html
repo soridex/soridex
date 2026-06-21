@@ -3761,6 +3761,7 @@
         <div class="radio-card active" data-source="empty"><span class="ico">+</span><span class="lbl">Vide</span></div>
         <div class="radio-card" data-source="set"><span class="ico">⬚</span><span class="lbl">Depuis un set</span></div>
         <div class="radio-card" data-source="character"><span class="ico">★</span><span class="lbl">Personnage</span></div>
+        <div class="radio-card" data-source="classification"><span class="ico">⚔</span><span class="lbl">Thème Lorcana</span></div>
       </div>
     </div>
     <div class="form-field" id="newPfSetField" hidden>
@@ -3771,6 +3772,33 @@
       <label>Nom du personnage</label>
       <input type="text" id="newPfChar" placeholder="Ex. Dracaufeu, Pikachu...">
       <div style="font-size:11px;color:var(--mut);margin-top:4px">Va importer toutes les cartes avec ce nom (peut prendre quelques secondes).</div>
+    </div>
+    <div class="form-field" id="newPfClassifField" hidden>
+      <label>Thème (classification Lorcana)</label>
+      <select id="newPfClassif">
+        <option value="Villain">Méchants Disney 🐍</option>
+        <option value="Hero">Héros</option>
+        <option value="Princess">Princesses</option>
+        <option value="Prince">Princes</option>
+        <option value="Queen">Reines</option>
+        <option value="King">Rois</option>
+        <option value="Sorcerer">Sorciers</option>
+        <option value="Captain">Capitaines</option>
+        <option value="Pirate">Pirates</option>
+        <option value="Knight">Chevaliers</option>
+        <option value="Dragon">Dragons</option>
+        <option value="Inventor">Inventeurs</option>
+        <option value="Mentor">Mentors</option>
+        <option value="Ally">Alliés</option>
+        <option value="Deity">Divinités</option>
+        <option value="Musketeer">Mousquetaires</option>
+        <option value="Detective">Détectives</option>
+        <option value="Madrigal">Madrigal (Encanto)</option>
+        <option value="Storyborn">Storyborn</option>
+        <option value="Floodborn">Floodborn</option>
+        <option value="Dreamborn">Dreamborn</option>
+      </select>
+      <div style="font-size:11px;color:var(--mut);margin-top:4px">Va importer toutes les cartes Lorcana avec ce thème (peut prendre quelques secondes).</div>
     </div>
     <label class="form-check" id="newPfEvoCheckWrap" hidden>
       <input type="checkbox" id="newPfEvoCheck">
@@ -4622,7 +4650,9 @@ function openCreatePfModal(){
   document.getElementById('createPfModal').classList.remove('hidden');
   document.getElementById('newPfName').value = '';
   document.getElementById('newPfTcg').value = 'pokemon';
+  document.getElementById('newPfTcg').disabled = false;
   document.getElementById('newPfChar').value = '';
+  document.getElementById('newPfClassif').value = 'Villain';
   setPfSource('empty');
   populatePfSetDropdown('pokemon');
 }
@@ -4634,6 +4664,15 @@ function setPfSource(src){
   document.querySelectorAll('#newPfSource .radio-card').forEach(c => c.classList.toggle('active', c.dataset.source === src));
   document.getElementById('newPfSetField').hidden = (src !== 'set');
   document.getElementById('newPfCharField').hidden = (src !== 'character');
+  document.getElementById('newPfClassifField').hidden = (src !== 'classification');
+  // Classification = Lorcana only : on force et on lock le select TCG
+  const tcgSel = document.getElementById('newPfTcg');
+  if(src === 'classification'){
+    tcgSel.value = 'lorcana';
+    tcgSel.disabled = true;
+  } else {
+    tcgSel.disabled = false;
+  }
   updateEvoCheckVisibility();
 }
 function updateEvoCheckVisibility(){
@@ -4691,6 +4730,16 @@ async function submitCreatePortfolio(){
       cards = await importCardsFromCharacter(tcg, charName);
       if(cards.length === 0){
         if(!confirm(`Aucune carte trouvée pour "${charName}". Vérifie l'orthographe.\n\nCréer quand même le portfolio vide ?`)){
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Créer';
+          return;
+        }
+      }
+    } else if(currentPfSource === 'classification'){
+      const classif = document.getElementById('newPfClassif').value;
+      cards = await importCardsFromClassification(classif);
+      if(cards.length === 0){
+        if(!confirm(`Aucune carte trouvée pour le thème "${classif}".\n\nCréer quand même le portfolio vide ?`)){
           submitBtn.disabled = false;
           submitBtn.textContent = 'Créer';
           return;
@@ -4955,6 +5004,31 @@ async function importCardsFromCharacter(tcg, charName){
     return cards.map(c => mgCardToPfEntry(c, null));
   }
   return [];
+}
+
+/* Import toutes les cartes Lorcana ayant une classification donnée (ex: Villain) */
+async function importCardsFromClassification(classif){
+  // Lorcast accepte c:villain (case-insensitive). On pagine au cas où >100 résultats.
+  let allCards = [];
+  let page = 1;
+  const MAX_PAGES = 10; // safety
+  try{
+    while(page <= MAX_PAGES){
+      const url = `https://api.lorcast.com/v0/cards/search?q=${encodeURIComponent('c:'+classif)}&unique=prints&page=${page}`;
+      const res = await fetch(url);
+      if(!res.ok) break;
+      const data = await res.json();
+      const cards = Array.isArray(data) ? data : (data.results || []);
+      if(cards.length === 0) break;
+      allCards = allCards.concat(cards);
+      // Lorcast renvoie 'has_more' ou similaire ; fallback : si <100 résultats, stop
+      const hasMore = data.has_more === true || (cards.length >= 100);
+      if(!hasMore) break;
+      page++;
+      await new Promise(r => setTimeout(r, 120));
+    }
+  }catch(e){ console.warn('importCardsFromClassification:', e); }
+  return allCards.flatMap(c => lcCardToPfEntries(c, null));
 }
 
 /* === PORTFOLIO DETAIL === */
