@@ -2386,7 +2386,7 @@
   <div class="sets-head">
     <div>
       <h2 class="view-title">Pokémon TCG</h2>
-      <p class="view-sub">Choisis une ère pour voir ses sets — du plus récent au plus ancien.</p>
+      <p class="view-sub" id="pokemonSub">Choisis une ère pour voir ses sets — du plus récent au plus ancien.</p>
     </div>
   </div>
   <div class="set-grid" id="setGridPokemon"></div>
@@ -4492,7 +4492,6 @@ async function updateTcgSetsHeaderStats(tcg){
   if(tcg === 'magic'){
     const sub = document.getElementById('magicSub');
     if(!sub) return;
-    // Magic est chargé async : si vide, on tente le load
     if(typeof MAGIC_SETS === 'undefined' || !MAGIC_SETS.length){
       try { if(typeof loadMagicSets === 'function') await loadMagicSets(); } catch(e){}
     }
@@ -4506,6 +4505,25 @@ async function updateTcgSetsHeaderStats(tcg){
       }
     } catch(e){ console.warn('magic stats err', e); }
     sub.innerHTML = `Tous les sets (core, expansion, masters) du plus récent au plus ancien. <span style="color:var(--gold-2);font-weight:600">${ownedCount.toLocaleString('fr-FR')}</span> / ${totalCards.toLocaleString('fr-FR')} cartes possédées.`;
+    return;
+  }
+  if(tcg === 'pokemon'){
+    const sub = document.getElementById('pokemonSub');
+    if(!sub) return;
+    let allSets = [];
+    try {
+      if(typeof getAllPokemonSetsFromApi === 'function') allSets = await getAllPokemonSetsFromApi();
+    } catch(e){ console.warn('pokemon sets load err', e); }
+    if(!allSets || !allSets.length) return;
+    const totalCards = allSets.reduce((acc, s) => acc + (s.printedTotal || s.total || 0), 0);
+    let ownedCount = 0;
+    try {
+      const idx = getOwnedCardsBySetIndex();
+      for(const s of allSets){
+        ownedCount += countOwnedInSet(idx, 'pokemon', s.name, s.id);
+      }
+    } catch(e){ console.warn('pokemon stats err', e); }
+    sub.innerHTML = `Choisis une ère pour voir ses sets — du plus récent au plus ancien. <span style="color:var(--gold-2);font-weight:600">${ownedCount.toLocaleString('fr-FR')}</span> / ${totalCards.toLocaleString('fr-FR')} cartes possédées.`;
     return;
   }
 }
@@ -10489,7 +10507,7 @@ document.addEventListener('click', (e)=>{
   if(action){
     e.preventDefault();
     const a=action.dataset.action;
-    if(a==='sets-pokemon'){showView('sets-pokemon');}
+    if(a==='sets-pokemon'){showView('sets-pokemon'); updateTcgSetsHeaderStats('pokemon');}
     else if(a==='sets-lorcana'){showView('sets-lorcana'); updateTcgSetsHeaderStats('lorcana');}
     else if(a==='sets-magic'){showView('sets-magic'); loadMagicSets().then(()=>updateTcgSetsHeaderStats('magic'));}
     else if(a.startsWith('manage-')) goToAccount();
