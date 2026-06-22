@@ -3753,6 +3753,7 @@
         <option value="pokemon">Pokémon</option>
         <option value="lorcana">Disney Lorcana</option>
         <option value="magic">Magic: The Gathering</option>
+        <option value="yugioh">Yu-Gi-Oh!</option>
       </select>
     </div>
     <div class="form-field">
@@ -4700,6 +4701,8 @@ async function populatePfSetDropdown(tcg){
       if(MAGIC_SETS.length === 0) await loadMagicSets();
       sel.innerHTML = MAGIC_SETS
         .map(s => `<option value="${s.code}">${s.name} (${s.year})</option>`).join('');
+    } else if(tcg === 'yugioh'){
+      sel.innerHTML = '<option value="">Bientôt disponible — utilise "Personnage"</option>';
     }
   }catch(e){
     console.error(e);
@@ -4879,6 +4882,31 @@ function mgCardToPfEntry(c, setInfo){
     addedAt: Date.now()
   };
 }
+function ygCardToPfEntry(c, setInfo){
+  // Yu-Gi-Oh via YGOPRODeck API. cardmarket_price est déjà en EUR.
+  const imgObj = (c.card_images && c.card_images[0]) || {};
+  const priceObj = (c.card_prices && c.card_prices[0]) || {};
+  let market = null;
+  if(priceObj.cardmarket_price && parseFloat(priceObj.cardmarket_price) > 0){
+    market = parseFloat(priceObj.cardmarket_price);
+  } else if(priceObj.tcgplayer_price && parseFloat(priceObj.tcgplayer_price) > 0){
+    market = parseFloat(priceObj.tcgplayer_price) * USD_TO_EUR;
+  }
+  // Premier set imprimé pour le nom de set par défaut
+  const firstSet = (c.card_sets && c.card_sets[0]) || {};
+  return {
+    apiId: c.id, name: c.name,
+    img: imgObj.image_url_small || imgObj.image_url || '',
+    largeImg: imgObj.image_url || imgObj.image_url_small || '',
+    setName: setInfo ? setInfo.name : (firstSet.set_name || ''),
+    setReleaseDate: setInfo ? setInfo.releaseDate : null,
+    number: firstSet.set_code || '',
+    rarity: firstSet.set_rarity || '',
+    cardmarketUrl: null,
+    marketPrice: market, pricePaid: 0, qty: 1, owned: false,
+    addedAt: Date.now()
+  };
+}
 
 async function importCardsFromSet(tcg, setVal){
   if(tcg === 'pokemon'){
@@ -5008,34 +5036,47 @@ async function importCardsFromCharacter(tcg, charName){
     }catch(e){console.warn(e);}
     return cards.map(c => mgCardToPfEntry(c, null));
   }
+  if(tcg === 'yugioh'){
+    try{
+      const res = await fetch(`https://db.ygoprodeck.com/api/v7/cardinfo.php?fname=${encodeURIComponent(charName)}`);
+      if(!res.ok) return [];
+      const data = await res.json();
+      const cards = data.data || [];
+      return cards.map(c => ygCardToPfEntry(c, null));
+    }catch(e){ console.warn(e); return []; }
+  }
   return [];
 }
 
 /* Import toutes les cartes Lorcana ayant une classification donnée (ex: Villain) */
 async function importCardsFromClassification(classif){
-  // Lorcast accepte c:villain (case-insensitive). On pagine au cas où >100 résultats.
+  // NB: `c:` sur Lorcast = cost (shorthand). Pour classifications/types : `type:`.
+  // `unique=cards` dédoublonne par nom+version (1 entrée par perso, pas 1 par print).
   let allCards = [];
   let page = 1;
   const MAX_PAGES = 10; // safety
   try{
     while(page <= MAX_PAGES){
-      // NB: sur Lorcast, `c:` = cost (shorthand). Les classifications (Villain, Hero, Princess...)
-      // se cherchent avec `type:` (qui couvre types ET classifications d'après la doc).
-      const url = `https://api.lorcast.com/v0/cards/search?q=${encodeURIComponent('type:'+classif)}&unique=prints&page=${page}`;
+      const url = `https://api.lorcast.com/v0/cards/search?q=${encodeURIComponent('type:'+classif)}&unique=cards&page=${page}`;
       const res = await fetch(url);
       if(!res.ok) break;
       const data = await res.json();
       const cards = Array.isArray(data) ? data : (data.results || []);
       if(cards.length === 0) break;
       allCards = allCards.concat(cards);
-      // Lorcast renvoie 'has_more' ou similaire ; fallback : si <100 résultats, stop
       const hasMore = data.has_more === true || (cards.length >= 100);
       if(!hasMore) break;
       page++;
       await new Promise(r => setTimeout(r, 120));
     }
   }catch(e){ console.warn('importCardsFromClassification:', e); }
-  return allCards.flatMap(c => lcCardToPfEntries(c, null));
+  // 1 seule entrée par carte (Normal en priorité, fallback Foil si pas de prix normal)
+  return allCards.flatMap(c => {
+    const entries = lcCardToPfEntries(c, null);
+    if(entries.length === 0) return [];
+    const normal = entries.find(e => e.variant === 'normal');
+    return [normal || entries[0]];
+  });
 }
 
 /* === PORTFOLIO DETAIL === */
