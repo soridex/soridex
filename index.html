@@ -3896,7 +3896,7 @@ function showView(name){
 /* === AUTH === */
 /* === SUPABASE CLIENT + AUTH RÉELLE === */
 const SUPABASE_URL = 'https://fldwgcrefovtyuwuuhid.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_cfN8YJkFLAhhWIZ2xPdzMg_mGk4NtIO';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZsZHdnY3JlZm92dHl1d3V1aGlkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwMjAxNzQsImV4cCI6MjA5NjU5NjE3NH0.G0PdlfH-RdEch9XJPxV8iacLA0GAmia6YdwPMJJub5M';
 const sb = (typeof supabase !== 'undefined' && supabase.createClient)
   ? supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
       auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
