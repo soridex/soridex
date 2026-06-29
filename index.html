@@ -106,6 +106,7 @@
   .stat-breakdown .bk-pokemon .bk-dot{background:#3b82f6}
   .stat-breakdown .bk-lorcana .bk-dot{background:#a855f7}
   .stat-breakdown .bk-magic .bk-dot{background:#dc2626}
+  .stat-breakdown .bk-yugioh .bk-dot{background:#f59e0b}
   .stat-breakdown .bk-dot{width:7px;height:7px;border-radius:50%;display:inline-block}
   .stat-unit{font-size:18px;font-weight:500;color:var(--mut)}
   .stat-trend{font-size:14px;font-weight:600;color:var(--green);display:inline-flex;align-items:center;gap:2px}
@@ -1795,7 +1796,7 @@
     <nav class="navlinks">
       <a class="navlink" href="#" data-nav="market">Marché</a>
       <a class="navlink active" href="#" data-view="home">Explorateur TCG</a>
-      <a class="navlink" href="#" data-nav="subscription">Abonnement</a>
+      <a class="navlink" href="#" data-nav="subscription" hidden style="display:none">Abonnement</a>
       <a class="navlink" href="#" data-view="shop">Boutique</a>
       <div class="nav-dropdown">
         <a class="navlink" href="#" data-toggle-dropdown="guide">Guide ▾</a>
@@ -2170,9 +2171,7 @@
         <li>⭐ Thème UI doré exclusif + badge Pro</li>
       </ul>
       <div class="sub-card-cta">
-        <span class="badge-current" id="proBadge" hidden>✓ Plan actuel</span>
-        <button class="btn-gold" id="joinWaitlistBtn">Rejoindre la liste d'attente</button>
-        <div class="sub-waitlist-note">Le paiement Stripe arrive bientôt. Inscris-toi pour être prévenue dès le lancement (+ tarif early-bird garanti).</div>
+        <div style="text-align:center;padding:20px;background:rgba(212,175,55,0.08);border:1px solid rgba(212,175,55,0.25);border-radius:16px;color:#d4af37;font-weight:700;font-size:18px">✓ Toutes les features sont gratuites pour tout le monde 🎉</div>
       </div>
     </div>
   </div>
@@ -3917,7 +3916,7 @@ try { _wishCache = JSON.parse(localStorage.getItem('soridex_wishlist_folders_v1'
 try { _bizCache = JSON.parse(localStorage.getItem('soridex_business_v1')||'{"folders":[]}'); if(!Array.isArray(_bizCache.folders)) _bizCache.folders = []; } catch(e){}
 
 function getUser(){ return currentUser; }
-function isProUser(){ return !!(currentUser && currentUser.isPro); }
+function isProUser(){ return true; /* Pro gratuit pour tous depuis 29 juin 2026 */ }
 
 // === Mode hors ligne auto ===
 let _isOnline = navigator.onLine;
@@ -10285,8 +10284,8 @@ function renderDashboard(){
   // 1. Calcul de la valeur totale + nombre de cartes possédées (uniquement si loggué)
   let totalValue = 0;
   let totalCards = 0;
-  const byTcgValue = { pokemon:0, lorcana:0, magic:0 };
-  const byTcgCards = { pokemon:0, lorcana:0, magic:0 };
+  const byTcgValue = { pokemon:0, lorcana:0, magic:0, yugioh:0 };
+  const byTcgCards = { pokemon:0, lorcana:0, magic:0, yugioh:0 };
   if(_isAuthed){
     const portfolios = (typeof getPortfolios === 'function') ? getPortfolios() : [];
     for(const pf of portfolios){
@@ -10310,10 +10309,11 @@ function renderDashboard(){
 
   // 2. Comptage des sets disponibles tous TCG (toujours affiché, c'est pas perso)
   let totalSets = 0;
-  const byTcgSets = { pokemon:0, lorcana:0, magic:0 };
+  const byTcgSets = { pokemon:0, lorcana:0, magic:0, yugioh:0 };
   try{ if(typeof _allApiSets !== 'undefined' && _allApiSets){ byTcgSets.pokemon = _allApiSets.length; totalSets += _allApiSets.length; } }catch(e){}
   try{ if(typeof LORCANA_SETS !== 'undefined' && LORCANA_SETS){ byTcgSets.lorcana = LORCANA_SETS.length; totalSets += LORCANA_SETS.length; } }catch(e){}
   try{ if(typeof MAGIC_SETS !== 'undefined' && MAGIC_SETS){ byTcgSets.magic = MAGIC_SETS.length; totalSets += MAGIC_SETS.length; } }catch(e){}
+  try{ if(typeof YUGIOH_SETS !== 'undefined' && YUGIOH_SETS){ byTcgSets.yugioh = YUGIOH_SETS.length; totalSets += YUGIOH_SETS.length; } }catch(e){}
 
   // 3. Évolution 24h via snapshots agrégés (uniquement si loggué)
   let trendHtml = '';
@@ -10368,6 +10368,7 @@ function renderDashboard(){
       {key:'pokemon', label:'Pokémon'},
       {key:'lorcana', label:'Lorcana'},
       {key:'magic', label:'Magic'},
+      {key:'yugioh', label:'Yu-Gi-Oh!'},
     ];
     el.innerHTML = tcgs.map(t => `
       <div class="bk bk-${t.key}">
@@ -13043,6 +13044,8 @@ document.addEventListener('DOMContentLoaded', function(){
     try{ if(typeof getAllPokemonSetsFromApi === 'function') await getAllPokemonSetsFromApi(); }catch(e){}
     try{ renderDashboard(); }catch(e){}
     try{ if(typeof loadMagicSets === 'function') await loadMagicSets(); }catch(e){}
+    try{ renderDashboard(); }catch(e){}
+    try{ if(typeof loadYugiohSets === 'function') await loadYugiohSets(); }catch(e){}
     try{ renderDashboard(); }catch(e){}
   })();
 
