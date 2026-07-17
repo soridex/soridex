@@ -4589,6 +4589,14 @@ function applySetListPipeline(cards, ownsCardFn, priceOfCardFn){
     list = [...list].sort((a,b) => (priceOfCardFn(b) ?? -Infinity) - (priceOfCardFn(a) ?? -Infinity));
   } else if(_setListState.sortMode === 'price-asc'){
     list = [...list].sort((a,b) => (priceOfCardFn(a) ?? Infinity) - (priceOfCardFn(b) ?? Infinity));
+  } else if(_setListState.sortMode === 'number'){
+    // Tri numérique propre : "10" > "2", et cartes hors print run (SIR, Iconic) en dernier
+    const numOf = (c) => {
+      const raw = String(c.number || c.collector_number || '');
+      const m = raw.match(/(\d+)/);
+      return m ? parseInt(m[1], 10) : Number.MAX_SAFE_INTEGER;
+    };
+    list = [...list].sort((a,b) => numOf(a) - numOf(b));
   }
   return list;
 }
@@ -6875,7 +6883,7 @@ function priceDateBadgeHtml(c, tcg, setCacheKey){
 }
 async function showPokemonSetCards(setId){
   showView('set-detail');
-  if(typeof setSetListRenderFn === 'function') setSetListRenderFn(null);
+  // On va enregistrer le renderFn plus bas (une fois `render` défini)
   setupSetModeUI('pokemon');
   const grid=document.getElementById('setCardGrid'), filtersBox=document.getElementById('rarityFilters');
   grid.innerHTML='<div class="empty-state"><div class="ico">…</div><h3>Chargement…</h3></div>';
@@ -6923,6 +6931,15 @@ async function showPokemonSetCards(setId){
   filtersBox.innerHTML=`<button class="rar-tab active" data-rar="all">Toutes (${cards.length})</button>`+rarities.map(r=>`<button class="rar-tab" data-rar="${escapeHtml(r)}">${escapeHtml(r)} (${cards.filter(c=>c.rarity===r).length})</button>`).join('');
   let _currentRarFilter = 'all';
   window._setSearchCallback = () => render(_currentRarFilter);
+  // Helpers pour le pipeline (filtre possession + tri)
+  const _pkOwnsCard = (c) => {
+    return _pkVariantQty(c.id) > 0 || _pkVariantQty(c.id + '__reverse') > 0;
+  };
+  const _pkPriceOf = (c) => {
+    const cm = (c.cardmarket && c.cardmarket.prices) || {};
+    const p = cm.trendPrice != null ? cm.trendPrice : (cm.averageSellPrice != null ? cm.averageSellPrice : null);
+    return p != null && p > 0 ? p : null;
+  };
   function render(filter){
     _currentRarFilter = filter;
     let list = filter==='all' ? cards : cards.filter(c=>c.rarity===filter);
@@ -6935,6 +6952,7 @@ async function showPokemonSetCards(setId){
         return names.some(n => matchesSearch(n, q));
       });
     }
+    list = applySetListPipeline(list, _pkOwnsCard, _pkPriceOf);
     grid.innerHTML=list.map(c=>{
       // Prix Cardmarket en EUR (averageSellPrice / trendPrice + reverseHolo)
       const cm = (c.cardmarket && c.cardmarket.prices) || {};
@@ -6963,12 +6981,18 @@ async function showPokemonSetCards(setId){
       const cmUrl = cardmarketUrlPokemon(c);
       const ebQuery = `${c.name} ${setInfo?setInfo.name:''} ${c.number}/${setInfo?(setInfo.printedTotal||setInfo.total):''}`;
       const displayName = translateCardNameToFr(c.name);
-      // Enregistrer la carte dans la map pour le bouton favori
-      _visibleCards[c.id] = {entry: pkCardToPfEntry(c, setInfo), tcg: 'pokemon'};
+      // Enregistrer la carte + rawCard/setInfo (nécessaire pour le listener .pk-var-action)
+      _visibleCards[c.id] = {entry: pkCardToPfEntry(c, setInfo), rawCard: c, setInfo: setInfo, tcg: 'pokemon'};
+      // Badge ✓ possédée
+      const _ownedAny = _pkVariantQty(c.id) > 0 || _pkVariantQty(c.id + '__reverse') > 0;
+      const pkOwnedBadgeHtml = _ownedAny
+        ? `<div class="pk-owned-badge" style="position:absolute;top:8px;left:8px;width:30px;height:30px;border-radius:50%;background:#34d399;color:#000;font-weight:800;font-size:16px;display:flex;align-items:center;justify-content:center;z-index:3;box-shadow:0 2px 8px rgba(52,211,153,.5)">✓</div>`
+        : '';
       return `<div class="card-item" data-card-id="${c.id}">
-        <div class="card-img">
+        <div class="card-img" style="position:relative">
+          ${pkOwnedBadgeHtml}
           <img src="${(c.images&&c.images.small)||''}" data-large="${large}" alt="${escapeHtml(displayName)}" loading="lazy">
-          ${favButtonHtml(c.id)}${ownButtonHtml(c.id)}
+          ${favButtonHtml(c.id)}
         </div>
         <div class="card-info">
           <div class="card-name">${escapeHtml(displayName)}</div>
@@ -6976,12 +7000,14 @@ async function showPokemonSetCards(setId){
           <div class="card-rarity">${escapeHtml(c.rarity||'—')}</div>
           <div class="card-variants">${variants.map(v=>`<span class="var-pill ${v.key}">${v.label}${v.price!=null?' €'+v.price.toFixed(2):''}</span>`).join('')}</div>
           ${priceStr}
+          ${_pkVariantControlsHtml(c)}
           <div class="card-actions">
             <button class="card-btn cd" data-detail-tcg="pokemon" data-detail-id="${escapeHtml(c.id)}" data-detail-name="${escapeHtml(displayName)}" data-detail-set="${escapeHtml(setInfo?setInfo.name:'')}" data-detail-num="${escapeHtml(num)}" data-detail-img="${escapeHtml(large)}" data-detail-rarity="${escapeHtml(c.rarity||'')}" title="Voir détails + cote">🔍 Détails</button>
           </div>
         </div></div>`;
     }).join('');
   }
+  setSetListRenderFn(() => render(_currentRarFilter));
   render('all');
   filtersBox.querySelectorAll('.rar-tab').forEach(btn=>btn.addEventListener('click',()=>{filtersBox.querySelectorAll('.rar-tab').forEach(b=>b.classList.toggle('active',b===btn)); render(btn.dataset.rar);}));
 }
@@ -8403,6 +8429,213 @@ if(!window._lcVarListenerInit){
       newQty = _lcAdjustVariantQty(apiId, delta, meta.rawCard, meta.setInfo, variant);
     }
     _lcUpdateVarRow(apiId, cardId, newQty);
+  });
+}
+
+// ═══ POKÉMON VARIANTS (Normal / Reverse Holo) — qty par variant ═══
+// apiId = c.id (Normal), c.id + '__reverse' (Reverse Holo)
+
+function _pkVariantQty(apiId){
+  const pf = getPortfolios().find(p => p.id === QUICK_OWNED_PF_ID);
+  if(!pf) return 0;
+  const card = (pf.cards||[]).find(c => c.apiId === apiId && c.owned !== false);
+  return card ? Math.max(1, parseInt(card.qty,10) || 1) : 0;
+}
+
+// Version pluriel de pkCardToPfEntry (Normal + Reverse Holo si dispo)
+function pkCardToPfEntries(c, setInfo){
+  const cm = (c.cardmarket && c.cardmarket.prices) || {};
+  const pNorm = cm.trendPrice != null && cm.trendPrice > 0 ? cm.trendPrice
+              : (cm.averageSellPrice != null && cm.averageSellPrice > 0 ? cm.averageSellPrice : null);
+  const pRev  = cm.reverseHoloTrend != null && cm.reverseHoloTrend > 0 ? cm.reverseHoloTrend
+              : (cm.reverseHoloSell != null && cm.reverseHoloSell > 0 ? cm.reverseHoloSell : null);
+  const baseEntry = {
+    name: c.name,
+    img: (c.images && c.images.small) || '',
+    largeImg: (c.images && c.images.large) || (c.images && c.images.small) || '',
+    setName: setInfo ? setInfo.name : (c.set ? c.set.name : ''),
+    setReleaseDate: setInfo ? setInfo.releaseDate : (c.set ? c.set.releaseDate : null),
+    number: c.number + (setInfo ? '/'+(setInfo.printedTotal||setInfo.total) : ''),
+    rarity: c.rarity || '',
+    cardmarketUrl: (c.cardmarket && c.cardmarket.url) || null,
+    pricePaid: 0, qty: 1, owned: false,
+    addedAt: Date.now()
+  };
+  const entries = [];
+  if(pNorm != null) entries.push({...baseEntry, apiId: c.id, variant: 'normal', marketPrice: pNorm});
+  if(pRev  != null) entries.push({...baseEntry, apiId: c.id + '__reverse', variant: 'reverse', marketPrice: pRev});
+  // Toujours au moins Normal (pour permettre de cocher même sans cote)
+  if(entries.length === 0) entries.push({...baseEntry, apiId: c.id, variant: 'normal', marketPrice: null});
+  return entries;
+}
+
+function _pkAdjustVariantQty(apiId, delta, cardData, setInfo, variant){
+  if(!getUser()){
+    if(confirm('Connecte-toi pour marquer tes cartes possédées. Aller à la connexion ?')) goToAccount();
+    return 0;
+  }
+  const arr = getPortfolios();
+  let pf = arr.find(p => p.id === QUICK_OWNED_PF_ID);
+  if(!pf){
+    pf = {id: QUICK_OWNED_PF_ID, name: 'Mes cartes possédées', tcg: 'mixed', isQuickOwned: true, createdAt: Date.now(), cards: []};
+    arr.push(pf);
+  }
+  pf.cards = pf.cards || [];
+  const idx = pf.cards.findIndex(c => c.apiId === apiId);
+  if(idx < 0 && delta > 0){
+    const entries = pkCardToPfEntries(cardData, setInfo);
+    const matched = entries.find(e => e.apiId === apiId) || entries[0];
+    pf.cards.push({...matched, tcg: 'pokemon', owned: true, qty: 1, pricePaid: 0, addedAt: Date.now()});
+    savePortfolios(arr);
+    if(typeof refreshSetDetailProgress === 'function') refreshSetDetailProgress();
+    if(_setListState && _setListState.renderFn && _setListState.ownFilter !== 'all') _setListState.renderFn();
+    return 1;
+  }
+  if(idx >= 0){
+    const card = pf.cards[idx];
+    const current = Math.max(1, parseInt(card.qty,10) || 1);
+    const next = current + delta;
+    if(next <= 0){
+      pf.cards.splice(idx, 1);
+      savePortfolios(arr);
+      if(typeof refreshSetDetailProgress === 'function') refreshSetDetailProgress();
+      if(_setListState && _setListState.renderFn && _setListState.ownFilter !== 'all') _setListState.renderFn();
+      return 0;
+    }
+    card.qty = next;
+    card.owned = true;
+    savePortfolios(arr);
+    return next;
+  }
+  return 0;
+}
+
+function _pkSetVariantQty(apiId, target, cardData, setInfo){
+  if(!getUser()) return 0;
+  const arr = getPortfolios();
+  let pf = arr.find(p => p.id === QUICK_OWNED_PF_ID);
+  if(!pf){
+    pf = {id: QUICK_OWNED_PF_ID, name: 'Mes cartes possédées', tcg: 'mixed', isQuickOwned: true, createdAt: Date.now(), cards: []};
+    arr.push(pf);
+  }
+  pf.cards = pf.cards || [];
+  const idx = pf.cards.findIndex(c => c.apiId === apiId);
+  if(target <= 0){
+    if(idx >= 0) pf.cards.splice(idx, 1);
+  } else if(idx < 0){
+    const entries = pkCardToPfEntries(cardData, setInfo);
+    const matched = entries.find(e => e.apiId === apiId) || entries[0];
+    pf.cards.push({...matched, tcg: 'pokemon', owned: true, qty: target, pricePaid: 0, addedAt: Date.now()});
+  } else {
+    pf.cards[idx].qty = target;
+    pf.cards[idx].owned = true;
+  }
+  savePortfolios(arr);
+  if(typeof refreshSetDetailProgress === 'function') refreshSetDetailProgress();
+  if(_setListState && _setListState.renderFn && _setListState.ownFilter !== 'all') _setListState.renderFn();
+  return target;
+}
+
+function _pkUpdateOwnedBadge(cardId){
+  const cardEl = document.querySelector(`.card-item[data-card-id="${CSS.escape(cardId)}"] .card-img`);
+  if(!cardEl) return;
+  const ownsAny = _pkVariantQty(cardId) > 0 || _pkVariantQty(cardId + '__reverse') > 0;
+  let badge = cardEl.querySelector('.pk-owned-badge');
+  if(ownsAny){
+    if(!badge){
+      badge = document.createElement('div');
+      badge.className = 'pk-owned-badge';
+      badge.innerHTML = '✓';
+      badge.style.cssText = 'position:absolute;top:8px;left:8px;width:30px;height:30px;border-radius:50%;background:#34d399;color:#000;font-weight:800;font-size:16px;display:flex;align-items:center;justify-content:center;z-index:3;box-shadow:0 2px 8px rgba(52,211,153,.5)';
+      cardEl.style.position = 'relative';
+      cardEl.appendChild(badge);
+    }
+  } else if(badge){
+    badge.remove();
+  }
+}
+
+function _pkUpdateVarRow(apiId, cardId, newQty){
+  const row = document.getElementById('pkrow-' + apiId);
+  if(row){
+    const spans = row.querySelectorAll('span');
+    if(spans.length >= 2) spans[1].textContent = newQty;
+    row.style.background = newQty > 0 ? 'rgba(52,211,153,.10)' : 'rgba(255,255,255,.03)';
+    row.style.borderColor = newQty > 0 ? 'rgba(52,211,153,.4)' : 'var(--line2)';
+    const minusBtn = row.querySelector('button[data-pk-action="dec"]');
+    if(minusBtn){
+      minusBtn.disabled = (newQty === 0);
+      minusBtn.style.opacity = newQty === 0 ? '.3' : '1';
+      minusBtn.style.cursor = newQty === 0 ? 'not-allowed' : 'pointer';
+    }
+  }
+  _pkUpdateOwnedBadge(cardId);
+}
+
+function _pkVariantControlsHtml(c){
+  const cm = (c.cardmarket && c.cardmarket.prices) || {};
+  const pNorm = cm.trendPrice != null && cm.trendPrice > 0 ? cm.trendPrice
+              : (cm.averageSellPrice != null && cm.averageSellPrice > 0 ? cm.averageSellPrice : null);
+  const pRev  = cm.reverseHoloTrend != null && cm.reverseHoloTrend > 0 ? cm.reverseHoloTrend
+              : (cm.reverseHoloSell != null && cm.reverseHoloSell > 0 ? cm.reverseHoloSell : null);
+  const hasNormal = pNorm != null;
+  const hasReverse = pRev != null;
+  const normalQty = _pkVariantQty(c.id);
+  const reverseQty = _pkVariantQty(c.id + '__reverse');
+  const rowStyle = (qty) => `display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:8px;border:1px solid ${qty>0?'rgba(52,211,153,.4)':'var(--line2)'};background:${qty>0?'rgba(52,211,153,.10)':'rgba(255,255,255,.03)'};font-size:13px;margin-top:4px`;
+  const labelStyle = 'flex:1;font-weight:600;color:var(--tx);min-width:0';
+  const btnStyle = (disabled) => `background:rgba(212,168,90,.10);border:1px solid rgba(212,168,90,.3);color:var(--gold-2);width:30px;height:30px;cursor:pointer;font-size:16px;font-weight:700;border-radius:6px;padding:0;display:flex;align-items:center;justify-content:center;font-family:inherit;flex-shrink:0;${disabled?'opacity:.3;cursor:not-allowed':''}`;
+  const qtyStyle = 'min-width:36px;text-align:center;font-weight:700;color:#fff;font-size:14px;padding:4px 8px;background:rgba(0,0,0,.25);border-radius:6px;cursor:pointer;user-select:none;flex-shrink:0';
+  const rowHtml = (apiId, label, qty, available) => {
+    if(!available) return '';
+    const sa = escapeHtml(apiId);
+    const sc = escapeHtml(c.id);
+    return `<div class="pk-var-row" id="pkrow-${sa}" data-pk-apiid="${sa}" data-pk-cardid="${sc}" style="${rowStyle(qty)}">
+      <span style="${labelStyle}">${label}</span>
+      <button type="button" class="pk-var-action" data-pk-action="dec" data-pk-apiid="${sa}" data-pk-cardid="${sc}" ${qty===0?'disabled':''} style="${btnStyle(qty===0)}" aria-label="Retirer un">−</button>
+      <span class="pk-var-action pk-var-qty" data-pk-action="edit" data-pk-apiid="${sa}" data-pk-cardid="${sc}" style="${qtyStyle}" title="Tap pour saisir une quantité">${qty}</span>
+      <button type="button" class="pk-var-action" data-pk-action="inc" data-pk-apiid="${sa}" data-pk-cardid="${sc}" style="${btnStyle(false)}" aria-label="Ajouter un">+</button>
+    </div>`;
+  };
+  // Toujours afficher au moins Normal (pour permettre de cocher les cartes sans cote dispo)
+  const showNormal = hasNormal || (!hasNormal && !hasReverse);
+  return `<div style="margin-top:8px">${rowHtml(c.id,'Normal',normalQty,showNormal)}${rowHtml(c.id+'__reverse','Reverse Holo',reverseQty,hasReverse)}</div>`;
+}
+
+// Listener UNIQUE pour les variants Pokémon
+if(!window._pkVarListenerInit){
+  window._pkVarListenerInit = true;
+  document.addEventListener('click', function(e){
+    const btn = e.target.closest('.pk-var-action');
+    if(!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if(!getUser()){
+      if(confirm('Connecte-toi pour marquer tes cartes possédées. Aller à la connexion ?')) goToAccount();
+      return;
+    }
+    const action = btn.dataset.pkAction;
+    const apiId = btn.dataset.pkApiid;
+    const cardId = btn.dataset.pkCardid;
+    const meta = _visibleCards[cardId];
+    if(!meta || !meta.rawCard){
+      alert('Erreur : carte introuvable. Recharge la page.');
+      return;
+    }
+    let newQty;
+    if(action === 'edit'){
+      const current = _pkVariantQty(apiId);
+      const input = prompt('Combien d\'exemplaires ?\n(0 pour retirer)', current);
+      if(input === null) return;
+      newQty = Math.max(0, parseInt(input,10) || 0);
+      if(newQty === current) return;
+      _pkSetVariantQty(apiId, newQty, meta.rawCard, meta.setInfo);
+    } else {
+      const delta = action === 'inc' ? 1 : -1;
+      const variant = apiId.endsWith('__reverse') ? 'reverse' : 'normal';
+      newQty = _pkAdjustVariantQty(apiId, delta, meta.rawCard, meta.setInfo, variant);
+    }
+    _pkUpdateVarRow(apiId, cardId, newQty);
   });
 }
 
