@@ -4589,6 +4589,15 @@ function applySetListPipeline(cards, ownsCardFn, priceOfCardFn){
     list = [...list].sort((a,b) => (priceOfCardFn(b) ?? -Infinity) - (priceOfCardFn(a) ?? -Infinity));
   } else if(_setListState.sortMode === 'price-asc'){
     list = [...list].sort((a,b) => (priceOfCardFn(a) ?? Infinity) - (priceOfCardFn(b) ?? Infinity));
+  } else if(_setListState.sortMode === 'number'){
+    list = [...list].sort((a,b) => {
+      const numOf = c => {
+        const raw = c.number || c.collector_number || '';
+        const m = String(raw).match(/\d+/);
+        return m ? parseInt(m[0], 10) : Number.MAX_SAFE_INTEGER;
+      };
+      return numOf(a) - numOf(b);
+    });
   }
   return list;
 }
