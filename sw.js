@@ -1,5 +1,5 @@
 // Soridex Service Worker — cache des images de cartes pour le mode hors ligne
-const CACHE_VERSION = 'soridex-img-v1';
+cconst CACHE_VERSION = 'soridex-img-v2';
 const IMAGE_HOSTS = [
   'images.pokemontcg.io',
   'cards.scryfall.io',
