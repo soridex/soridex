@@ -6902,10 +6902,20 @@ async function showPokemonSetCards(setId){
   if(_setCacheIsFresh('pk_'+setId)) cards=_setCardsCache['pk_'+setId];
   else{
     try{
-      const res=await fetch(`https://api.pokemontcg.io/v2/cards?q=set.id:${encodeURIComponent(setId)}&pageSize=250&orderBy=number`);
-      if(!res.ok) throw new Error('HTTP '+res.status);
-      const data=await res.json();
-      cards=data.data||[]; _setCacheStore('pk_'+setId, cards);
+      // pageSize=100 : workaround bug pokemontcg.io (250 renvoie 500 sur certains sets récents)
+      cards = [];
+      let page = 1;
+      while(true){
+        const res = await fetch(`https://api.pokemontcg.io/v2/cards?q=set.id:${encodeURIComponent(setId)}&pageSize=100&page=${page}&orderBy=number`);
+        if(!res.ok) throw new Error('HTTP '+res.status);
+        const data = await res.json();
+        const chunk = data.data || [];
+        cards = cards.concat(chunk);
+        if(chunk.length < 100) break;
+        page++;
+        if(page > 5) break; // garde-fou
+      }
+      _setCacheStore('pk_'+setId, cards);
     }catch(err){console.error(err); grid.innerHTML='<div class="empty-state"><h3>Erreur</h3></div>'; return;}
   }
   if(!cards.length){grid.innerHTML='<div class="empty-state"><h3>Aucune carte</h3></div>'; return;}
