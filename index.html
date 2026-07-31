@@ -6906,7 +6906,7 @@ async function showPokemonSetCards(setId){
       cards = [];
       let page = 1;
       while(true){
-        const res = await fetch(`https://api.pokemontcg.io/v2/cards?q=set.id:${encodeURIComponent(setId)}&pageSize=100&page=${page}&orderBy=number`);
+        const res = await fetch(`https://api.pokemontcg.io/v2/cards?q=set.id:${encodeURIComponent(setId)}&pageSize=100&page=${page}`);
         if(!res.ok) throw new Error('HTTP '+res.status);
         const data = await res.json();
         const chunk = data.data || [];
@@ -6915,6 +6915,12 @@ async function showPokemonSetCards(setId){
         page++;
         if(page > 5) break; // garde-fou
       }
+      // Tri par numéro côté client (orderBy=number côté API plante sur certains sets récents)
+      cards.sort((a,b) => {
+        const na = parseInt((a.number||'').match(/\d+/)?.[0] ?? '999999', 10);
+        const nb = parseInt((b.number||'').match(/\d+/)?.[0] ?? '999999', 10);
+        return na - nb;
+      });
       _setCacheStore('pk_'+setId, cards);
     }catch(err){console.error(err); grid.innerHTML='<div class="empty-state"><h3>Erreur</h3></div>'; return;}
   }
