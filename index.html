@@ -6876,7 +6876,6 @@ function priceDateBadgeHtml(c, tcg, setCacheKey){
 }
 async function showPokemonSetCards(setId){
   showView('set-detail');
-  if(typeof setSetListRenderFn === 'function') setSetListRenderFn(null);
   setupSetModeUI('pokemon');
   const grid=document.getElementById('setCardGrid'), filtersBox=document.getElementById('rarityFilters');
   grid.innerHTML='<div class="empty-state"><div class="ico">…</div><h3>Chargement…</h3></div>';
@@ -6923,6 +6922,20 @@ async function showPokemonSetCards(setId){
   const rarities=[...new Set(cards.map(c=>c.rarity).filter(Boolean))];
   filtersBox.innerHTML=`<button class="rar-tab active" data-rar="all">Toutes (${cards.length})</button>`+rarities.map(r=>`<button class="rar-tab" data-rar="${escapeHtml(r)}">${escapeHtml(r)} (${cards.filter(c=>c.rarity===r).length})</button>`).join('');
   let _currentRarFilter = 'all';
+  // Helpers pipeline filtre possession + tri prix (Pokémon)
+  const _pkOwnsCard = (c) => {
+    const set = getOwnedApiIdSet();
+    return set.has(c.id) || set.has(c.id + '__reverse');
+  };
+  const _pkPriceOf = (c) => {
+    const cm = (c.cardmarket && c.cardmarket.prices) || {};
+    const pN = cm.trendPrice != null ? cm.trendPrice : (cm.averageSellPrice != null ? cm.averageSellPrice : null);
+    const pR = cm.reverseHoloTrend != null ? cm.reverseHoloTrend : (cm.reverseHoloSell != null ? cm.reverseHoloSell : null);
+    const est = (typeof pokemonEstimate === 'function') ? pokemonEstimate(c) : null;
+    const best = Math.max(pN ?? -Infinity, pR ?? -Infinity);
+    if(est && est.price != null) return est.price;
+    return best === -Infinity ? null : best;
+  };
   window._setSearchCallback = () => render(_currentRarFilter);
   function render(filter){
     _currentRarFilter = filter;
@@ -6936,6 +6949,7 @@ async function showPokemonSetCards(setId){
         return names.some(n => matchesSearch(n, q));
       });
     }
+    list = applySetListPipeline(list, _pkOwnsCard, _pkPriceOf);
     grid.innerHTML=list.map(c=>{
       // Prix Cardmarket en EUR (averageSellPrice / trendPrice + reverseHolo)
       const cm = (c.cardmarket && c.cardmarket.prices) || {};
@@ -6983,6 +6997,7 @@ async function showPokemonSetCards(setId){
         </div></div>`;
     }).join('');
   }
+  setSetListRenderFn(() => render(_currentRarFilter));
   render('all');
   filtersBox.querySelectorAll('.rar-tab').forEach(btn=>btn.addEventListener('click',()=>{filtersBox.querySelectorAll('.rar-tab').forEach(b=>b.classList.toggle('active',b===btn)); render(btn.dataset.rar);}));
 }
